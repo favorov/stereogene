@@ -1,0 +1,142 @@
+CPP=g++
+CC=gcc
+
+gmake_which=$(shell which gmake 2>/dev/null)
+ifeq (/gmake,$(findstring /gmake,$(gmake_which)))
+ MAKE=gmake
+endif
+
+ifndef MAKE
+make_info=$(shell make --version)
+ifeq (GNU,$(findstring GNU,$(make_info)))
+	MAKE=make
+else
+	$(error No gmake and make is not gmake) 
+endif
+endif
+
+
+gcc_version_info=$(shell gcc --version)
+gcc_4_test=) 4.
+gcc_3_test=) 3.
+ifeq ($(gcc_4_test), $(findstring $(gcc_4_test),$(gcc_version_info)))
+	GCC4=GCC4
+endif
+ifeq ($(gcc_3_test), $(findstring $(gcc_3_test),$(gcc_version_info)))
+	GCC3=GCC3
+endif
+
+ifndef GCC3
+ifndef GCC4
+$(error GCC major version is neither 3 nor 4, gcc --version says:$(gcc_version_info).)
+endif
+endif
+
+ifdef GCC3
+ifdef GCC4
+$(error GCC major version cannot be 3 and 4 at one time)
+endif
+endif
+
+LINKFLAGS=-lm
+DEBUGFLAG=-g
+OMITSYMBOLINFOFLAG=-s
+OPTIMISEFLAG=-O3
+NOOPTIMISEFLAG=-O0
+STATICFLAG=-static
+PARANOIC_FLAG=-Wextra
+MINGW_FLAG=-mno-cygwin
+PPRO_FLAG=-mpentiumpro
+
+ifdef GCC4 
+	INCLUDEKEY=-iquote
+	INCLUDECLOSETERM=
+else #GCC3
+	INCLUDEKEY=-I
+	INCLUDECLOSETERM= -I-
+endif
+
+ifdef GCC4
+OMITSYMBOLINFOFLAG=
+# -s is obsoleted for mac, gcc4
+endif
+
+#ifdef CYGWIN
+#ifdef GCC4
+#LINKFLAGS=$(LINKGLAGS) -enable-auto-import
+#endif
+#endif
+
+ifndef PROFFLAG
+ PROFFLAG=-pg
+endif
+
+CCFLAGS:=-c -pipe -Wall $(includeflags)
+CPPFLAGS:=-c -pipe -ffor-scope -Wall $(includeflags)
+
+ifdef PARANOIC
+ CCFLAGS:=$(CCFLAGS) $(PARANOIC_FLAG) 
+ CPPFLAGS:=$(CPPFLAGS) $(PARANOIC_FLAG)
+endif
+
+ifdef MINGW
+ CCFLAGS:=$(CCFLAGS) $(MINGW_FLAG)
+ CPPFLAGS:=$(CPPFLAGS) $(MINGW_FLAG)
+ LINKFLAGS:=$(LINKFLAGS) $(MINGW_FLAG)
+endif
+
+ifdef PENTIUMPRO
+ CCFLAGS:= $(CCFLAGS) $(PPRO_FLAG)
+ CPPFLAGS:= $(CPPFLAGS) $(PPRO_FLAG)
+endif 
+
+ifdef OPTIMISE
+ CCFLAGS:= $(CCFLAGS) $(OPTIMISEFLAG)
+ CPPFLAGS:= $(CPPFLAGS) $(OPTIMISEFLAG)
+endif 
+
+ifdef OPT
+ CCFLAGS:= $(CCFLAGS) $(OPTIMISEFLAG)
+ CPPFLAGS:= $(CPPFLAGS) $(OPTIMISEFLAG)
+endif 
+
+ifdef NOOPTIMISE
+ CCFLAGS:= $(CCFLAGS) $(NOOPTIMISEFLAG)
+ CPPFLAGS:= $(CPPFLAGS) $(NOOPTIMISEFLAG)
+endif 
+
+ifdef NOOPT
+ CCFLAGS:= $(CCFLAGS) $(NOOPTIMISEFLAG)
+ CPPFLAGS:= $(CPPFLAGS) $(NOOPTIMISEFLAG)
+endif 
+
+ifdef PROFILE
+ DEBUG=PROFILE #just to switch it on
+ CCFLAGS:=$(CCFLAGS) $(PROFFLAG)  $(DEBUGFLAG)
+ CPPFLAGS:=$(CPPFLAGS) $(PROFFLAG)  $(DEBUGFLAG)
+ifdef GCC4 
+ LINKFLAGS:=$(LINKFLAGS) $(PROFFLAG) $(DEBUGFLAG)
+else #GCC3
+ LINKFLAGS:=$(LINKFLAGS:-l%=-l%_p) $(PROFFLAG) $(DEBUGFLAG)
+endif
+endif
+
+
+
+ifdef STATIC
+ LINKFLAGS:=$(LINKFLAGS) $(STATICFLAG)
+endif 
+
+ifdef DEBUG
+ CCFLAGS:=$(CCFLAGS) $(DEBUGFLAG) $(NOOPTIMISEFLAG)
+ CPPFLAGS:=$(CPPFLAGS) $(DEBUGFLAG) $(NOOPTIMISEFLAG)
+else
+ LINKFLAGS:=$(LINKFLAGS) $(OMITSYMBOLINFOFLAG)
+endif
+
+ifdef CYGWIN
+ EXEEXT=.exe
+else
+ EXEEXT=
+endif
+
