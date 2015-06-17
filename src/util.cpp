@@ -10,8 +10,9 @@
 #include <stdarg.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <wordexp.h>
 
-const char* version="1.55";
+const char* version="1.56.1";
 
 //int debugFg=0;
 int debugFg=DEBUG_LOG|DEBUG_PRINT;
@@ -730,9 +731,12 @@ char *makeFileName(char *b, const char *path, const char*fname, const char*ext){
 
 //================== make path - add '/' if necessary
 char* makePath(char* pt){
-	char *s=pt+strlen(pt)-1;
-	if(*s=='/') return strdup(pt);
-	return strdup(strcat(pt,"/"));
+	wordexp_t exp_result;
+	wordexp(pt, &exp_result, 0);
+	char *expt=exp_result.we_wordv[0];
+	char *s=expt+strlen(expt)-1;
+	if(*s=='/') return strdup(expt);
+	return strdup(strcat(expt,"/"));
 }
 
 //=================== change file extension
