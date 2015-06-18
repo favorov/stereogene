@@ -754,15 +754,15 @@ char *makeFileName(char *b, const char *path, const char*fname, const char*ext){
 }
 
 void makeDir(const char *path){
-	char b[2048]; strcpy(b,path);
+	char b[2048];
+	parseTilda(b,path);
 	char *s=b+strlen(b)-1;
 		mode_t mode=S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH;
 	if(*s=='/') *s=0;
-
 	for(char *s=b; (s=strchr(s+1,'/'))!=0;){
 		*s=0; mkdir(b,mode); *s='/';
 	}
-	mkdir(path,mode);
+	mkdir(b,mode);
 }
 //================== make path - add '/' if necessary
 char* makePath(char* pt){
