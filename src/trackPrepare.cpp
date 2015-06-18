@@ -314,14 +314,14 @@ void testDistrib(){
 		else{
 			float x=log(1+profile[i]);
 			int k=(int)(x/10*1000)+1;
-			if(k>=1000){
-				deb("overflow profile value  %f",x); k=999;
-			}
+//			if(k>=1000){
+//				deb("overflow profile value  %f",x); k=999;
+//			}
 			dd[k]++;
 		}
 	}
 
-	FILE *f=fopen("dstr","wt");
+	FILE *f=xopen("dstr","wt");
 	for(int i=0; i<1000; i++){
 		fprintf(f,"%5.2f\t%6f\n",i*10./1000.,dd[i]);
 	}

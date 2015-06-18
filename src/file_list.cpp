@@ -172,7 +172,7 @@ void pcaMain(const char *fname){
 		s=strrchr(s,'.'); if(s!=0) *s=0;
 		strcat(b,".r");
 
-		FILE *f=fopen(b,"wt");
+		FILE *f=xopen(b,"wt");
 
 		fprintf(f,"aa=read.table(\"%s\",header=TRUE)\n",outFname);
 		fprintf(f,"print(cor(aa[,4:%i]))\n",nFiles+3);

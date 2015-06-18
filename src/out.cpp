@@ -111,7 +111,7 @@ void printStat(){
 
 	bool fg=fileExists(statFileName);
 	if((outRes & TAB)!=0) {
-		f=fopen(statFileName,"a+t");
+		f=gopen(statFileName,"a+t");
 	}
 
 	if(!fg && f){								//================ write the header
@@ -133,7 +133,7 @@ void printStat(){
 	//================================================== write parameters
 	fg=fileExists(paramsFileName);
 	if((outRes&TAB)!=0){
-		f=fopen(paramsFileName,"a+t");
+		f=gopen(paramsFileName,"a+t");
 	}
 	if(!fg && f){								//================ write the header
 		fprintf(f,"%-6s\t%-20s\t%-20s","id","trackPath","resPath");
@@ -162,7 +162,7 @@ void printStat(){
 	if((outRes & XML)!=0) {
 		sprintf(b,"%s.xml",statFileName);
 		fg=fileExists(b);
-		FILE *xml=fopen(b,"a+t");
+		FILE *xml=xopen(b,"a+t");
 		if(!fg) fprintf(xml,"<xml>\n");
 		fprintf(xml,"<run id=%lx ver=%s>\n", id, version);
 		fprintf(xml,"\t<input track1=\"%s\" track2=\"%s\"/>\n",bTrack1.name,bTrack2.name);
@@ -313,7 +313,7 @@ void printR(){
 	correlation.getLimits(x0,x1, y0, y1);
 
 	strcat(strcpy(b,fn),".r");
-	FILE *f=fopen(b,"wt");
+	FILE *f=xopen(b,"wt");
 
 	strcpy(b,outFile);
 	s=strrchr(b,'/'); if(s==0) s=outFile; else s++; strcpy(fname,s);

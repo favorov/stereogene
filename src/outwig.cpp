@@ -120,7 +120,7 @@ if(lmax < z) lmax=z;
 		int k=(int)(log(z)*1000);
 		if(kmin > k) kmin=k;
 		if(kmax < k) kmax=k;
-if(k > 998) deb("maxPos=%i k=%i",i,kmax);
+//if(k > 998) deb("maxPos=%i k=%i",i,kmax);
 		double v1=bTrack1.getValue(i,0), v2=bTrack2.getValue(i,0);
 		if(k>=outThreshold && v1*v2!=0){
 			filePos2Pos(i,&pos,stepSize);
@@ -138,7 +138,7 @@ if(k > 998) deb("maxPos=%i k=%i",i,kmax);
 //}
 		}
 	}
-deb("\nkmin=%i  kmax=%i lmax=%f",kmin, kmax,lmax);
+//deb("\nkmin=%i  kmax=%i lmax=%f",kmin, kmax,lmax);
 	fclose(outWigFile);
 }
 //==================================================================

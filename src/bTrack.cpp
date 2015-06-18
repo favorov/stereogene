@@ -487,7 +487,7 @@ void bTrack::trackAutoCorrelation(){
 	for(int i=0; i<lProfAuto; i++) ma=max(autoCorr[i],ma);
 	for(int i=0; i<lProfAuto; i++) autoCorr[i]/=ma;
 	makeFileName(b,resPath,name,"ac");
-	FILE *fil=fopen(b,"wt");
+	FILE *fil=xopen(b,"wt");
 	fprintf(fil,"l\tac\n");
 	for(int i=lProfAuto/2; i>0; i--){
 		if(abs(autoCorr[i])<0.01) continue;

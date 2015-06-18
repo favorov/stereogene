@@ -600,6 +600,7 @@ char *correctFname(const char* s);			// remove fucking MS Widows backslash
 char *cfgName(char* p, char* ext);			// Make config file name
 char *makePath(char* pt);					// Make path - add '/' to the end of pathname
 FILE *xopen(const char*, const char*);		// open file if exists, exit otherwise
+FILE *gopen(const char*, const char*);		// open file with parsing ~
 char *getFname(char *s);					// get filename without path
 bool fileExists(const char *fname);				// check if the file exists
 bool fileExists(const char* path, const char *fname);				// check if the file exists

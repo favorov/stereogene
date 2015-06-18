@@ -10,9 +10,9 @@
 #include <stdarg.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <wordexp.h>
+//#include <dir.h>
 
-const char* version="1.56.1";
+const char* version="1.57";
 
 //int debugFg=0;
 int debugFg=DEBUG_LOG|DEBUG_PRINT;
@@ -175,7 +175,7 @@ void testAliases(){
 }
 
 void AliaseTable::readTable(const char* fname){
-	FILE *f=fopen(fname,"rt");
+	FILE *f=gopen(fname,"rt");
 	if(f==0) return;
 	nAls=0;
 	int capacity=100;
@@ -232,6 +232,7 @@ void clearChromosomes(){
 }
 
 int readChromSizes(char *fname){
+	if(fname==0) errorExit("Chromosome file undfined");
 	if(verbose) printf("read chrom...\n");
 	FILE *f=xopen(fname,"rt");
 	if(f==0)return 0;
@@ -352,7 +353,7 @@ void errorExit(const char *format, va_list args){
 	    if(errStatus) fprintf(stderr, "%s\n", errStatus);
 	    else fprintf(stderr, "\n");
 		if(logFileName) {
-			FILE *f=fopen(logFileName,"at");
+			FILE *f=gopen(logFileName,"at");
 			vfprintf(f,format,args);
 		    if(errStatus) fprintf(f, "%s\n", errStatus);
 		    else fprintf(f, "\n");
@@ -365,13 +366,12 @@ void errorExit(const char *format, ...){
 	va_list args;
 	va_start(args, format);
 	errorExit(format, args);
-	writeLog(format, args);
 	va_end(args);
 }
 
 void writeLog(const char *format, va_list args){
 	if(logFileName) {
-		FILE *f=fopen(logFileName,"at");
+		FILE *f=gopen(logFileName,"at");
 		fprintf(f,"#%8lx-> ",id);
 		vfprintf(f,format,args);
 		fclose(f);
@@ -498,10 +498,32 @@ long Timer::mtime()
 
 // open file with control
 //================
+char* parseTilda(char *b, const char*fname){
+	if(*fname=='~'){
+		char *z=getenv("HOME");
+		if(z==0) z=getenv("HOMEPATH");
+		if(z!=0) {
+			strcpy(b,correctFname(z));
+			if(b[strlen(b)-1] != '/') strcat(b,"/");
+			fname+=2;}
+	}
+	else *b=0;
+	return strcat(b,fname);
+}
+
 FILE *xopen(const char* fname, const char *t){
-	FILE* f=fopen(fname,t);
-	if(f==0){errorExit("can\'t open file <%s>",fname);}
+	if(fname==0) errorExit("can\'t open file <null>");
+	FILE* f=gopen(fname,t);
+	if(f==0){
+		char b[2048];
+		errorExit("can\'t open file <%s> (<%s>)",fname, parseTilda(b,fname));
+	}
 	return f;
+}
+
+FILE *gopen(const char*fname, const char* type){		// open file with parsing ~
+	char b[2048];
+	return fopen(parseTilda(b,fname),type);
 }
 
 //===================
@@ -718,6 +740,7 @@ char *FileName::coreFname(){
 //================= create filename using path and name
 char* makeFileName(char *b, const char *path, const char*fname){
 	if(path==0) return strcpy(b,fname);
+	if(*fname=='/' || *fname=='~') return strcpy(b,fname);
 	char *s;
 	if((s=strrchr((char*)fname,'/'))!=0) fname=s+1;
 	sprintf(b,"%s%s",path,fname);
@@ -725,18 +748,27 @@ char* makeFileName(char *b, const char *path, const char*fname){
 }
 char *makeFileName(char *b, const char *path, const char*fname, const char*ext){
 	makeFileName(b,path,fname);
-	char *s=strrchr(b,'.'); if(s) *s=0;
+	char *ss=strrchr(b,'/'); if(ss==0) ss=b;
+	char *s=strrchr(ss,'.'); if(s) *s=0;
 	return strcat(strcat(b,"."),ext);
 }
 
+void makeDir(const char *path){
+	char b[2048]; strcpy(b,path);
+	char *s=b+strlen(b)-1;
+	if(*s=='/') *s=0;
+
+	for(char *s=b; (s=strchr(s+1,'/'))!=0;){
+		*s=0; mkdir(b); *s='/';
+	}
+	mkdir(path);
+}
 //================== make path - add '/' if necessary
 char* makePath(char* pt){
-	wordexp_t exp_result;
-	wordexp(pt, &exp_result, 0);
-	char *expt=exp_result.we_wordv[0];
-	char *s=expt+strlen(expt)-1;
-	if(*s=='/') return strdup(expt);
-	return strdup(strcat(expt,"/"));
+	char b[2048];
+	char *s=pt+strlen(pt)-1;
+	if(*s=='/') *s=0;
+	return strdup(strcat(strcpy(b,pt),"/"));
 }
 
 //=================== change file extension
@@ -747,7 +779,7 @@ char * cfgName(char* p, char* ext){
 //=================== Check if given file exists
 bool fileExists(const char *fname){
 	bool fg=false;						// The file do not exist. The header should be writen.
-	FILE *f=fopen(fname,"rt");	// check if statistics file exists
+	FILE *f=gopen(fname,"rt");	// check if statistics file exists
 	if(f!=0) {fg=true; fclose(f);}
 	return fg;
 }
@@ -850,16 +882,14 @@ char *getFnameWithoutExt(char *buf, char *fname){
 //========================================================================================
 // search appropriate cfg file
 void readCfg(int argc, const char *argv[]) {
-	deb("argv[0]=%s\n", argv[0]);
 	argv[0]=correctFname(argv[0]);
-	deb("corrected argv[0]=%s\n", argv[0]);
 	char *cfg=cfgName((char*)argv[0], (char*)"cfg");
-	deb("cfg=%s\n", cfg);
-	readCfg(cfg);
+	readCfg(cfg);					// deafult cfg
+	char* cfg1=strrchr(cfg,'/');	// cfg in current directory
+	if(cfg1 !=0) readCfg(cfg1+1);
 	for(int i=0; i<argc; i++){
 		if(strncmp(argv[i],"cfg=",4)==0) {
 			verb("read cfg <%s>\n",cfg);
-			deb("read cfg: %s\n", argv[i]);
 			readCfg((char*)(argv[i]+4));
 		}
 	}
@@ -920,8 +950,8 @@ void addFile(const char* fname, int id){
 void addFile(const char* fname){
 	if(nfiles > 256) errorExit("too many input files\n");
 	char b[4096], *s;
-	strcpy(b,fname); s=strrchr(b,'.'); if(s) s++; else return;
-	if(keyCmp(s,"lst")==0 || keyCmp(s,"list")==0){
+	strcpy(b,fname); s=strrchr(b,'.'); if(s) s++;
+	if(s && (keyCmp(s,"lst")==0 || keyCmp(s,"list")==0)){
 		FILE *f=0;
 		if(fileExists(fname)) f=xopen(fname,"rt");
 		else{
@@ -985,15 +1015,28 @@ void readArgs(int argc, const char *argv[]){
 	}
 }
 
+char *trim(char *s){
+	s=skipSpace(s);
+	for(int i=strlen(s)-1; i>=0; i--){
+		if(isspace(s[i])) s[i]=0;
+		else break;
+	}
+	if(*s=='\"') s++;
+	char *ss=strchr(s,'\"'); if(ss) *ss=0;
+	return s;
+}
+
 // read given cfg file
 void readArg(char *b){
+	strtok(b,"#");
+
 	char *s1=strtok(b,"=");
 	char *s2=strtok(0,"=");
 	if(s2!=0) s2=skipSpace(s2);
-	if(*s1=='#') return;
-	s1=strtok(s1," \t");
-	s2=strtok(s2," \t");
 
+	if(*s1=='#') return;
+	s1=trim(s1);
+	s2=trim(s2);
 	//================================================== Common parameters
 	if(keyCmp(s1,"chrom")==0) chromFile=strdup(s2);
 	else if(keyCmp(s1,"verbose")==0)    verbose=getFlag(s2);
@@ -1115,27 +1158,17 @@ void readArg(char *b){
 }
 
 void readCfg(char *cfg){
-	FILE *f=fopen(cfg,"rt");
-
-	deb(1, "in readCfg: cfg=%s", cfg);
-	if (f==0){
-		deb(1, "f=0");
-	}
+	FILE *f=gopen(cfg,"rt");
 
 	if(f==0) return;
 	char b[1024], *s;
 	for(;(s=fgets(b,sizeof(b),f))!=0;){
-		strtok(b,"\r\n#");
+		strtok(b,"\r\n");
+		char *s=skipSpace(b);
+		if(*s==0) continue;
+		readArg(s);
+	}
 
-
-		readArg(b);
-	}
-	if (profPath !=0){
-		deb(1, "in readCfg: profPath=%s", profPath);
-	}
-	else{
-		deb(1, "in readCfg: profPath=0");
-	}
 	fclose(f);
 }
 
@@ -1184,6 +1217,17 @@ void makeId(){
 	id=hashx(id,kernelType);
 }
 
+
+//================= Create directories
+void makeDirs(){
+	if(profPath!=0) makeDir(profPath);
+	else profPath=strdup("./");
+	if(resPath!=0) makeDir(resPath);
+	else resPath=strdup("./");
+	if(trackPath!=0) makeDir(trackPath);
+	else trackPath=strdup("./");
+}
+
 // for debugging :
 // set debugFg=DEBUG_LOG|DEBUG_PRINT
 // set debS string for module identification//
@@ -1203,7 +1247,6 @@ int main(int argc, const char *argv[]) {
 	debugFg=DEBUG_LOG|DEBUG_PRINT;
 	unsigned long t=time(0);	id=t&0xffffff;	// define run id
 	readArgs( argc, argv);
-
 	if(wStep==0)   wStep=wSize;
 	if(RScriptFg) {writeDistCorr|=TOTAL; writeDistr=1;}
 	if(complFg==0){
@@ -1213,7 +1256,7 @@ int main(int argc, const char *argv[]) {
 	FileName fn((char*) argv[0]);
 	const char *progName=fn.name;
 
-
+	makeDirs();
 
 	verb("===== %s version %s =====\n",progName,version);
 	if(nfiles==0){

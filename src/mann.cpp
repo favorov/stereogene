@@ -20,7 +20,7 @@ void makeSets(){
 	makeSet(nSet2, set2, 0.1,1);
 }
 void writeSet(double *set, int nSet, const char*fname){
-	FILE *f=fopen(fname,"wt");
+	FILE *f=xopen(fname,"wt");
 	for(int i=0; i<nSet; i++)
 		fprintf(f,"%f\n",set[i]);
 	fclose(f);
