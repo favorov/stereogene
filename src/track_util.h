@@ -101,7 +101,7 @@ extern char *mapFil;		   // map file
 extern char *inputProfiles;    // input formula for track combination
 extern int 	bpType;
 
-extern int  writeDistr;		// flag: write distributions
+extern bool  writeDistr;		// flag: write distributions
 
 extern char *trackName;   	// current track name
 extern char *profPath;		// path to binary profiles
@@ -116,8 +116,8 @@ extern unsigned long id;
 //============================ Track parameters ===============================
 extern int   complFg;		// Flag: IGNORE_STRAND - ignore strand; COLLINEAR - compare collinear strands; COMPLEMENT - compare complement strands
 extern int   intervFlag0;	// Flag: for bed tracks take intervals with score 1.
-extern int   NAFlag;		// Flag: 0 -> uncovered_values=0; otherwise uncovered values=NA
-extern int   strandFg0;	 	// Flag: 1 - strand-dependent
+extern bool  NAFlag;		// Flag: 0 -> uncovered_values=0; otherwise uncovered values=NA
+extern bool  strandFg0;	 	// Flag: 1 - strand-dependent
 extern int   profileLength;	// size of the profile array
 extern float *profile;		// uncompressed profile array
 extern float *profilec;		// uncompressed profile array
@@ -125,7 +125,7 @@ extern float *profilec;		// uncompressed profile array
 extern unsigned char *byteprofile;	 // compressed profile array
 extern unsigned char *byteprofilec;	 // compressed profile array for complement strand
 extern int   logScale;		// use logScale
-extern float scaleFactor0;
+extern double scaleFactor0;
 
 extern char *pcorProfile;    	// partial correlation profile file name
 extern float *outTrackProfile;  // correlation track
@@ -135,7 +135,7 @@ extern float *outTrackProfile;  // correlation track
 extern int flankSize;    // size of flank (nucleotides)
 extern int LFlankProfSize;        // size of the left flank (profile scale)
 extern int RFlankProfSize;        // size of the right flank (profile scale)
-extern float noiseLevel; // level of noise
+extern double noiseLevel; // level of noise
 extern int wSize;        // size of widow (nucleotides)
 extern int wStep;        // window step   (nucleotides)
 extern int wProfSize;    // size of widow (profile scale)
@@ -148,23 +148,23 @@ extern double kernelProfShift;  // Kernel shift (profile scale)
 
 
 extern int kernelType;   		// kernel type
-extern float maxNA0;				// max allowed NA values - if at lest one of profiles contains more than maxNA NA values the window will be ignored
-extern float maxZero0;				// max allowed zero values - if both profiles contains more than maxZero zeros the window will be ignored
-extern float maxNA;				// max allowed NA values - if at lest one of profiles contains more than maxNA NA values the window will be ignored
-extern float maxZero;				// max allowed zero values - if both profiles contains more than maxZero zeros the window will be ignored
+extern double maxNA0;				// max allowed NA values - if at lest one of profiles contains more than maxNA NA values the window will be ignored
+extern double maxZero0;				// max allowed zero values - if both profiles contains more than maxZero zeros the window will be ignored
+extern double maxNA;				// max allowed NA values - if at lest one of profiles contains more than maxNA NA values the window will be ignored
+extern double maxZero;				// max allowed zero values - if both profiles contains more than maxZero zeros the window will be ignored
 extern int nShuffle;			// number of shuffle in percents
 extern int maxShuffle;		    // max number of shuffle
 extern double pVal;				// min (-log10(p-value)) for output
 extern double qVal;				// min (-log10(q-value)) for output
-extern int verbose;				// number of suffle
+extern bool verbose;				// number of suffle
 extern int threshold;
 extern int lAuto;
 extern int lProfAuto;
 extern int corrScale;			// scale for correlations
-extern int corrOnly;			// only calculate corr functions
-extern int writeBPeak;			// write BroadPeak
+extern bool corrOnly;			// only calculate corr functions
+extern bool writeBPeak;			// write BroadPeak
+extern bool silent;				// inhibit stdout
 extern int writeDistCorr;		// write BroadPeak
-extern int maskZero;
 
 extern int outWIG;
 
@@ -175,10 +175,10 @@ extern int pcaFg;
 extern int nPca;
 extern int pcaSegment;	//segment length in profile scale
 extern double totCorr;
-extern int RScriptFg;
-extern int outSpectr;
+extern bool RScriptFg;
+extern bool outSpectr;
 extern int outRes;
-extern int outChrom;
+extern bool outChrom;
 extern int outThreshold;
 extern const char *errStatus;
 extern const char *debS;
@@ -186,6 +186,7 @@ extern int debugFg;
 extern double *xDat,*yDat,*xyCorr;  	//Woriking arrays
 
 extern int cage;
+extern bool clearProfile; //Force profile recalculation
 
 extern int scoreType;
 
@@ -252,15 +253,11 @@ struct IVSet{
 	int ivNo;
 	IVSet();
 	void addIv(int f, int t);
-//	void intersectWith(IVSet &mapIv);
 	int randPos();
 	void fin();
 	void clear();
 	void write(FILE*f);
 	void print(int f, int t);
-	void printLog(int f, int t);
-	void printLog();
-//	void mask(unsigned char *b, int l);
 };
 
 //===================================================================
@@ -294,7 +291,7 @@ struct bTrack{		        // Binary track
 			sd0,
 			nn;
 
-	int strandFg;
+	bool strandFg;
 	float scaleFactor;
 
 	int intervFlag;
@@ -404,6 +401,7 @@ public:
 
 struct Complex{
 	double re,im;
+	Complex(){re=0; im=0;}
 	double Mod();
 	Complex scalar(Complex otherC);
 };
@@ -593,6 +591,9 @@ char *skipSpace(char *s);		// skip space characters
 char *skipNoSpace(char *s);		// skip non-space characters
 char *strtoupper(char*s);		// convert string to upper-case
 int EmptyString(const char*buff);
+bool isInt(const char *s);
+bool isDouble(const char *s);
+bool isUInt(const char *s);
 //=============================== File names ===========================
 char *makeFileName(char *b, const char *path, const char*fname);	// make filename using path and name
 char *makeFileName(char *b, const char *path, const char*fname, const char*ext);	// make filename using path, name and extension
@@ -610,12 +611,19 @@ const char *getExt(const char *fname);					// extract file extension
 char *getFnameWithoutExt(char *buf, char *fname);
 int   getTrackType(const char *fname);
 unsigned long getFileTime(const char *fname);
+void flockFile(FILE *f);
+void funlockFile(FILE *f);
+void addFile(const char* fname);
+
+
 
 //============================================== read config file
-void readArg(char *b);
-void readArgs(int argc, const char *argv[]);
-void readCfg(int argc, const char *argv[]);
-void readCfg(char *cfg);
+char *trim(char *s);
+//void readArg(char *b);
+//int readArg(char *s1, char *s2, int check);
+//void readArgs(int argc, const char *argv[]);
+//void readCfg(int argc, const char *argv[]);
+//void readCfg(char *cfg);
 int  keyCmp(const char *str, const char *key);
 int  getFlag(char*s);
 const char*getKernelType();
@@ -664,7 +672,8 @@ void *xmalloc(size_t n, const char * err);
 void errorExit(const char *format, ...);
 void writeLog(const char *format, ...);
 void verb(const char *format, ...);
-
+void xverb(const char *format, ...);
+void helpPage();
 //======================== Mapping
 void mapIntervals();
 void fillMap();

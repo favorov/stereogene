@@ -580,8 +580,7 @@ float* tmpProf;
 
 void Term::make(){
 	tmpBTrack.name=fname;
-	if(!tmpBTrack.check(fname))
-		tmpBTrack.makeBinTrack();
+	if(!tmpBTrack.check(fname))	tmpBTrack.makeBinTrack();
 }
 
 void Term::add(){

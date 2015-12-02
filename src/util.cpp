@@ -10,12 +10,14 @@
 #include <stdarg.h>
 #include <sys/stat.h>
 #include <unistd.h>
+
+#include <sys/file.h>
 //#include <dir.h>
 
-const char* version="1.57";
+const char* version="1.58";
 
-//int debugFg=0;
-int debugFg=DEBUG_LOG|DEBUG_PRINT;
+int debugFg=0;
+//int debugFg=DEBUG_LOG|DEBUG_PRINT;
 
 const char *debS=0;
 
@@ -23,7 +25,7 @@ Chromosome *chrom_list;       // list of chromosomes
 Chromosome *curChrom=chrom_list;
 int  stepSize=100;   // frame size fo profile
 int  intervFlag0=GENE;   // Flag: for bed tracks uncovered values=0 otherwise uncovered values=NA
-int  NAFlag=0;
+bool  NAFlag=0;
 
 long long GenomeLength=0;      // TOTAL LENGTH OF THE GENOME
 int n_chrom;
@@ -45,13 +47,15 @@ char *mapFil=0;			// map file
 char *inputProfiles=0;
 char *outTrackFile=0; // Filename for write out track
 
-int  verbose=0;
-int  strandFg0=1;
-int  writeDistr=1;
-int  writeBPeak=0;
+bool  verbose=0;
+bool  silent=0;				// inhibit stdout
+
+bool  strandFg0=1;
+bool  writeDistr=1;
+bool  writeBPeak=0;
 int  writeDistCorr=TOTAL;		    // write BroadPeak
-int  outSpectr=0;
-int  outChrom=0;
+bool  outSpectr=0;
+bool  outChrom=0;
 int  outRes=XML|TAB;
 
 
@@ -68,14 +72,14 @@ int   logScale=AUTO_SCALE;
 char *pcorProfile=0;    // partial correlation profile file name
 
 int kernelType=KERN_NORM;
-float noiseLevel=0.5;
+double noiseLevel=0.5;
 int wSize=100000;        // size of widow (nucleotides)
 int wStep=0;             // window step   (nucleotides)
 int flankSize=500;
 double kernelSigma=1000.;    // kernel width (nucleotides)
 double kernelShift=0;      	    // Kernel mean (for Gauss) or Kernel start for exponent
 int intervFg0;
-float scaleFactor0=0.2;
+double scaleFactor0=0.2;
 int outWIG=NONE;
 int outThreshold=1;
 
@@ -90,10 +94,10 @@ double kernelProfShift;
 double kernelNS;			// Correction for non-specifisity
 bTrack bTrack1, bTrack2, projTrack, mapTrack;
 Kernel *kern;
-float maxNA0=50;
-float maxZero0=80;
-float maxNA;
-float maxZero;
+double maxNA0=50;
+double maxZero0=80;
+double maxNA;
+double maxZero;
 int nShuffle=100;
 int maxShuffle=20000;
 double pVal=2;
@@ -108,7 +112,7 @@ FILE *logFile=0;
 int genFg=0;			// generate data
 int lAuto=0;
 int corrScale=10;
-int corrOnly=0;
+bool corrOnly=0;
 double prod11=0,prod12=0,prod22=0,sprod11=0, sprod12=0,sprod22=0;
 Correlation correlation;		// array for correlation picture
 Correlation bgcorrelation;		// array for correlation picture
@@ -120,11 +124,11 @@ int nPca=100000;
 int pcaSegment=100;
 double totCorr=0;
 unsigned long id;
-int RScriptFg=0;
+bool RScriptFg=0;
 int bpType=BP_SIGNAL;
 int cage=0;
+bool clearProfile=false;
 int scoreType=AV_SCORE;
-int maskZero=0;
 AliaseTable alTable;
 FileListEntry files[256];
 int   nfiles;
@@ -320,6 +324,28 @@ int EmptyString(const char*buff){
 	return 1;
 }
 
+//==============================================================================
+bool isUInt(const char *s){
+	for(;*s;s++) {
+		if(!isdigit(*s)) return false;
+	}
+	return true;
+}
+bool isInt(const char *s){
+	char *ss=skipSpace((char*)s);
+	if(*ss=='-' || *ss=='+') ss++;
+	return isUInt(ss);
+}
+bool isDouble(const char *s){
+	char b[256]; strcpy(b,s);
+	char *s0=strtok(b,"eE");
+	char *s1=strtok(0,"");
+	if(s1!=0 && strlen(s1)!=0 && !isInt(s1)) return false;
+	s0=strtok(s0,"."); s1=strtok(0,".");
+	if(!isInt(s0)) return false;
+	if(s1!=0 && strlen(s1)!=0 && !isUInt(s1)) return false;
+	return true;
+}
 
 // extract attribute value by attr name
 char * getAttr(char *s0, const char *name, char *buf){
@@ -354,9 +380,11 @@ void errorExit(const char *format, va_list args){
 	    else fprintf(stderr, "\n");
 		if(logFileName) {
 			FILE *f=gopen(logFileName,"at");
+			flockFile(f);
 			vfprintf(f,format,args);
 		    if(errStatus) fprintf(f, "%s\n", errStatus);
 		    else fprintf(f, "\n");
+		    funlockFile(f);
 			fclose(f);
 		}
 	}
@@ -372,8 +400,10 @@ void errorExit(const char *format, ...){
 void writeLog(const char *format, va_list args){
 	if(logFileName) {
 		FILE *f=gopen(logFileName,"at");
+		flockFile(f);
 		fprintf(f,"#%8lx-> ",id);
 		vfprintf(f,format,args);
+		funlockFile(f);
 		fclose(f);
 	}
 }
@@ -393,6 +423,18 @@ void verb(const char *format, ...){
 	va_list args;
 	va_start(args, format);
 	verb_(format, args);
+	va_end(args);
+	fflush(stdout);
+}
+void xverb_(const char *format, va_list args){
+	if(!silent){
+		vprintf(format,args);
+	}
+}
+void xverb(const char *format, ...){
+	va_list args;
+	va_start(args, format);
+	xverb_(format, args);
 	va_end(args);
 	fflush(stdout);
 }
@@ -753,19 +795,30 @@ char *makeFileName(char *b, const char *path, const char*fname, const char*ext){
 	return strcat(strcat(b,"."),ext);
 }
 
+int _makeDir(const char * path){
+
+#if defined(_WIN32)
+	return _mkdir(path);
+#else
+	mode_t mode=S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH;
+	return mkdir(path, mode); // notice that 777 is different than 0777
+#endif
+
+
+}
 void makeDir(const char *path){
 	char b[2048];
 	parseTilda(b,path);
 	char *s=b+strlen(b)-1;
-		mode_t mode=S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH;
 	if(*s=='/') *s=0;
 	for(char *s=b; (s=strchr(s+1,'/'))!=0;){
-		*s=0; mkdir(b,mode); *s='/';
+		*s=0; _makeDir(b); *s='/';
 	}
-	mkdir(b,mode);
+	_makeDir(b);
 }
 //================== make path - add '/' if necessary
 char* makePath(char* pt){
+	if(pt==0) return pt;
 	char b[2048];
 	char *s=pt+strlen(pt)-1;
 	if(*s=='/') *s=0;
@@ -777,6 +830,22 @@ char * cfgName(char* p, char* ext){
 	FileName fn(p);	fn.ext=ext;
 	return fn.fname();
 }
+void flockFile(FILE *f){
+#if defined(_WIN32)
+	return;
+#else
+	flockfile(f);
+#endif
+}
+void funlockFile(FILE *f){
+#if defined(_WIN32)
+	return;
+#else
+	funlockfile(f);
+#endif
+}
+
+
 //=================== Check if given file exists
 bool fileExists(const char *fname){
 	bool fg=false;						// The file do not exist. The header should be writen.
@@ -882,25 +951,25 @@ char *getFnameWithoutExt(char *buf, char *fname){
 
 //========================================================================================
 // search appropriate cfg file
-void readCfg(int argc, const char *argv[]) {
-	argv[0]=correctFname(argv[0]);
-	char *cfg=cfgName((char*)argv[0], (char*)"cfg");
-	readCfg(cfg);					// deafult cfg
-	char* cfg1=strrchr(cfg,'/');	// cfg in current directory
-	if(cfg1 !=0) readCfg(cfg1+1);
-	for(int i=0; i<argc; i++){
-		if(strncmp(argv[i],"cfg=",4)==0) {
-			verb("read cfg <%s>\n",cfg);
-			readCfg((char*)(argv[i]+4));
-		}
-	}
-}
+//void readCfg(int argc, const char *argv[]) {
+//	argv[0]=correctFname(argv[0]);
+//	char *cfg=cfgName((char*)argv[0], (char*)"cfg");
+//	readCfg(cfg);					// deafult cfg
+//	char* cfg1=strrchr(cfg,'/');	// cfg in current directory
+//	if(cfg1 !=0) readCfg(cfg1+1);
+//	for(int i=0; i<argc; i++){
+//		if(strncmp(argv[i],"cfg=",4)==0) {
+//			verb("read cfg <%s>\n",cfg);
+//			readCfg((char*)(argv[i]+4));
+//		}
+//	}
+//}
 
 int getFlag(char*s){
 	int fg=0;
-	if(*s=='1') {fg=1;}
-	else if(*s=='0') {fg=0;}
-	else if(keyCmp(s,"YES")==0 || keyCmp(s,"ON")==0) {fg=1;}
+	if(		keyCmp(s,"1")==0 || keyCmp(s,"YES")==0 || keyCmp(s,"ON" )==0) {fg=1;}
+	else if(keyCmp(s,"0")==0 || keyCmp(s,"NO")==0  || keyCmp(s,"OFF")==0) {fg=0;}
+	else fg=-1;
 	return fg;
 }
 
@@ -933,11 +1002,6 @@ const char*getKernelType(){
 	}
 	else return type;
 
-}
-const char*getPC(){
-	if(pcorProfile != 0) return "_PC";
-
-	return "";
 }
 
 int   fileId=0;
@@ -973,48 +1037,54 @@ void addFile(const char* fname){
 	}
 }
 
-void readArgs(int argc, const char *argv[]){
-	char b[1024];
-	profile1=profile2=0;
-	//===================================================================== read config
-	argv[0]=correctFname(argv[0]);
-
-	readCfg(argc,argv);
-
-	//===================================================================== parse arguments
-	outFile=0;
-	for(int i=1; i<argc; i++){
-	//======================================================== args without keys
-		if(keyCmp(argv[i],"-v"   )==0) {verbose 	=1; 	continue;}
-		else if(keyCmp(argv[i],"-gene")==0) {intervFlag0 	=GENE; 	continue;}
-		else if(keyCmp(argv[i],"-exon")==0) {intervFlag0 	=EXON; 	continue;}
-		else if(keyCmp(argv[i],"-ivs" )==0) {intervFlag0 	=IVS; 	continue;}
-		else if(keyCmp(argv[i],"-gene_beg")==0) {intervFlag0 	=GENE_BEG; 	continue;}
-		else if(keyCmp(argv[i],"-exon_beg")==0) {intervFlag0 	=EXON_BEG; 	continue;}
-		else if(keyCmp(argv[i],"-ivs_beg" )==0) {intervFlag0 	=IVS_BEG; 	continue;}
-		else if(keyCmp(argv[i],"-gene_end")==0) {intervFlag0 	=GENE_END; 	continue;}
-		else if(keyCmp(argv[i],"-exon_end")==0) {intervFlag0 	=EXON_END; 	continue;}
-		else if(keyCmp(argv[i],"-ivs_end" )==0) {intervFlag0 	=IVS_END; 	continue;}
-
-		else if(keyCmp(argv[i],"-pca" )==0) {pcaFg 		=1; 	continue;}
-
-		else if(keyCmp(argv[i],"-na"  )==0) {NAFlag 		=1; 	continue;}
-
-		else if(keyCmp(argv[i],"-strand")==0) {strandFg0	=1; 	continue;}
-		else if(keyCmp(argv[i],"-rnd"   )==0) {genFg		=1; 	continue;}
-		else if(keyCmp(argv[i],"-corr"  )==0) {corrOnly	=1; 	continue;}
-		else if(keyCmp(argv[i],"-r"     )==0) {RScriptFg	=1; 	continue;}
-
-		else if(strchr(argv[i],'=')==0 && *argv[i]!='-'){	// this is a filename
-			addFile(argv[i]);
-			continue;
-		}
-		else{
-			strcpy(b,argv[i]);	// read attribute
-			readArg(b);
-		}
-	}
-}
+//void readArgs(int argc, const char *argv[]){
+//	char b[1024];
+//	//===================================================================== read config
+//	argv[0]=correctFname(argv[0]);
+//
+////	readCfg(argc,argv);
+//
+//	//===================================================================== parse arguments
+////	outFile=0;
+//	for(int i=1; i<argc; i++){
+//	//======================================================== args without keys
+//		if(keyCmp(argv[i],"-v"   )==0) {verbose 	=1; 	continue;}
+//		else if(keyCmp(argv[i],"-gene")==0) {intervFlag0 	=GENE; 	continue;}
+//		else if(keyCmp(argv[i],"-exon")==0) {intervFlag0 	=EXON; 	continue;}
+//		else if(keyCmp(argv[i],"-ivs" )==0) {intervFlag0 	=IVS; 	continue;}
+//		else if(keyCmp(argv[i],"-gene_beg")==0) {intervFlag0 	=GENE_BEG; 	continue;}
+//		else if(keyCmp(argv[i],"-exon_beg")==0) {intervFlag0 	=EXON_BEG; 	continue;}
+//		else if(keyCmp(argv[i],"-ivs_beg" )==0) {intervFlag0 	=IVS_BEG; 	continue;}
+//		else if(keyCmp(argv[i],"-gene_end")==0) {intervFlag0 	=GENE_END; 	continue;}
+//		else if(keyCmp(argv[i],"-exon_end")==0) {intervFlag0 	=EXON_END; 	continue;}
+//		else if(keyCmp(argv[i],"-ivs_end" )==0) {intervFlag0 	=IVS_END; 	continue;}
+//
+//		else if(keyCmp(argv[i],"-pca" )==0) {pcaFg 		=1; 	continue;}
+//
+//		else if(keyCmp(argv[i],"-na"  )==0) {NAFlag 		=1; 	continue;}
+//
+//		else if(keyCmp(argv[i],"-strand")==0) {strandFg0	=1; 	continue;}
+//		else if(keyCmp(argv[i],"-corr"  )==0) {corrOnly	=1; 	continue;}
+//		else if(keyCmp(argv[i],"-r"     )==0) {RScriptFg	=1; 	continue;}
+//		else if(keyCmp(argv[i],"-clear" )==0) {clearProfile=1; 	continue;}
+//
+//		else if(strchr(argv[i],'=')==0 && *argv[i]!='-'){	// this is a filename
+//			addFile(argv[i]);
+//			continue;
+//		}
+//		else if(*argv[i]=='-'){
+//			strcpy(b,argv[i]+1);
+//			if(readArg(b,b,1) <0) errorExit("Unknown parameter %s",argv[i]);
+//			char bb[1024];
+//			strcpy(bb,argv[i+1]);
+//			readArg(b, bb,0); i++;
+//		}
+//		else{
+//			strcpy(b,argv[i]);	// read attribute
+//			readArg(b);
+//		}
+//	}
+//}
 
 char *trim(char *s){
 	s=skipSpace(s);
@@ -1027,151 +1097,234 @@ char *trim(char *s){
 	return s;
 }
 
+//void readArg(char *b){
+//	strtok(b,"#");
+//	char *s1=strtok(b,"=");
+//	char *s2=strtok(0,"=");
+//	if(s2!=0) s2=trim(s2);
+//	s1=trim(s1);
+//	s2=trim(s2);
+//	int c=readArg(s1, s2,0);
+//	if(c < 0) writeLog("Unknown parameter <%s>\n",b);
+//}
 // read given cfg file
-void readArg(char *b){
-	strtok(b,"#");
+//int readArg(char *s1, char *s2, int check){
+//	if(s2!=0) s2=skipSpace(s2);
+//
+//	if(*s1=='#') return 0;
+//	//================================================== Common parameters
+//	if(keyCmp(s1,"chrom")==0) chromFile=strdup(s2);
+//	else if(keyCmp(s1,"verbose")==0)    verbose=getFlag(s2);
+//	//================================================== Preparator parameters
+//	else if(keyCmp(s1,"intervals")==0) {if(check) return 1;
+//		if(keyCmp(s2,"NONE"   )==0) intervFlag0=NONE;
+//		if(keyCmp(s2,"GENE"   )==0) intervFlag0=GENE;
+//		if(keyCmp(s2,"EXON"   )==0) intervFlag0=EXON;
+//		if(keyCmp(s2,"IVS"    )==0) intervFlag0=IVS;
+//
+//		if(keyCmp(s2,"GENE_BEG"   )==0) intervFlag0=GENE_BEG;
+//		if(keyCmp(s2,"EXON_BEG"   )==0) intervFlag0=EXON_BEG;
+//		if(keyCmp(s2,"IVS_BEG"    )==0) intervFlag0=IVS_BEG;
+//
+//		if(keyCmp(s2,"GENE_END"   )==0) intervFlag0=GENE_END;
+//		if(keyCmp(s2,"EXON_END"   )==0) intervFlag0=EXON_END;
+//		if(keyCmp(s2,"IVS_END"    )==0) intervFlag0=IVS_END;
+//	}
+//	else if(keyCmp(s1,"NA"     )==0){if(check) return 1;
+//		NAFlag   =getFlag(s2);
+//	}
+//	else if(keyCmp(s1,"corrOnly")==0){if(check) return 1;
+//		corrOnly=getFlag(s2);
+//	}
+//	else if(keyCmp(s1,"step"   )==0){if(check) return 1;
+//		stepSize =atoi(s2);
+//	}
+//	else if(keyCmp(s1,"strand" )==0){if(check) return 1;
+//		strandFg0 =atoi(s2);
+//	}
+//	else if(keyCmp(s1,"scale")==0) {if(check) return 1;
+//		if(keyCmp(s2,"LOG"    )==0) logScale=LOG_SCALE;
+//		if(keyCmp(s2,"LIN"    )==0) logScale=LIN_SCALE;
+//		if(keyCmp(s2,"AUTO"   )==0) logScale=AUTO_SCALE;
+//	}
+//	else if(keyCmp(s1,"scaleFactor" )==0){if(check) return 1;
+//		scaleFactor0 =atof(s2);
+//	}
+//	else if(keyCmp(s1,"lAuto"      )==0){if(check) return 1;
+//		lAuto =2*atoi(s2);
+//	}
+//	else if(keyCmp(s1,"bpType")==0) {if(check) return 1;
+//		if(keyCmp(s2,"SCORE"  )==0) bpType=BP_SCORE;
+//		if(keyCmp(s2,"SIGNAL" )==0) bpType=BP_SIGNAL;
+//		if(keyCmp(s2,"LOGPVAL")==0) bpType=BP_LOGPVAL;
+//	}
+//
+//	//================================================== Fouriertor-correlator parameters
+//	else if(keyCmp(s1,"pcorProfile")==0) {if(check) return 1;
+//		pcorProfile = strdup(s2);
+//	}
+//	else if(keyCmp(s1,"clear")==0) {if(check) return 1;
+//		clearProfile = getFlag(s2);
+//	}
+//	else if(keyCmp(s1,"wSize"      )==0){if(check) return 1;
+//		wSize =atoi(s2);
+//	}
+//	else if(keyCmp(s1,"wStep"      )==0){if(check) return 1;
+//		wStep =atoi(s2);
+//	}
+//	else if(keyCmp(s1,"kernelSigma")==0){if(check) return 1;
+//		kernelSigma =atoi(s2);     // Kernel width
+//	}
+//	else if(keyCmp(s1,"kernelShift")==0){if(check) return 1;
+//		kernelShift =atof(s2);   	// Kernel shift
+//	}
+//	else if(keyCmp(s1,"kernelNS"   )==0){if(check) return 1;
+//		kernelNS    =atof(s2)/100;   	// Kernel non-specif correction
+//	}
+//	else if(keyCmp(s1,"flankSize"  )==0){if(check) return 1;
+//		flankSize =atoi(s2);
+//	}
+//	else if(keyCmp(s1,"maxNA"      )==0){if(check) return 1;
+//		maxNA0   =atof(s2);
+//	}
+//	else if(keyCmp(s1,"maxZero"    )==0){if(check) return 1;
+//		maxZero0 =atof(s2);
+//	}
+//	else if(keyCmp(s1,"nShuffle"   )==0){if(check) return 1;
+//		nShuffle =atoi(s2);
+//	}
+//	else if(keyCmp(s1,"MaxShuffle" )==0){if(check) return 1;
+//		maxShuffle =atoi(s2);
+//	}
+//	else if(keyCmp(s1,"noiseLevel" )==0){if(check) return 1;
+//		noiseLevel =atof(s2);
+//	}
+//	else if(keyCmp(s1,"pVal"       )==0){if(check) return 1;
+//		pVal 		=atof(s2);
+//	}
+//	else if(keyCmp(s1,"qVal"       )==0){if(check) return 1;
+//		qVal		=atof(s2);
+//	}
+//	else if(keyCmp(s1,"kernelType" )==0){if(check) return 1;
+//		if(keyCmp(s2,"NORMAL"      )==0) kernelType=KERN_NORM;
+//		if(keyCmp(s2,"LEFT_EXP"    )==0) kernelType=KERN_LEFT_EXP;
+//		if(keyCmp(s2,"RIGHT_EXP"   )==0) kernelType=KERN_RIGHT_EXP;
+//	}
+//	else if(keyCmp(s1,"complFg"    )==0){if(check) return 1;
+//		if(keyCmp(s2,"IGNORE_STRAND")==0) complFg=IGNORE_STRAND;	//ignore strand
+//		if(keyCmp(s2,"COLLINEAR"    )==0) complFg=COLLINEAR;			//compare colLinear strands
+//		if(keyCmp(s2,"COMPLEMENT"   )==0) complFg=COMPLEMENT;		//compare complement strands
+//	}
+//	else if(keyCmp(s1,"mapIv")==0) 	{if(check) return 1;
+//		miv.read(s2);
+//	}
+//	else if(keyCmp(s1,"threshold")==0){if(check) return 1;
+//		threshold=atoi(s2);
+//	}
+//	//===================================== output
+//	else if(keyCmp(s1,"outDistr" )==0) {if(check) return 1;
+//		writeDistr=getFlag(s2);
+//	}
+//	else if(keyCmp(s1,"outWig")==0) {if(check) return 1;				// write correlation to wig-file
+//		if(keyCmp(s2,"NONE"  )==0) outWIG=NONE;		//no wig output
+//		// correlation is ( f*\int g\rho + g*\int f\rho )
+//		if(keyCmp(s2,"BASE"  )==0) outWIG=WIG_BASE|WIG_SUM;		//correlation without substract average
+//		if(keyCmp(s2,"CENTER")==0) outWIG=WIG_CENTER|WIG_SUM;	//substract average
+//		// correlation is ( \int g\rho * \int f\rho )
+//		if(keyCmp(s2,"BASE_MULT"  )==0) outWIG=WIG_BASE|WIG_MULT;	//correlation without substract average
+//		if(keyCmp(s2,"CENTER_MULT")==0) outWIG=WIG_CENTER|WIG_MULT;	//substract average
+//	}
+//	else if(keyCmp(s1,"outThreshold")==0){if(check) return 1;
+//		outThreshold=atoi(s2);
+//	}
+//
+//	else if(keyCmp(s1,"outBPeak")==0){if(check) return 1;
+//		writeBPeak=getFlag(s2);	//write correlation to wig-file
+//	}
+//	else if(keyCmp(s1,"Distances")==0){if(check) return 1;  	//write distance correlations
+//		if(keyCmp(s2,"TOTAL" )==0) writeDistCorr=TOTAL;			//Write total distance distribution
+//		if(keyCmp(s2,"DETAIL")==0) writeDistCorr=CHR_DETAIL;	//Write distance distribution by chromosomes
+//		if(keyCmp(s2,"NONE"  )==0) writeDistCorr=NONE;			//Do not write distance correlations
+//	}
+//	else if(keyCmp(s1,"Rscrpit")==0){if(check) return 1;
+//		RScriptFg=getFlag(s2);
+//	}
+//	else if(keyCmp(s1,"outSpectr")==0){if(check) return 1;
+//		outSpectr=getFlag(s2);
+//	}
+//	else if(keyCmp(s1,"outChrom")==0){if(check) return 1;
+//		outChrom=getFlag(s2);
+//	}
+//	else if(keyCmp(s1,"outRes")==0)     {if(check) return 1;
+//		if(keyCmp(s2,"NONE")==0) outRes=NONE;		//Do not write distance correlations
+//		if(keyCmp(s2,"XML" )==0) outRes=XML;		//Write distance distribution by chromosomes in XML format
+//		if(keyCmp(s2,"TAB" )==0) outRes=TAB;		//Write distance distribution by chromosomes in table format
+//		if(keyCmp(s2,"BOTH")==0) outRes=XML|TAB;	//Write distance distribution by chromosomes in XML and table format
+//	}
+//
+//	//====================================== Paths and files
+//	else if(keyCmp(s1,"profPath" )==0){if(check) return 1;
+//		profPath=makePath(s2);
+//	}
+//	else if(keyCmp(s1,"trackPath")==0){if(check) return 1;
+//		trackPath=makePath(s2);
+//	}
+//	else if(keyCmp(s1,"resPath"  )==0){if(check) return 1;
+//		resPath=makePath(s2);
+//	}
+//
+//	else if(keyCmp(s1,"map" )==0) {if(check) return 1;
+//		mapFil   = strdup(s2);
+//	}
+//	else if(keyCmp(s1,"statistics")==0){if(check) return 1;
+//		statFileName=strdup(s2);
+//	}
+//	else if(keyCmp(s1,"params")==0){if(check) return 1;
+//		paramsFileName=strdup(s2);
+//	}
+//
+//	else if(keyCmp(s1,"aliases")==0){if(check) return 1;
+//		aliaseFil=strdup(s2);
+//	}
+//	else if(keyCmp(s1,"log" )==0) {if(check) return 1;
+//		logFileName=strdup(s2);
+//	}
+//
+//	//========================================= pca mode
+//	else if(keyCmp(s1,"pcaSegment")==0){if(check) return 1;
+//		pcaSegment=atoi(s2);
+//	}
+//	else if(keyCmp(s1,"nPca")==0){if(check) return 1;
+//		nPca=atoi(s2);
+//	}
+//
+//	else if(keyCmp(s1,"cage")==0){if(check) return 1;
+//		cage=atoi(s2);
+//	}
+//
+//	else if(keyCmp(s1,"cfg"    )==0){if(check) return 1;
+//		readCfg(s2);}
+//	else{
+//		return -1;
+//	}
+//
+//	if(threshold < 1) threshold=1;
+//	return 1;
+//}
 
-	char *s1=strtok(b,"=");
-	char *s2=strtok(0,"=");
-	if(s2!=0) s2=skipSpace(s2);
-
-	if(*s1=='#') return;
-	s1=trim(s1);
-	s2=trim(s2);
-	//================================================== Common parameters
-	if(keyCmp(s1,"chrom")==0) chromFile=strdup(s2);
-	else if(keyCmp(s1,"verbose")==0)    verbose=getFlag(s2);
-	//================================================== Preparator parameters
-	else if(keyCmp(s1,"intervals")==0) {
-		if(keyCmp(s2,"NONE"   )==0) intervFlag0=NONE;
-		if(keyCmp(s2,"GENE"   )==0) intervFlag0=GENE;
-		if(keyCmp(s2,"EXON"   )==0) intervFlag0=EXON;
-		if(keyCmp(s2,"IVS"    )==0) intervFlag0=IVS;
-
-		if(keyCmp(s2,"GENE_BEG"   )==0) intervFlag0=GENE_BEG;
-		if(keyCmp(s2,"EXON_BEG"   )==0) intervFlag0=EXON_BEG;
-		if(keyCmp(s2,"IVS_BEG"    )==0) intervFlag0=IVS_BEG;
-
-		if(keyCmp(s2,"GENE_END"   )==0) intervFlag0=GENE_END;
-		if(keyCmp(s2,"EXON_END"   )==0) intervFlag0=EXON_END;
-		if(keyCmp(s2,"IVS_END"    )==0) intervFlag0=IVS_END;
-	}
-	else if(keyCmp(s1,"NA"     )==0) NAFlag   =getFlag(s2);
-	else if(keyCmp(s1,"corrOnly")==0) corrOnly=getFlag(s2);
-	else if(keyCmp(s1,"step"   )==0) stepSize =atoi(s2);
-	else if(keyCmp(s1,"strand" )==0) strandFg0 =atoi(s2);
-	else if(keyCmp(s1,"scale")==0) {
-		if(keyCmp(s2,"LOG"    )==0) logScale=LOG_SCALE;
-		if(keyCmp(s2,"LIN"    )==0) logScale=LIN_SCALE;
-		if(keyCmp(s2,"AUTO"   )==0) logScale=AUTO_SCALE;
-	}
-	else if(keyCmp(s1,"scaleFactor" )==0) scaleFactor0 =atof(s2);
-	else if(keyCmp(s1,"lAuto"      )==0) lAuto =2*atoi(s2);
-	else if(keyCmp(s1,"bpType")==0) {
-		if(keyCmp(s2,"SCORE"  )==0) bpType=BP_SCORE;
-		if(keyCmp(s2,"SIGNAL" )==0) bpType=BP_SIGNAL;
-		if(keyCmp(s2,"LOGPVAL")==0) bpType=BP_LOGPVAL;
-	}
-
-	//================================================== Furiertor parameters
-	else if(keyCmp(s1,"pcorProfile")==0) pcorProfile = strdup(s2);
-	else if(keyCmp(s1,"wSize"      )==0) wSize =atoi(s2);
-	else if(keyCmp(s1,"wStep"      )==0) wStep =atoi(s2);
-	else if(keyCmp(s1,"kernelSigma")==0) kernelSigma =atoi(s2);     // Kernel width
-	else if(keyCmp(s1,"kernelShift")==0) kernelShift =atof(s2);   	// Kernel shift
-	else if(keyCmp(s1,"kernelNS"   )==0) kernelNS    =atof(s2)/100;   	// Kernel non-specif correction
-	else if(keyCmp(s1,"flankSize"  )==0) flankSize =atoi(s2);
-	else if(keyCmp(s1,"maxNA"      )==0) maxNA0   =atof(s2);
-	else if(keyCmp(s1,"maxZero"    )==0) maxZero0 =atof(s2);
-	else if(keyCmp(s1,"nShuffle"   )==0) nShuffle =atoi(s2);
-	else if(keyCmp(s1,"MaxShuffle" )==0) maxShuffle =atoi(s2);
-	else if(keyCmp(s1,"noiseLevel" )==0) noiseLevel =atof(s2);
-	else if(keyCmp(s1,"pVal"       )==0) pVal 		=atof(s2);
-	else if(keyCmp(s1,"qVal"       )==0) qVal		=atof(s2);
-	else if(keyCmp(s1,"kernelType" )==0){
-		if(keyCmp(s2,"NORMAL"      )==0) kernelType=KERN_NORM;
-		if(keyCmp(s2,"LEFT_EXP"    )==0) kernelType=KERN_LEFT_EXP;
-		if(keyCmp(s2,"RIGHT_EXP"   )==0) kernelType=KERN_RIGHT_EXP;
-	}
-	else if(keyCmp(s1,"complFg"    )==0){
-		if(keyCmp(s2,"IGNORE_STRAND")==0) complFg=IGNORE_STRAND;	//ignore strand
-		if(keyCmp(s2,"COLLINEAR"     )==0) complFg=COLLINEAR;			//compare colLinear strands
-		if(keyCmp(s2,"COMPLEMENT"   )==0) complFg=COMPLEMENT;		//compare complement strands
-	}
-	else if(keyCmp(s1,"mapIv")==0) 		miv.read(s2);
-	else if(keyCmp(s1,"threshold")==0) 	threshold=atoi(s2);
-	//===================================== output
-	else if(keyCmp(s1,"outDistr" )==0) writeDistr=getFlag(s2);
-	else if(keyCmp(s1,"outWig")==0) {				// write correlation to wig-file
-		if(keyCmp(s2,"NONE"  )==0) outWIG=NONE;		//no wig output
-		// correlation is ( f*\int g\rho + g*\int f\rho )
-		if(keyCmp(s2,"BASE"  )==0) outWIG=WIG_BASE|WIG_SUM;		//correlation without substract average
-		if(keyCmp(s2,"CENTER")==0) outWIG=WIG_CENTER|WIG_SUM;	//substract average
-		// correlation is ( \int g\rho * \int f\rho )
-		if(keyCmp(s2,"BASE_MULT"  )==0) outWIG=WIG_BASE|WIG_MULT;	//correlation without substract average
-		if(keyCmp(s2,"CENTER_MULT")==0) outWIG=WIG_CENTER|WIG_MULT;	//substract average
-	}
-	else if(keyCmp(s1,"outThreshold" )==0) outThreshold=atoi(s2);
-	else if(keyCmp(s1,"maskZero"    )==0) {maskZero=getFlag(s2);}
-
-	else if(keyCmp(s1,"outBPeak")==0)  writeBPeak=getFlag(s2);	//write correlation to wig-file
-	else if(keyCmp(s1,"Distances")==0){							//write distance correlations
-		if(keyCmp(s2,"TOTAL" )==0) writeDistCorr=TOTAL;			//Write total distance distribution
-		if(keyCmp(s2,"DETAIL")==0) writeDistCorr=CHR_DETAIL;	//Write distance distribution by chromosomes
-		if(keyCmp(s2,"NONE"  )==0) writeDistCorr=NONE;			//Do not write distance correlations
-	}
-	else if(keyCmp(s1,"Rscrpit")==0) 	RScriptFg=getFlag(s2);
-	else if(keyCmp(s1,"outSpectr")==0) 	outSpectr=getFlag(s2);
-	else if(keyCmp(s1,"outChrom")==0)   outChrom=getFlag(s2);
-	else if(keyCmp(s1,"outRes")==0)     {
-		if(keyCmp(s2,"NONE")==0) outRes=NONE;		//Do not write distance correlations
-		if(keyCmp(s2,"XML" )==0) outRes=XML;		//Write distance distribution by chromosomes in XML format
-		if(keyCmp(s2,"TAB" )==0) outRes=TAB;		//Write distance distribution by chromosomes in table format
-		if(keyCmp(s2,"BOTH")==0) outRes=XML|TAB;	//Write distance distribution by chromosomes in XML and table format
-	}
-
-	//====================================== Paths and files
-	else if(keyCmp(s1,"profPath" )==0) 		profPath=makePath(s2);
-	else if(keyCmp(s1,"trackPath")==0) 		trackPath=makePath(s2);
-	else if(keyCmp(s1,"resPath"  )==0) 		resPath=makePath(s2);
-
-	else if(keyCmp(s1,"map" )==0) 		mapFil   = strdup(s2);
-	else if(keyCmp(s1,"out" )==0) 		outFile  = strdup(s2);
-	else if(keyCmp(s1,"statistics")==0) statFileName=strdup(s2);
-	else if(keyCmp(s1,"params")==0)     paramsFileName=strdup(s2);
-
-	else if(keyCmp(s1,"aliases")==0) 	aliaseFil=strdup(s2);
-	else if(keyCmp(s1,"log" )==0) 		logFileName=strdup(s2);
-
-	//========================================= pca mode
-	else if(keyCmp(s1,"pcaSegment")==0) pcaSegment=atoi(s2);
-	else if(keyCmp(s1,"nPca")==0) 		nPca=atoi(s2);
-
-	else if(keyCmp(s1,"cage")==0) 	    cage=atoi(s2);
-
-	else if(keyCmp(s1,"cfg"    )==0) 	    {;}
-	else{
-		printf("==== WARNING!! ==== Unknown parameter <%s>\n",b);
-	}
-
-
-	if(threshold < 1) threshold=1;
-}
-
-void readCfg(char *cfg){
-	FILE *f=gopen(cfg,"rt");
-
-	if(f==0) return;
-	char b[1024], *s;
-	for(;(s=fgets(b,sizeof(b),f))!=0;){
-		strtok(b,"\r\n");
-		char *s=skipSpace(b);
-		if(*s==0) continue;
-		readArg(s);
-	}
-
-	fclose(f);
-}
+//void readCfg(char *cfg){
+//	FILE *f=gopen(cfg,"rt");
+//
+//	if(f==0) return;
+//	char b[1024], *s;
+//	for(;(s=fgets(b,sizeof(b),f))!=0;){
+//		strtok(b,"\r\n");
+//		char *s=skipSpace(b);
+//		if(*s==0) continue;
+//		readArg(s);
+//	}
+//	fclose(f);
+//}
 
 unsigned int hashx(unsigned int h,char c){
 	return h+(c-32)+1234567;
@@ -1229,54 +1382,49 @@ void makeDirs(){
 	else trackPath=strdup("./");
 }
 
-// for debugging :
-// set debugFg=DEBUG_LOG|DEBUG_PRINT
-// set debS string for module identification//
-// Use:  deb(n);  // print debug information as number
-//       deb(format,...)    // print debug information as printf
-//       deb(n,format,...)  // print debug information as a number and printf
-// example:
-// debS="fun1";
-// deb(1);
-// ....
-// deb(2,"%i %f", n, d);
-// ....
-// deb("OK");
 
-int main(int argc, const char *argv[]) {
-	clearDeb();
-	debugFg=DEBUG_LOG|DEBUG_PRINT;
-	unsigned long t=time(0);	id=t&0xffffff;	// define run id
-	readArgs( argc, argv);
-	if(wStep==0)   wStep=wSize;
-	if(RScriptFg) {writeDistCorr|=TOTAL; writeDistr=1;}
-	if(complFg==0){
-		if(strandFg0) complFg=COLLINEAR;
-		else		  complFg=IGNORE_STRAND;
-	}
-	FileName fn((char*) argv[0]);
-	const char *progName=fn.name;
-
-	makeDirs();
-
-	verb("===== %s version %s =====\n",progName,version);
-	if(nfiles==0){
-		printf("\n");
-		printf("Program %s compares two track and calculates Kernel Correlation\n",progName);
-		printf("Usage:\n");
-		printf("$ ./%s [-parameters] trackFile_1 trackFile_2 ... trackFile_n\n",progName);
-		printf("\n");
-		exit(0);
-	}
-
-	if(aliaseFil!=0)  alTable.readTable(aliaseFil);		// read aliases
-	readChromSizes(chromFile);							// read chromosomes
-
-	if(cage) {CageMin(files[0].fname,files[1].fname); exit(0);}
-
-	if(pcaFg) pcaMain(profile1);
-
-	Correlator();
-
-	if(logFile) {fclose(logFile); logFile=0;}	// debug log file
-}
+//int main0(int argc, const char *argv[]) {
+////	clearDeb();
+////	debugFg=DEBUG_LOG|DEBUG_PRINT;
+//
+//	char *chrom=getenv("SG_CHROM");
+//	if(chrom!=0) chromFile=strdup(chrom);
+//
+//	unsigned long t=time(0);	id=t&0xffffff;	// define run id
+//	readArgs( argc, argv);
+//	if(wStep==0)   wStep=wSize;
+//	if(RScriptFg) {writeDistCorr|=TOTAL; writeDistr=1;}
+//	if(complFg==0){
+//		if(strandFg0) complFg=COLLINEAR;
+//		else		  complFg=IGNORE_STRAND;
+//	}
+//
+//
+//
+//	FileName fn((char*) argv[0]);
+//	const char *progName=fn.name;
+//
+//	makeDirs();
+//
+//	verb("===== %s version %s =====\n",progName,version);
+//	if(nfiles==0){
+//		printf("\n");
+//		printf("Program %s compares two track and calculates Kernel Correlation\n",progName);
+//		printf("Usage:\n");
+//		printf("$ ./%s [-parameters] trackFile_1 trackFile_2 ... trackFile_n\n",progName);
+//		printf("\n");
+//		exit(0);
+//	}
+//
+//	if(aliaseFil!=0)  alTable.readTable(aliaseFil);		// read aliases
+//	readChromSizes(chromFile);							// read chromosomes
+//
+//	if(cage) {CageMin(files[0].fname,files[1].fname); exit(0);}
+//
+//	if(pcaFg) pcaMain(profile1);
+//
+//	Correlator();
+//
+//	if(logFile) {fclose(logFile); logFile=0;}	// debug log file
+//	return 0;
+//}

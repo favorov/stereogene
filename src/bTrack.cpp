@@ -19,6 +19,10 @@ void failParam(const char* s){
 }
 
 bool bTrack::check(const char *fname){
+	if(clearProfile){
+		verb("forced profile recalculation");
+		return false;
+	}
 	char prmFile[4096], binFile[4096], b[4096];
 	makeFileName(prmFile,profPath, name, PRM_EXT);
 	makeFileName(binFile,profPath, name, BPROF_EXT);
@@ -89,7 +93,7 @@ void bTrack::read(const char *fname){
 	for(;*fname==DERIV; fname++) {
 		deriv++;
 	}
-	//todo  If this is BED and ivFlag defined then define extended filename
+//todo  If this is BED and ivFlag defined then define extended filename
 	name=strdup(fname);
 	char prmFile[4096], binFile[4096], b[4096];
 	makeFileName(prmFile,profPath, name, PRM_EXT);

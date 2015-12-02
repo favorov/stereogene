@@ -31,7 +31,7 @@
 ========== Version 1.48 ====================
 1. Fixed bug in trackPrepare (read wig-files). The previous versions write a parasite data to the profile. As result a periodic small peaks appears.
 ========== Version 1.50 ====================
-1. A new parameter introduced: kernelNS. This is percent for reducing kernel values in the interval [-15..+150]bp: newVal=oldVal*(1-kernelNS/100).
+1. A new parameter introduced: kernelNS. This is percent for reducing kernel values in the interval [-100..+100]bp: newVal=oldVal*(1-kernelNS/100).
 2. A new out-file statistics.xml.  
 ========== Version 1.51 ====================
 1. Fixed bug in local correlation wig-file 
@@ -52,5 +52,15 @@
 2. Program creates necessary directories
 3. Program parse tilda at the beginning of filename
 4. Program allows spaces in filenames / directory names  
+========== Version 1.58 ====================
+1. Program do not use default cfg file. If cfg file is used it should be defined explcitelly in command line: cgf=<fname>
+2. Progam can use two equivalent arguments notation: param=value and -param value
+3. File with Chromosomes can be defined in env variable SG_CHROM
+4. ErrorExit on unknown parameter or incorrect value
+5. new flag -clear. It forces profile recalculation.
+6. flag -h introduced. It shows a help page
+7. lock-unlock for cumulative files (not for windows)
+8. flag silent introduced. Even if 'verbose' is OFF the main results are printed to stdout. If silent is ON no output expected.
+9. New system of parameters parsing introduced (testing needed!)
 
 

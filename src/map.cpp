@@ -184,14 +184,5 @@ void IVSet::print(int f, int t){
 	for(int i=f; i<t && i<nIv; i++)
 		printf("$iv$ %i..%i\n",ivs[i]->f,ivs[i]->t);
 }
-void IVSet::printLog(){
-	for(int i=0; i<nIv; i++)
-		deb("$iv#%i$ %i..%i",i,ivs[i]->f,ivs[i]->t);
-}
-
-void IVSet::printLog(int f, int t){
-	for(int i=f; i<t && i<nIv; i++)
-		deb("$iv#%i$ %i..%i  %i",i,ivs[i]->f,ivs[i]->t,ivs[i]->cumLength);
-}
 
 

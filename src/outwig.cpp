@@ -41,40 +41,8 @@ void ScaledAray::init(){
 }
 
 
-//short ScaledAray::scale(double x){
-//	return scale(x,min,max);
-//}
-//short ScaledAray::scale(double x, double amin, double amax){
-//	short a=(short)(10000*(x-amin)/(amax-amin));
-//	return a;
-//}
-//double ScaledAray::unscale(short k){
-//	return k*(max-min)/10000.+min;
-//}
-//
-//void ScaledAray::rescale(double amin, double amax){
-//	if(amin > min) amin=min;
-//	if(amax < max) amax=max;
-//	if(amin != min || amax!=max){
-//deb("rescale: min=%.4f max=%.4f  curpos=%i ", amin, amax,curPos);
-//		for(int i=0; i<curPos; i++){
-////short z=array[i];
-//			double x=unscale(array[i]);
-//			array[i]=scale(x,amin,amax);
-////if(z!=0 && array[i]==0)
-////	deb("min=%.4f max=%.4f val=%.4f", amin, amax, x);
-//		}
-//	}
-//	min=amin; max=amax;
-//}
-
 void ScaledAray::addArray(double *f, int pos){
-//	double amin=1.e+128, amax=-1.e+128;
-//	for(int i=0; i<wProfSize; i++){
-//		if(amin > f[i]) amin=f[i];
-//		if(amax < f[i]) amax=f[i];
-//	}
-//	rescale(amin,amax);
+
 	for(int i=0, j=pos; i<wProfSize; i++,j++){
 		double x=f[i];
 		if(j<curPos){

@@ -25,7 +25,7 @@ vpath %.cpp $(srcdirlist)
 
 all: $(exename)$(EXEEXT) 
 
-OBJS= $(od)/FourierCorr.o \
+OBJS=$(od)/FourierCorr.o \
 	$(od)/bTrack.o \
 	$(od)/file_list.o \
 	$(od)/kernel.o \
@@ -36,7 +36,8 @@ OBJS= $(od)/FourierCorr.o \
 	$(od)/tests.o \
 	$(od)/trackPrepare.o \
 	$(od)/util.o \
-	$(od)/mixfft.o 
+	$(od)/mixfft.o \
+	$(od)/main.o
 
 objs:$(OBJS)
 
@@ -62,9 +63,9 @@ $(od)/outwig.o: outwig.cpp track_util.h
 $(od)/tests.o: tests.cpp track_util.h
 $(od)/trackPrepare.o: trackPrepare.cpp track_util.h
 $(od)/util.o: util.cpp track_util.h
-$(od)/MIXFFT.o: mixfft.c
+$(od)/mixfft.o: mixfft.c
+$(od)/main.o: main.cpp track_util.h
 
 clean:
 	rm -f $(OBJS)
 	rm -r -f *~
-

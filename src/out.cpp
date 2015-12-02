@@ -5,7 +5,9 @@
  *      Author: 1
  */
 #include "track_util.h"
+#include <sys/file.h>
 
+statTest *MannW;
 //================================================================= write results in ENCODE Broad Peak format
 void printCorrelations(){
 	verb("\nWrite correlations...\n");
@@ -23,11 +25,9 @@ void printCorrelations(){
 }
 
 void printChrDistances(char *fname){
-//	fname=(char*)"../files/res/chr";
 	FILE *f=xopen(fname,"wt");
 	bgcorrelation.norm();
 	correlation.norm();
-//	FILE *f=xopen("../files/res/chrom","wt");
 	fprintf(f,"x\tBkg\tFg\tFgPlus\tFgMinus");
 
 	if(writeDistCorr==CHR_DETAIL){
@@ -66,7 +66,6 @@ void printChrDistances(char *fname){
 
 void printChomosomes(char *fname){
 	FILE *f=xopen(fname,"wt");
-//	FILE *f=xopen("../files/res/chrom","wt");
 	fprintf(f,"%s\n%s\n",bTrack1.name, bTrack2.name);
 	fprintf(f,"%6s\t%5s \t%5s \t%5s \t%5s\n",
 			"chrom","av1", "av2", "cc",  "count");
@@ -93,9 +92,9 @@ void printStat(){
 	verb("Write statistics\n");
 	char b[2048];
 
-	statTest *st=MannWhitney(FgSet, nFg, BkgSet, nBkg);	// do Mann-Whitney test
-	verb("n1=%i n2=%i u=%.0f z=%.2f e=%.1f sigma=%.1f p-val=%e nFg=%i Kern=%s\n",
-		st->n1, st->n2, st->u,st->z,st->e,st->sigma,st->pVal, nFg, getKernelType());
+	MannW=MannWhitney(FgSet, nFg, BkgSet, nBkg);	// do Mann-Whitney test
+	xverb("p-val=%e nWindows=%i Kern=%s\n",
+		MannW->pVal, nFg, getKernelType());
 
 	double avBg,sdBg,avFg,sdFg;
 	getStat(FgSet,nFg,avFg,sdFg);
@@ -113,7 +112,7 @@ void printStat(){
 	if((outRes & TAB)!=0) {
 		f=gopen(statFileName,"a+t");
 	}
-
+	flockFile(f);
 	if(!fg && f){								//================ write the header
 		fprintf(f,"%-6s\t%-20s\t%-20s","id","name1","name2");
 		fprintf(f,"\t%-6s\t%-6s\t%-6s","window","kern","nFgr");
@@ -126,7 +125,8 @@ void printStat(){
 		fprintf(f,"%lx\t%-10s\t%-10s",id,alTable.convert(bTrack1.name), alTable.convert(bTrack2.name));
 		fprintf(f,"\t%-6i\t%-6s\t%6i",wSize,getKernelType(),nFg);
 		fprintf(f,"\t%8.4f\t%8.4f\t%8.4f\t%8.4f",avBg,avFg,sdBg,sdFg);
-		fprintf(f,"\t%8.4f\t%8.1f\t%-7.2e\t%-6c\n",totCorr,st->z,st->pVal, pc);
+		fprintf(f,"\t%8.4f\t%8.1f\t%-7.2e\t%-6c\n",totCorr,MannW->z,MannW->pVal, pc);
+		funlockFile(f);
 		fclose(f);
 	}
 
@@ -135,6 +135,7 @@ void printStat(){
 	if((outRes&TAB)!=0){
 		f=gopen(paramsFileName,"a+t");
 	}
+	flockFile(f);
 	if(!fg && f){								//================ write the header
 		fprintf(f,"%-6s\t%-20s\t%-20s","id","trackPath","resPath");
 		fprintf(f,"\t%-20s\t%-12s\t%-20s","map","mapIv","pcorProfile");
@@ -156,6 +157,7 @@ void printStat(){
 		fprintf(f,"\t%-6i\t%-6i\t%-6i\t%-6.2f",wSize, wStep,flankSize,noiseLevel);
 		fprintf(f,"\t%-6s\t%-8.0f\t%-8.0f",getKernelType(), kernelSigma,kernelShift);
 		fprintf(f,"\t%-i\t%-i\t%-8i\n",nShuffle, maxShuffle,threshold);
+		funlockFile(f);
 		fclose(f);
 	}
 
@@ -164,6 +166,7 @@ void printStat(){
 		fg=fileExists(b);
 		FILE *xml=xopen(b,"a+t");
 		if(!fg) fprintf(xml,"<xml>\n");
+		flockFile(xml);
 		fprintf(xml,"<run id=%lx ver=%s>\n", id, version);
 		fprintf(xml,"\t<input track1=\"%s\" track2=\"%s\"/>\n",bTrack1.name,bTrack2.name);
 		fprintf(xml,"\t<output out=\"%s\"/>\n",outFile);
@@ -179,19 +182,19 @@ void printStat(){
 		fprintf(xml,"/>\n");
 
 		fprintf(xml,"\t<res ");
-		fprintf(xml,"totCorr=%.4f MannZ=%.4f pVal=%.2e ",totCorr,st->z,st->pVal);
+		fprintf(xml,"totCorr=%.4f MannZ=%.4f pVal=%.2e ",totCorr,MannW->z,MannW->pVal);
 
 
 		fprintf(f,"avBg=%.4f avFg=%.4f sdBg=%.4f sdFg=%.4f ",avBg,avFg,sdBg,sdFg);
 		fprintf(xml,"/>\n");
 		fprintf(xml,"</run>\n");
+		funlockFile(xml);
 		fclose(xml);
 	}
 }
 
 void Correlation::printSpect(char *fname){
 	FILE *f=xopen(fname,"wt");
-//	FILE *f=xopen("../files/res/spectrum","wt");
 	double dx=0,dy=0;
 	for(int i=0; i<profWithFlanksLength; i++){
 		dx+=spectrumX[i]; dy+=spectrumY[i];
@@ -208,23 +211,6 @@ void Correlation::printSpect(char *fname){
 
 	fclose(f);
 }
-
-//void Correlation::print(char *fname){
-//	FILE *f=xopen(fname,"wt");
-//	//Normalize
-//	norm();
-//	 int center=profWithFlanksLength/2;
-//	 int right=profWithFlanksLength;
-//	for(int i=center; i<right; i++){
-//		int k=i-right, x=k*stepSize;
-//		fprintf(f,"%i\t%9.5f\t%9.5f\t%9.5f\n",x,correlation[i],corrPlus[i],corrMinus[i]);
-//	}
-//	for(int i=0; i<center; i++){
-//		int k=i, x=k*stepSize;
-//		fprintf(f,"%i\t%9.5f\t%9.5f\t%9.5f\n",x,correlation[i],corrPlus[i],corrMinus[i]);
-//	}
-//	fclose(f);
-//}
 
 //============================================== write the foreground distribution of the correlations
 void printFgDistr(){
@@ -258,7 +244,6 @@ void printBroadPeak(){
 		if(pv > pVal && qv > qVal){							// p-value and q-value are good enough
 			filePos2Pos(pe->profPos,&pPair[nPpint],wSize);		// get chromosome position
 			pPair[nPpint].score=pe->d;						// define information for write
-//			pPair[nPpint].end  =pPair[nPpint].beg+wSize;
 			nPpint++;
 		}
 	}
@@ -323,9 +308,6 @@ void printR(){
 	fprintf(f,"fg <- read.table(\'%s.fg\')\n",fname);
 	fprintf(f,"bkg<- read.table(\'%s.bkg\')\n",fname);
 
-//	fprintf(f,"fgCorr <- read.table(\'%s.fgCorr\')\n",fname);
-//	fprintf(f,"bgCorr <- read.table(\'%s.bgCorr\')\n",fname);
-//
 	fprintf(f,"dist <- read.table(\'%s.dist\', header=TRUE)\n",fname);
 	fprintf(f,"\n#  Define plot limits\n\n");
 
@@ -343,12 +325,12 @@ void printR(){
 	fprintf(f,"par( mfrow = c( 2, 1 ), oma = c( 0.5, 0, 2, 0 ),mar=c(2.5,3,1.5,1),mgp=c(1,0.3,0))\n\n");
 
 	fprintf(f,"plot(density(bkg[[1]]), xlim=c(-1,1), ylim=c(0, y_lim1), %s,\n",lab);
-	fprintf(f,"col=\'red\', main=\'Distribution of correlations\',\n");
+	fprintf(f,"col=\'red\', main=\'Distribution of correlations, p-value=%.1e\',\n",MannW->pVal );
 	fprintf(f,"%s,%s)\n\n",cex,lwd);
 	fprintf(f,"lines(density(fg[,4]), col=\'blue\', %s)\n\n",lwd);
 
 	fprintf(f,"plot(dist$x/1000, dist$Fg, type=\'l\',col=\'blue\', ylim=y_lim2, xlim=x_lim2,\n");
-	fprintf(f,"main=\'Cross-correlation function\',xlab=\'Distance (kb)\',ylab=\'%%\',%s,%s)\n",cex,lwd);
+	fprintf(f,"main=\'Cross-correlation function\',xlab=\'Distance (kb)\',ylab=\'density,%%\',%s,%s)\n",cex,lwd);
 	fprintf(f,"#lines(dist$x/1000,dist$FgPlus, col=\'cyan\',%s)\n",lwd);
 	fprintf(f,"#lines(dist$x/1000,dist$FgMinus, col=\'brown\',%s)\n",lwd);
 	fprintf(f,"lines(dist$x/1000,dist$Bkg , col=\'red\',%s)\n",lwd);

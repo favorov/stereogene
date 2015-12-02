@@ -265,18 +265,6 @@ void readWig(const char *fname){
 	}
 }
 
-void printPoints(){
-	for(int i=0; i<n_points; i++){
-		deb("%s\t%i",gPoints[i]->chrom,gPoints[i]->pos);
-	}
-}
-
-void testFind(const char *s, int p){
-	int ii=findPoint(s,p);
-	if(ii<0) deb("==== %s\t%i\t Not found", s,p);
-	else deb("==== %s\t%i\t found: %s\t%i", s,p, gPoints[ii]->chrom, gPoints[ii]->pos);
-}
-
 void writeProfile(){
 	FILE *f=fopen("x","wt");
 	for(int i=-tstWindow; i<tstWindow; i++){

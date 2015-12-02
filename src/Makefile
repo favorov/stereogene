@@ -7,7 +7,7 @@
 makefile=StereoGene.mak
 objdir=./obj
 
-.PHONY:	all clean zip cleanzip
+.PHONY:	all clean
 
 
 all: $(objdir) ccvars $(makefile) 
@@ -18,10 +18,4 @@ $(objdir):
 
 clean:
 	$(MAKE) -f $(makefile) clean
-
-zip:
-	$(MAKE) -f $(makefile) zip
-
-cleanzip:
-	$(MAKE) -f $(makefile) cleanzip
 

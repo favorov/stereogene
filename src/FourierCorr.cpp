@@ -266,7 +266,7 @@ void distrBkg(){
 	}
 
 	double cc=calcCC();
-	verb("\nrandom cc=%f\n",cc);
+	xverb("\nrandom cc=%f",cc);
 	if(writeDistr) fclose(f);
 	bgHist.normBeta();								// finalize the histogram
 	errStatus=0;
@@ -424,7 +424,7 @@ void distrCorr(){
 
 	totCorr=calcCC();
 
-	verb("\n cc=%f\n",totCorr);
+	xverb("\n cc=%f\n",totCorr);
 	errStatus=0;
 }
 
@@ -475,10 +475,10 @@ int Correlator(){
 	if (pcorProfile != 0) verb("==         pcorProfile=<%s>\n", pcorProfile);
 	verb("===        step=%i\n",stepSize);
 	verb("==         wSize=%i\n",wSize);
-	verb("==         wStep=%i\n",wStep);
-	verb("==         flankSize=%i\n",LFlankProfSize*wStep);
+//	verb("==         wStep=%i\n",wStep);
+//	verb("==         flankSize=%i\n",LFlankProfSize*stepSize);
 	verb("==         kernelType=%i\n",kernelType);
-	verb("==         kernelShift=%.0f\n",kernelShift);
+//	verb("==         kernelShift=%.0f\n",kernelShift);
 	verb("==         kernelSigma=%.0f\n",kernelSigma);
 	verb("==         nShuffle=%i\n",nShuffle);
 

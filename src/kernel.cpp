@@ -10,7 +10,7 @@ Fourier::Fourier(int n){init(n);}
 Fourier::Fourier(){re=im=datRe=datIm=0; length=0; err=0; re0=im0=0;}
 double Complex::Mod(){return sqrt(re*re+im*im);}
 Complex Complex::scalar(Complex otherC){
-	Complex res;
+	Complex res=Complex();
 	res.re = re * otherC.re + im * otherC.im;
 	res.im = - re*otherC.im + im*otherC.re;
 	return res;
@@ -142,7 +142,7 @@ double Kernel::dist(bool complem){
 
 
 double Kernel::dist(Fourier *f1, Fourier *f2, bool complem){
-	Complex c0, c1, c2;
+	Complex c0=Complex(), c1=Complex(), c2=Complex();
 
 	double d12=scalar(f1,f2, &c0, complem);
 	double d11=scalar(f1,f1, &c1, complem);
@@ -163,7 +163,7 @@ double Kernel::dist(Fourier *f1, Fourier *f2, bool complem){
 }
 
 double Kernel::dist(Fourier *f1, Fourier *f2, Fourier *fpc, bool complem){
-	Complex c0, c1, c2;
+	Complex c0=Complex(), c1=Complex(), c2=Complex();
 
 	double d12=scalar(f1,f2, &c0, complem);//<xy>
 	double d11=scalar(f1,f1, &c1, complem);//<xx>
@@ -172,7 +172,7 @@ double Kernel::dist(Fourier *f1, Fourier *f2, Fourier *fpc, bool complem){
 	d11=c1.Mod(); d22=c2.Mod(); //|x|, |y|
 
 	//partial correlation
-	Complex cx, cy, cz;
+	Complex cx=Complex(), cy=Complex(), cz=Complex();
 	double dx = scalar(f1,fpc, &cx, complem);  //<xz>
 	double dy = scalar(f2,fpc, &cy, complem);  //<xz>
 	double dz2 = scalar(fpc,fpc, &cz, complem);//<zz>
