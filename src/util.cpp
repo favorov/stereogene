@@ -236,7 +236,7 @@ void clearChromosomes(){
 }
 
 int readChromSizes(char *fname){
-	if(fname==0) errorExit("Chromosome file undfined");
+	if(fname==0) errorExit("Chromosome file undefined");
 	if(verbose) printf("read chrom...\n");
 	FILE *f=xopen(fname,"rt");
 	if(f==0)return 0;
