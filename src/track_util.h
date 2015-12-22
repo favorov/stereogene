@@ -595,6 +595,7 @@ bool isInt(const char *s);
 bool isDouble(const char *s);
 bool isUInt(const char *s);
 //=============================== File names ===========================
+void makeDir(const char *path);
 char *makeFileName(char *b, const char *path, const char*fname);	// make filename using path and name
 char *makeFileName(char *b, const char *path, const char*fname, const char*ext);	// make filename using path, name and extension
 char *correctFname(const char* s);			// remove fucking MS Widows backslash

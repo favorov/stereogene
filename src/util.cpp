@@ -236,7 +236,7 @@ void clearChromosomes(){
 }
 
 int readChromSizes(char *fname){
-	if(fname==0) errorExit("Chromosome file undefined");
+	if(fname==0) errorExit("Chromosome file undfined");
 	if(verbose) printf("read chrom...\n");
 	FILE *f=xopen(fname,"rt");
 	if(f==0)return 0;
@@ -796,15 +796,14 @@ char *makeFileName(char *b, const char *path, const char*fname, const char*ext){
 }
 
 int _makeDir(const char * path){
-
+    struct stat sb;
+    if (stat(path, &sb) == 0 && S_ISDIR(sb.st_mode)) return 0;
 #if defined(_WIN32)
 	return _mkdir(path);
 #else
 	mode_t mode=S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH;
 	return mkdir(path, mode); // notice that 777 is different than 0777
 #endif
-
-
 }
 void makeDir(const char *path){
 	char b[2048];
@@ -812,7 +811,10 @@ void makeDir(const char *path){
 	char *s=b+strlen(b)-1;
 	if(*s=='/') *s=0;
 	for(char *s=b; (s=strchr(s+1,'/'))!=0;){
-		*s=0; _makeDir(b); *s='/';
+		*s=0;
+		if(_makeDir(b))
+			errorExit("Can not create directory %s\n",b);
+		*s='/';
 	}
 	_makeDir(b);
 }

@@ -1,15 +1,27 @@
 #include "track_util.h"
 #include <unistd.h>
+
+#if defined(_WIN32)
+#include <conio.h>
+#else
 #include <termios.h>
+#endif
+
 
 int xpause(){
+	int c=0;
+#if defined(_WIN32)
+	c=_getch(); printf("\n%c\n",c);
+#else
+	return 0;
 	struct termios oldt, newt;
 	tcgetattr( STDIN_FILENO, &oldt);
 	newt = oldt;
 	newt.c_lflag &= ~(ICANON);
 	tcsetattr( STDIN_FILENO, TCSANOW, &newt);
-	int c=getchar();
+	c=getchar();
 	tcsetattr( STDIN_FILENO, TCSANOW, &oldt);
+#endif
 	return c;
 }
 
@@ -452,7 +464,6 @@ int main(int argc, char **argv) {
 //	clearDeb();
 //	debugFg=DEBUG_LOG|DEBUG_PRINT;
 	const char * progName="StereoGene";
-
 	verb("===== %s version %s =====\n",progName,version);
 	char *chrom=getenv("SG_CHROM");
 	if(chrom!=0) chromFile=strdup(chrom);
