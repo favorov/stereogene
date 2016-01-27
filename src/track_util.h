@@ -154,6 +154,9 @@ extern double maxNA;				// max allowed NA values - if at lest one of profiles co
 extern double maxZero;				// max allowed zero values - if both profiles contains more than maxZero zeros the window will be ignored
 extern int nShuffle;			// number of shuffle in percents
 extern int maxShuffle;		    // max number of shuffle
+extern int minShuffle;		    // min number of shuffle
+extern int nCompare;			// number of observations
+
 extern double pVal;				// min (-log10(p-value)) for output
 extern double qVal;				// min (-log10(q-value)) for output
 extern bool verbose;				// number of suffle

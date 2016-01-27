@@ -36,33 +36,30 @@ const int PRM_UNKNOWN=-0XFFFFFFF;
 
 char * cfgFile=0;
 
-struct ValEnum{
-	const char* name;
-	int value;
-	ValEnum(const char *nm, int val){
-		name=nm; value=val;
-	}
+struct Name_Value{			// symbolic name for a value
+	const char* name;		// name for the value
+	int value;				// value
+	Name_Value(const char *nm, int val){name=nm; value=val;}
 };
 
 struct Param{
-	const char* name;
-	const char* shortName;
-	int type;
-	ValEnum **enums;
-	void *prm;
-	int value;
+	const char* name;			// command line (cfg) argument name
+	int type;					// parameter type
+	Name_Value **enums;			// array of aviable values
+	void *prm;					// pointer to the argument value
+	int value;					//a value that should be set if -prm is used in a command line
 	const char *description;
 	Param(const char* descr);
 	Param(const char* _name, int    *prm, const char* descr);
 	Param(const char* _name, int    *prm, int val, const char* descr);
-	Param(const char* _name, int    *prm, ValEnum **fg, const char* descr);
+	Param(const char* _name, int    *prm, Name_Value **fg, const char* descr);
 	Param(const char* _name, bool   *prm, const char* descr);
 	Param(const char* _name, bool   *prm, bool val, const char* descr);
 	Param(const char* _name, double *prm, const char* descr);
 	Param(const char* _name, char * *prm, const char* descr);
 	Param(const char* _name, MapIv  *prm, const char* descr);
 	void setVal();
-	void init(const char* _name, void* _prm, int type, ValEnum **fg, const char* descr);
+	void init(const char* _name, void* _prm, int type, Name_Value **fg, const char* descr);
 	void printDescr();
 	int readVal(char *s);
 	int readEnum(char *s);
@@ -79,66 +76,65 @@ void printHelp();
 
 
 //==============================================================================
-ValEnum* intervalTypes[]={
-		new ValEnum("NONE",NONE),
-		new ValEnum("GENE",GENE),
-		new ValEnum("EXON",EXON),
-		new ValEnum("IVS",IVS),
+Name_Value* intervalTypes[]={
+		new Name_Value("NONE",NONE),
+		new Name_Value("GENE",GENE),
+		new Name_Value("EXON",EXON),
+		new Name_Value("IVS",IVS),
+		new Name_Value("GENE_BEG",GENE_BEG),
+		new Name_Value("EXON_BEG",EXON_BEG),
+		new Name_Value("IVS_BEG",IVS_BEG),
+		new Name_Value("GENE_END",GENE_END),
+		new Name_Value("EXON_END",EXON_END),
+		new Name_Value("IVS_END",IVS_END),
+		0
+};
+Name_Value* scaleTypes[]={
+		new Name_Value("LOG",LOG_SCALE),
+		new Name_Value("LIN" ,LIN_SCALE),
+		new Name_Value("AUTO",AUTO_SCALE),
+		0
+};
+Name_Value* bpTypes[]= {
+		new Name_Value("SCORE",BP_SCORE),
+		new Name_Value("SIGNAL" ,BP_SIGNAL),
+		new Name_Value("LOGPVAL",BP_LOGPVAL),
+		0
+};
+Name_Value* kernelTypes[]= {
+		new Name_Value("NORMAL",KERN_NORM),
+		new Name_Value("LEFT_EXP",KERN_LEFT_EXP),
+		new Name_Value("RIGHT_EXP",KERN_RIGHT_EXP),
+		0
+};
 
-		new ValEnum("GENE_BEG",GENE_BEG),
-		new ValEnum("EXON_BEG",EXON_BEG),
-		new ValEnum("IVS_BEG",IVS_BEG),
-		new ValEnum("GENE_END",GENE_END),
-		new ValEnum("EXON_END",EXON_END),
-		new ValEnum("IVS_END",IVS_END),
+Name_Value* complFlags[]={
+		new Name_Value("IGNORE_STRAND",IGNORE_STRAND),
+		new Name_Value("COLLINEAR",COLLINEAR),
+		new Name_Value("COMPLEMENT",COMPLEMENT),
 		0
 };
-ValEnum* scaleTypes[]={
-		new ValEnum("LOG",LOG_SCALE),
-		new ValEnum("LIN" ,LIN_SCALE),
-		new ValEnum("AUTO",AUTO_SCALE),
-		0
-};
-ValEnum* bpTypes[]= {
-		new ValEnum("SCORE",BP_SCORE),
-		new ValEnum("SIGNAL" ,BP_SIGNAL),
-		new ValEnum("LOGPVAL",BP_LOGPVAL),
-		0
-};
-ValEnum* kernelTypes[]= {
-		new ValEnum("NORMAL",KERN_NORM),
-		new ValEnum("LEFT_EXP",KERN_LEFT_EXP),
-		new ValEnum("RIGHT_EXP",KERN_RIGHT_EXP),
-		0
-};
-
-ValEnum* complFlags[]={
-		new ValEnum("IGNORE_STRAND",IGNORE_STRAND),
-		new ValEnum("COLLINEAR",COLLINEAR),
-		new ValEnum("COMPLEMENT",COMPLEMENT),
-		0
-};
-ValEnum* outWigTypes[]={
+Name_Value* outWigTypes[]={
 		//	correlation is ( f*\int g\rho + g*\int f\rho )
-		new ValEnum("NONE",NONE),
-		new ValEnum("BASE",WIG_BASE|WIG_SUM), //correlation without substract average
-		new ValEnum("CENTER",WIG_CENTER|WIG_SUM),//substract average
+		new Name_Value("NONE",NONE),
+		new Name_Value("BASE",WIG_BASE|WIG_SUM), //correlation without substract average
+		new Name_Value("CENTER",WIG_CENTER|WIG_SUM),//substract average
 		//	correlation is ( \int g\rho * \int f\rho )
-		new ValEnum("BASE_MULT",WIG_BASE|WIG_MULT),
-		new ValEnum("CENTER_MULT",WIG_CENTER|WIG_MULT),
+		new Name_Value("BASE_MULT",WIG_BASE|WIG_MULT),
+		new Name_Value("CENTER_MULT",WIG_CENTER|WIG_MULT),
 		0
 };
-ValEnum* distTypes[]={
-		new ValEnum("TOTAL",TOTAL),
-		new ValEnum("DETAIL",CHR_DETAIL),
-		new ValEnum("NONE",NONE),
+Name_Value* distTypes[]={
+		new Name_Value("TOTAL",TOTAL),
+		new Name_Value("DETAIL",CHR_DETAIL),
+		new Name_Value("NONE",NONE),
 		0
 };
-ValEnum* outResTypes[]={
-		new ValEnum("NONE",NONE),
-		new ValEnum("XML",XML),
-		new ValEnum("TAB",TAB),
-		new ValEnum("BOTH",XML|TAB),
+Name_Value* outResTypes[]={
+		new Name_Value("NONE",NONE),
+		new Name_Value("XML",XML),
+		new Name_Value("TAB",TAB),
+		new Name_Value("BOTH",XML|TAB),
 		0
 };
 
@@ -172,7 +168,7 @@ Param *pparams[]={
 		new Param("log" 		, &logFileName	 ,"cumulative log-file"),
 		new Param("aliases" 	, &aliaseFil	,0),
 //=============================================================================================================
-		new Param( "input parameters"),
+		new Param("input parameters"),
 		new Param("chrom"		, &chromFile	,"chromosome file"),
 		new Param("strand" 	 	, &strandFg0  	,"account for strand information"),
 		new Param("intervals"	, &intervFlag0	,intervalTypes,"interval type in BED file"),
@@ -204,6 +200,7 @@ Param *pparams[]={
 		new Param("maxZero"		, &maxZero  	,"Max number of zero values in window (percent)"),
 		new Param("nShuffle"	, &nShuffle  	,"Number of shuffles for background calculation (percent of window pairs)"),
 		new Param("MaxShuffle"	, &maxShuffle  	,"Max number of shuffles"),
+		new Param("MinShuffle"	, &minShuffle  	,"Min number of shuffles"),
 		new Param("noiseLevel"	, &noiseLevel  	,0),
 		new Param("complFg"		, &complFg		,complFlags,0),
 //=============================================================================================================
@@ -220,6 +217,7 @@ Param *pparams[]={
 		new Param("outWig"		, &outWIG		,outWigTypes,"parameters for local correlation file"),
 		new Param("outThreshold", &outThreshold	,"threshold for output to correlation profile"),
 		new Param("corrOnly" 	, &corrOnly   	,0),
+		new Param("corr" 		, &corrOnly   	,1, 0),
 		new Param("lAuto"	  	, &lAuto  		,0),
 		new Param("outRes" 		, &outRes 		,outResTypes,"format for results in statistics file"),
 		new Param("pcaSegment" 	, &pcaSegment	,0),
@@ -233,7 +231,7 @@ Param *pparams[]={
 //=================================================================================================
 //===================================  End declaration ============================================
 //=================================================================================================
-void Param::init(const char* _name, void *_prm, int _type, ValEnum **fg, const char* descr){
+void Param::init(const char* _name, void *_prm, int _type, Name_Value **fg, const char* descr){
 	name=_name;
 	enums=fg;
 	description=descr;
@@ -243,7 +241,7 @@ void Param::init(const char* _name, void *_prm, int _type, ValEnum **fg, const c
 }
 Param::Param(const char* descr)												{init("",0,0,0 ,descr);}
 Param::Param(const char* _name,  int    *_prm, const char* descr)			{init(_name,_prm,PRM_INT	,0 ,descr);}
-Param::Param(const char* _name,  int    *_prm, ValEnum **fg, const char* descr){init(_name,_prm,PRM_ENUM	,fg,descr);}
+Param::Param(const char* _name,  int    *_prm, Name_Value **fg, const char* descr){init(_name,_prm,PRM_ENUM	,fg,descr);}
 Param::Param(const char* _name,  bool   *_prm,  const char* descr)			{init(_name,_prm,PRM_FG		,0 ,descr);}
 Param::Param(const char* _name,  double *_prm,  const char* descr)			{init(_name,_prm,PRM_DOUBLE	,0 ,descr);}
 Param::Param(const char* _name,  char*  *_prm, const char* descr)			{init(_name,_prm,PRM_STRING	,0 ,descr);}
@@ -320,10 +318,10 @@ void Param::printDescr(){
 	if(name ==0 || strlen(name)==0) {printf("\n====================== %s ====================== \n",description); return;}
 	printf("-%s ", name);
 	if(value==PRM_UNKNOWN) {
-		if(type==PRM_INT) 	printf("<int>");
+		if(type==PRM_INT) 	 printf("<int>");
 		if(type==PRM_DOUBLE) printf("<float>");
 		if(type==PRM_STRING) printf("<string>");
-		if(type==PRM_FG) printf(" <0|1>");
+		if(type==PRM_FG)     printf("<0|1>");
 	}
 	if(enums){
 		for(int i=0; enums[i]!=0; i++){

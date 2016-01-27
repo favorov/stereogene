@@ -262,9 +262,8 @@ void bTrack::makeIntervals(unsigned char *bytes, IVSet *iv){
 //========================================================================
 int bTrack::getRnd(bool cmpl){
 	int pos;
-//return 	randInt(profileLength);
-	pos=cmpl ? ivsC.randPos() : ivs.randPos();
-
+	pos=cmpl ? ivsC.randPos() : ivs.randPos();         // get random position in the interval
+	pos-=randInt(wProfSize > pos ? pos : wProfSize);   // random left shift the position
 	return pos;
 }
 

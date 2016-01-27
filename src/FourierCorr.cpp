@@ -228,6 +228,7 @@ void distrBkg(){
 
 	nSimul=	(long)((double)nShuffle*l/wProfStep/100.);
 	if(nSimul > maxShuffle) nSimul = maxShuffle;
+	if(nSimul < minShuffle) nSimul = minShuffle;
 	getMem0(BkgSet,(nSimul+10), "bkg Distr"); nBkg=0; // allocate array for background observations
 	strcat(strcpy(b,outFile),".bkg");			// open file for background observations
 	FILE *f=0;
@@ -253,7 +254,7 @@ void distrBkg(){
 		if(d<=-10) {							// invalid windows (too many NA's of Zeros)
 			i--;
 			if(tst++ > 10000){
-				errorExit("too many empty/zero windows\n try to decrease window size (wSize) and/or to increase parameters maxZero and maxNA\n");
+				errorExit("too many empty/zero windows\n try to decrease window size (wSize) and/or to increase parameters maxZero and maxNA\n and/or decrease the parameter MaxShuffle\n");
 			}
 			continue;
 		}
@@ -320,12 +321,12 @@ void resultAutoCorrelation(){
 	if(corrScale <1) corrScale=1;
 
 	lProfAuto=lAuto*1000/(stepSize*corrScale);
-	getMem0(xDat,lProfAuto, "resultAutoCorrelation #1");
-	getMem0(yDat,lProfAuto, "resultAutoCorrelation #2");
-	getMem0(xyCorr,lProfAuto, "resultAutoCorrelation #3");
+	getMem0(xDat,lProfAuto     , "resultAutoCorrelation #1");
+	getMem0(yDat,lProfAuto     , "resultAutoCorrelation #2");
+	getMem0(xyCorr,lProfAuto   , "resultAutoCorrelation #3");
 	getMem0(autoCorrx,lProfAuto, "resultAutoCorrelation #4"); 	zeroMem(autoCorrx,lProfAuto);
 	getMem0(autoCorry,lProfAuto, "resultAutoCorrelation #5");	zeroMem(autoCorry,lProfAuto);
-	getMem0(Corrxy,lProfAuto, "resultAutoCorrelation #6");		zeroMem(Corrxy,lProfAuto);
+	getMem0(Corrxy,lProfAuto   , "resultAutoCorrelation #6");		zeroMem(Corrxy,lProfAuto);
 	int from=0, to=lProfAuto;
 	int nn=0;
 	for(; to< profileLength; from+=lProfAuto, to+=lProfAuto){
@@ -491,6 +492,7 @@ int Correlator(){
 	maxNA   =(int)(maxNA0  *wProfSize/100);			// rescale maxNA
 	maxZero =(int)(maxZero0*wProfSize/100);			// rescale maxZero
 	if(maxZero>=wProfSize) maxZero=wProfSize-1;
+	if(maxNA  >=wProfSize) maxNA  =wProfSize-1;
 	//===================================================================== generate Kernels
 	switch(kernelType){
 	case KERN_NORM:

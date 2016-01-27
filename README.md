@@ -1,3 +1,3 @@
 Stereogene
-v1.58
-18 Dec 2015
+v1.60
+25 Jan 2015

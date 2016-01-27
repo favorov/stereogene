@@ -14,7 +14,7 @@
 #include <sys/file.h>
 //#include <dir.h>
 
-const char* version="1.58";
+const char* version="1.60";
 
 int debugFg=0;
 //int debugFg=DEBUG_LOG|DEBUG_PRINT;
@@ -72,7 +72,7 @@ int   logScale=AUTO_SCALE;
 char *pcorProfile=0;    // partial correlation profile file name
 
 int kernelType=KERN_NORM;
-double noiseLevel=0.5;
+double noiseLevel=0.2;
 int wSize=100000;        // size of widow (nucleotides)
 int wStep=0;             // window step   (nucleotides)
 int flankSize=500;
@@ -94,12 +94,13 @@ double kernelProfShift;
 double kernelNS;			// Correction for non-specifisity
 bTrack bTrack1, bTrack2, projTrack, mapTrack;
 Kernel *kern;
-double maxNA0=50;
-double maxZero0=80;
+double maxNA0=95;
+double maxZero0=95;
 double maxNA;
 double maxZero;
 int nShuffle=100;
-int maxShuffle=20000;
+int maxShuffle=10000;
+int minShuffle=1000;
 double pVal=2;
 double qVal=0;
 MapIv miv;				// interval for mapping
@@ -372,19 +373,33 @@ char *strtoupper(char*s){
 // Errors
 //================
 const char *errStatus=0;
+
+FILE *openLog(){
+	if(logFileName) {
+		FILE *f=gopen(logFileName,"at");
+		if(f!=0) return f;
+		else{
+			fprintf(stderr, "Error in opening log file%s\n", logFileName);
+		}
+	}
+	return 0;
+}
+
 void errorExit(const char *format, va_list args){
     fflush(stdout);
 	if (format != NULL) {
-	    vfprintf(stderr, format, args);
+		char b[1024];
+		vsprintf(b, format, args);
+	    fprintf(stderr, "%s", b);
 	    if(errStatus) fprintf(stderr, "%s\n", errStatus);
 	    else fprintf(stderr, "\n");
-		if(logFileName) {
-			FILE *f=gopen(logFileName,"at");
+	    FILE *f=openLog();
+		if(f) {
 			flockFile(f);
-			vfprintf(f,format,args);
-		    if(errStatus) fprintf(f, "%s\n", errStatus);
-		    else fprintf(f, "\n");
-		    funlockFile(f);
+			fprintf(f,"#%8lx-> %s",id,b);
+			if(errStatus) fprintf(f, "%s\n", errStatus);
+			else fprintf(f, "\n");
+			funlockFile(f);
 			fclose(f);
 		}
 	}
@@ -398,8 +413,8 @@ void errorExit(const char *format, ...){
 }
 
 void writeLog(const char *format, va_list args){
-	if(logFileName) {
-		FILE *f=gopen(logFileName,"at");
+	FILE *f=openLog();
+	if(f) {
 		flockFile(f);
 		fprintf(f,"#%8lx-> ",id);
 		vfprintf(f,format,args);
@@ -407,6 +422,7 @@ void writeLog(const char *format, va_list args){
 		fclose(f);
 	}
 }
+
 void writeLog(const char *format, ...){
 	va_list args;
 	va_start(args, format);

@@ -162,16 +162,16 @@ void IVSet::write(FILE*f){
 	}
 }
 
-int IVSet::randPos(){
+int IVSet::randPos(){		// get a random position in the intervals
 	int p=randInt(totLength);
 	int i0=0, i1=nIv-1;
-	while(1){
+	while(1){				// binary search
 		int i=(i0+i1)/2;
 		int ivT=ivs[i]->cumLength;
 		int ivF=ivT-(ivs[i]->t-ivs[i]->f);
 		if(ivF <= p && ivT >= p){
 			ivNo=i;
-			return ivs[i]->f+p-ivF;
+			return ivs[i]->f+p-ivF;	// map the position in the interval set to the genome
 		}
 		else if(p > ivF) i0=i+1;
 		else if(p <=ivT) i1=i;

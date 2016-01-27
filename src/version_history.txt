@@ -43,8 +43,8 @@
 ========== Version 1.54 ====================
 1. Makefile. If you have problems with ccvars, replace it with ccvars.simple
 ========== Version 1.55 ====================
-1. Fixed bud with loss of last chromosom
-2. Alloud blank lines in chrom length file
+1. Fixed bud with loss of the last chromosom
+2. Allowed a blank lines in chrom length file
 ========== Version 1.56 ====================
 1. Fixed bug in read chromosomes
 ========== Version 1.57 ====================
@@ -54,7 +54,7 @@
 4. Program allows spaces in filenames / directory names  
 ========== Version 1.58 ====================
 1. Program do not use default cfg file. If cfg file is used it should be defined explcitelly in command line: cgf=<fname>
-2. Progam can use two equivalent arguments notation: param=value and -param value
+2. Program can use two equivalent arguments notation: param=value and -param value
 3. File with Chromosomes can be defined in env variable SG_CHROM
 4. ErrorExit on unknown parameter or incorrect value
 5. new flag -clear. It forces profile recalculation.
@@ -62,5 +62,10 @@
 7. lock-unlock for cumulative files (not for windows)
 8. flag silent introduced. Even if 'verbose' is OFF the main results are printed to stdout. If silent is ON no output expected.
 9. New system of parameters parsing introduced (testing needed!)
-
-
+========== Version 1.59 ====================
+1. Fixed some bugs with opening files
+2. Some default values changed (maxNA=95, maxZero=95)
+3. The shuffling procedure corrected 
+========== Version 1.60 ====================
+1. Introduced parameter minShuffle - minimal number of shuffles
+2. File statistics and statistics.xml get new parameters nFg = number of observations: nBkg = actual number of shuffles.
