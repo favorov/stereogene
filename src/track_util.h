@@ -314,7 +314,6 @@ struct bTrack{		        // Binary track
 	double addStatistics();
 	void finStatistics();
 	int readProfileToArray(double *x, int scale, int from, int to, bool cmpl);
-	void fillNoise(double *a,int n);// fill n elements in the profile with noise
 	int  countNA  (int pos, bool cmpl);		// count NA elements in the window
 	int  countZero(int pos, bool cmpl);		// count zero elements in the window
 

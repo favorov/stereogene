@@ -69,3 +69,6 @@
 ========== Version 1.60 ====================
 1. Introduced parameter minShuffle - minimal number of shuffles
 2. File statistics and statistics.xml get new parameters nFg = number of observations: nBkg = actual number of shuffles.
+========== Version 1.61 ====================
+1. NA values are used only for WIG tracks; for the BED and other tracks types the program treats NA as 0 always regardless '-na' parameter definition.  
+

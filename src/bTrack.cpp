@@ -274,14 +274,6 @@ void bTrack::clear(){
 }
 
 //========================================================================
-void bTrack::fillNoise(double* a, int n){
-	for(int i=0; i<n; i++, a++){
-		double r=rGauss();
-		*a=r*sd*noiseLevel;
-	}
-}
-
-//========================================================================
 int  bTrack::countNA(int pos, bool cmpl){
 	if(pos+wProfSize >= lProf) return wProfSize+1000000;	//===== wrong position
 	int c=0;
@@ -338,7 +330,7 @@ bTrack::bTrack(){
 }
 
 double bTrack::getVal(unsigned char b){
-	if(b==0 && NAFlag) return rGauss()*sd*noiseLevel;
+	if(b==0 && NAFlag && trackType==WIG_TRACK) return rGauss()*sd*noiseLevel;
 	if(b < threshold) return 0;
 	if(b==1) return 0;
 	double x=bScale*(b-1)+delta;

@@ -24,9 +24,9 @@ void bTrack::initProfile(){
 		if(profilec==0) errorExit("%s",memError);
 	}
 
-	int zero=NAFlag ? NA : 0;
+	int zero=NA;
 	for(int i=0; i<profileLength; i++){
-		profile[i]=zero;								//== fill the profile with NA or zero
+		profile[i]=zero;								//== fill the profile with NA
 		if(profilec) profilec[i]=zero;
 	}
 	errStatus=0;
