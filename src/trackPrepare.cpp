@@ -314,9 +314,6 @@ void testDistrib(){
 		else{
 			float x=log(1+profile[i]);
 			int k=(int)(x/10*1000)+1;
-//			if(k>=1000){
-//				deb("overflow profile value  %f",x); k=999;
-//			}
 			dd[k]++;
 		}
 	}

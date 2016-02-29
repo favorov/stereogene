@@ -14,7 +14,7 @@
 #include <sys/file.h>
 //#include <dir.h>
 
-const char* version="1.61";
+const char* version="1.62";
 
 int debugFg=0;
 //int debugFg=DEBUG_LOG|DEBUG_PRINT;
@@ -246,9 +246,8 @@ int readChromSizes(char *fname){
 	int max_chrom=300;
 	chrom_list=(Chromosome *)malloc(max_chrom*sizeof(Chromosome));
 	char *s1,*s2;
-
 	for(char *s; (s=fgets(buff,2048,f))!=0;){
-		if (strcmp(s, "") == 0)
+		if (strcmp(s, "") == 0) continue;
 		if(n_chrom>=max_chrom) {
 			max_chrom+=300;
 			chrom_list=(Chromosome *)realloc(chrom_list,max_chrom*sizeof(Chromosome));
@@ -269,12 +268,24 @@ int readChromSizes(char *fname){
 	return 1;
 };
 
+int strcmpX(char *s1, char *s2){
+	for(;;s1++,s2++){
+		char c1= (*s1==0) ? 0 : toupper(*s1);
+		char c2= (*s2==0) ? 0 : toupper(*s2);
+		if(c1 < c2) return -1;
+		if(c1 > c2) return  1;
+		if(c1==0 && c2==0) break;
+	}
+	return  0;
+}
+
 Chromosome* findChrom(char *ch){
-	if(strcmp(curChrom->chrom, ch) ==0) return curChrom;
+	if(strcmpX(curChrom->chrom, ch) ==0) return curChrom;
 	for(int i=0; i<n_chrom; i++){
 		curChrom=chrom_list+i;
-		if(strcmp(curChrom->chrom, ch) ==0) return curChrom;
+		if(strcmpX(curChrom->chrom, ch) ==0) return curChrom;
 	}
+	writeLog("Chromosome %s not found\n",ch);
 	fprintf(stderr,"Chromosome %s not found\n",ch);
 	return 0;
 }

@@ -457,10 +457,31 @@ void parseArgs(int argc, char **argv){
 // deb(2,"%i %f", n, d);
 // ....
 // deb("OK");
+//================
+//void ttt(const char *in, const char * out){
+//	FILE*fIn=fopen(in,"rt");
+//	FILE *fOut=fopen(out,"wt");
+//	char b[1024];
+//	fgets(b,sizeof(b),fIn); fputs(b,fOut);
+//	for(int i=0; fgets(b,sizeof(b),fIn)!=0;i++){
+//		if(i%1000000 ==0) printf("%s  %i\n",in,i);
+//		if(isalpha(b[0])) {
+//			fputs(b,fOut);
+//			fprintf(fOut,"25\n");
+//		}
+//	}
+//	fclose(fOut);
+//	fclose(fIn);
+//}
+//void ttt(){
+//	ttt("B_G.H3K4me1.wig","K4me1.wig");
+//	ttt("B_G.H3K4me3.wig","K4me3.wig");
+//	exit(0);
+//}
 
 int main(int argc, char **argv) {
 //	clearDeb();
-//	debugFg=DEBUG_LOG|DEBUG_PRINT;
+	debugFg=DEBUG_LOG|DEBUG_PRINT;
 	const char * progName="StereoGene";
 	verb("===== %s version %s =====\n",progName,version);
 	char *chrom=getenv("SG_CHROM");
