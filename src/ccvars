@@ -17,15 +17,17 @@ endif
 
 
 gcc_version_info=$(shell gcc --version)
-
-gcc_5_test=) 5.
+gcc_4_test=) 5.
 gcc_4_test=) 4.
+darwin_4_test=/4.
 gcc_3_test=) 3.
-
 ifeq ($(gcc_5_test), $(findstring $(gcc_5_test),$(gcc_version_info)))
-	GCC4=GCC5
+	GCC5=GCC5
 endif
 ifeq ($(gcc_4_test), $(findstring $(gcc_4_test),$(gcc_version_info)))
+	GCC4=GCC4
+endif
+ifeq ($(darwin_4_test), $(findstring $(darwin_4_test),$(gcc_version_info)))
 	GCC4=GCC4
 endif
 ifeq ($(gcc_3_test), $(findstring $(gcc_3_test),$(gcc_version_info)))
@@ -34,13 +36,17 @@ endif
 
 ifndef GCC3
 ifndef GCC4
+ifndef GCC5
 $(error GCC major version is neither 3 nor 4, gcc --version says:$(gcc_version_info).)
+endif
 endif
 endif
 
 ifdef GCC3
 ifdef GCC4
+ifdef GCC5
 $(error GCC major version cannot be 3 and 4 at one time)
+endif
 endif
 endif
 
@@ -53,6 +59,10 @@ STATICFLAG=-static
 PARANOIC_FLAG=-Wextra
 MINGW_FLAG=-mno-cygwin
 PPRO_FLAG=-mpentiumpro
+
+ifdef GCC5
+GCC4=GCC4 #5 and 4 behave the same
+endif
 
 ifdef GCC4 
 	INCLUDEKEY=-iquote

@@ -55,11 +55,6 @@ bool bTrack::check(const char *fname){
 		else if(strcmp(s1,"version")==0){
 			strcpy(bver,s2);
 		}
-		else if(strcmp(s1,"trackType")==0){
-			int tt=atoi(s2);
-			if(tt==CAGE_MIN) break;
-			if(tt!=trackType) {failParam("trackType");  fg=false; break;}
-		}
 		if(strcmp(s1,"input"    )==0){
 			if(trackType == MODEL_TRACK){
 				model.readMap(name);
@@ -106,12 +101,10 @@ void bTrack::read(const char *fname){
 	for(;fgets(b,sizeof(b),f)!=0;){
 		char *s1=strtok(b,"=");
 		char *s2=strtok(0,"=\r\n");
-//		if(strcmp(s1,"trackName")==0) name=strdup(s2);
 		if(     strcmp(s1,"min"    )==0) minP=atof(s2);
 		else if(strcmp(s1,"max"    )==0) maxP=atof(s2);
 		else if(strcmp(s1,"average")==0) av0 =atof(s2);
 		else if(strcmp(s1,"stdDev" )==0) sd0 =atof(s2);
-//		else if(strcmp(s1,"step"   )==0) profStep=atoi(s2);
 		else if(strcmp(s1,"strand" )==0) hasCompl=atoi(s2);
 		else if(strcmp(s1,"lscale" )==0) lScale  =atoi(s2);
 		else if(strcmp(s1,"scaleFactor" )==0) scaleFactor=atof(s2);
@@ -241,20 +234,21 @@ void bTrack::makeIntervals(unsigned char *bytes, IVSet *iv){
 	bool space=true;
 
 	int nZ=0;
-	for(int i=0; i<wProfSize; i++)
+	int wp=wProfSize;
+	for(int i=0; i<wp; i++)
 		if(isZero(bytes,i)) nZ++;
-	for(int i=wProfSize; i<lProf; i++){
-		if(nZ >= wProfSize-1){
-			if(!space) iv->addIv(f,i);
+	for(int i=wp; i<lProf; i++){
+		if(nZ >= wp-1){
+			if(!space) iv->addIv(f,i-wp);
 			space=true;
 			}
 		else{
-			if(space) f=i-wProfSize;
+			if(space) f=i-wp;
 			space=false;
 		}
 
 		if( isZero(bytes,i          )) nZ++;
-		if( isZero(bytes,i-wProfSize)) nZ--;
+		if( isZero(bytes,i-wp)) nZ--;
 	}
 	if(!space) iv->addIv(f,lProf);
 }
@@ -263,7 +257,6 @@ void bTrack::makeIntervals(unsigned char *bytes, IVSet *iv){
 int bTrack::getRnd(bool cmpl){
 	int pos;
 	pos=cmpl ? ivsC.randPos() : ivs.randPos();         // get random position in the interval
-	pos-=randInt(wProfSize > pos ? pos : wProfSize);   // random left shift the position
 	return pos;
 }
 
@@ -275,9 +268,8 @@ void bTrack::clear(){
 
 //========================================================================
 int  bTrack::countNA(int pos, bool cmpl){
-	if(pos+wProfSize >= lProf) return wProfSize+1000000;	//===== wrong position
-	int c=0;
-	for(int i=0; i< wProfSize; i++) {
+	int c=pos+wProfSize >= lProf ? wProfSize+pos-lProf-1 : 0;
+	for(int i=0; i< wProfSize && i+pos < lProf; i++) {
 		if(complFg==IGNORE_STRAND){		// ignore strand
 			int x=1;
 			if(bytes[pos+i]!=0) x=0;
@@ -295,11 +287,9 @@ int  bTrack::countNA(int pos, bool cmpl){
 
 //========================================================================
 int  bTrack::countZero(int pos, bool cmpl){
-	if(pos+wProfSize >= lProf) return wProfSize+1000000;	//===== wrong position
-	int c=0;
+	int c=pos+wProfSize >= lProf ? wProfSize+pos-lProf-1 : 0;
 	int thr= threshold;
-
-	for(int i=0; i< wProfSize; i++) {
+	for(int i=0; i< wProfSize && i+pos < lProf; i++) {
 		if(complFg==IGNORE_STRAND){		// ignore strand
 			int x=1;
 			if(bytes[pos+i] > thr) x=0;
@@ -366,16 +356,14 @@ void bTrack::ortProject(){
 }
 
 double bTrack::getProjValue(int pos, bool cmpl){
+	if(pos >= lProf) return 0;
 	double x=getValue(pos,cmpl);
 	if(projCoeff) x-=projCoeff*projTrack.getValue(pos,cmpl);
 	return x;
 }
 
 double * bTrack::getProfile(int pos, bool cmpl){ //====== pos - profile position; cmpl=true <=> +strand
-	if(pos+wProfSize >= lProf) return 0;
 	double *a=profWindow;
-	//======================================================= fill left flank
-//	zeroMem(a,LFlankProfSize); a+=LFlankProfSize;
 	//======================================================= fill window
 	double e=0, dd=0;
 	for(int i=0; i < wProfSize; i++, a++){
@@ -394,21 +382,11 @@ double * bTrack::getProfile(int pos, bool cmpl){ //====== pos - profile position
 		e+=*a; dd+=(*a) *(*a);
 	}
 	e/=wProfSize; dd=dd-e*e/wProfSize; dd/=wProfSize-1; dd=sqrt(dd);
-	//======================================================== fill right flank
-//	zeroMem(a,RFlankProfSize); a+=RFlankProfSize;
 //	======================================== fill flanks
 	int x0=wProfSize+LFlankProfSize;
 	int x1=x0+LFlankProfSize+RFlankProfSize;
-//	float y0=profWindow[x0-1], y1=profWindow[(x1-1)%profWithFlanksLength];
-//e=av0;
 	for(int x=x0; x<x1; x++){
-//		profWindow[x%profWithFlanksLength]=e;
-//		profWindow[x%profWithFlanksLength]=profWindow[(2*x0-x)%profWithFlanksLength];
 		profWindow[x%profWithFlanksLength]=rGauss(e,dd);
-//		profWindow[x%profWithFlanksLength]=(y1+y0)/2;
-//		profWindow[x%profWithFlanksLength]=y0+(y1-y0)/(x1-x0)*(x-x0);
-//		profWindow[x%profWithFlanksLength]=y0+(y1-y0)/(x1-x0)*(x-x0)+rGauss(0,dd/3);
-//		profWindow[x%profWithFlanksLength]=0;
 	}
 	return profWindow;
 }
@@ -423,7 +401,6 @@ double arrayMax(double *d, int n){
 }
 
 void autoCorrelation(double *p, int from, int to){
-//deb("ac1 lpAuto=%i, %i:%i",lProfAuto,from,to);
 	Fourier ff(lProfAuto);
 	zeroMem(dat,lProfAuto);
 
@@ -431,7 +408,6 @@ void autoCorrelation(double *p, int from, int to){
 		int k=(i-from)/corrScale;
 		if(p[k]!=NA && p[k]!=0) {
 			dat[k]+=p[k];
-//deb("k=%i dat=%f i=%i from=%i scale=%i",k,dat[k],i,from, corrScale);
 		}
 	}
 
@@ -452,7 +428,6 @@ void autoCorrelation(double *p, int from, int to){
 void bTrack::trackAutoCorrelation(){
 	verb("Autocorrelation...\n");
 	errStatus="Autocorrelation";
-//	corrScale=lAuto/stepSize;
 	corrScale=1;
 
 	lProfAuto=lAuto/(stepSize*corrScale);

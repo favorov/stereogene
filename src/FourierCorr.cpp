@@ -254,7 +254,7 @@ void distrBkg(){
 		if(d<=-10) {							// invalid windows (too many NA's of Zeros)
 			i--;
 			if(tst++ > 10000){
-				errorExit("too many empty/zero windows\n try to decrease window size (wSize) and/or to increase parameters maxZero and maxNA\n and/or decrease the parameter MaxShuffle\n");
+				errorExit("too many empty/zero windows\n");
 			}
 			continue;
 		}
