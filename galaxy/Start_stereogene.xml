@@ -1,0 +1,21 @@
+<tool id="stereogene" name="Stereogene">
+  <description>FFT-based correlation between two files of genomic intervals</description>
+  <command interpreter="bash"> Stereogene $cfg $file1 $file1 $output</command>
+  <inputs>
+    <param format="text" name="cfg" type="data" label="Configuration file"/>
+    <param format="text" name="query" type="data" label="tracks/coverage file 1"/>
+    <param format="text" name="reference" type="data" label="tracks/coverage file 2"/>
+    <param name="output_options" type="select" label="Type of output">
+       <option value="outBPeak">BroadPeak file output</option>
+       <option value="stats">Text output of statistics</option>
+    </param>
+  </inputs>
+  <outputs>
+     <data name="output" format="txt"/>
+  </outputs>
+
+  <help>
+This tool determines the genomewide spatial correlation between two tracks or coverage files.
+  </help>
+
+</tool>
