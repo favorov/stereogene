@@ -14,7 +14,7 @@
 #include <sys/file.h>
 //#include <dir.h>
 
-const char* version="1.63";
+const char* version="1.64";
 
 int debugFg=0;
 //int debugFg=DEBUG_LOG|DEBUG_PRINT;
@@ -133,6 +133,10 @@ int scoreType=AV_SCORE;
 AliaseTable alTable;
 FileListEntry files[256];
 int   nfiles;
+
+double BgAvCorr;
+double FgAvCorr;
+
 unsigned int hashx(unsigned int h,unsigned int x);
 unsigned int hashx(unsigned int h,char c);
 unsigned int hashx(unsigned int h,int x);

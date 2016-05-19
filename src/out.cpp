@@ -121,7 +121,7 @@ void printStat(){
 		fprintf(f,"%-6s\t%-20s\t%-20s","id","name1","name2");
 		fprintf(f,"\t%-6s\t%-6s\t%-6s\t%-6s","window","kern","nFgr","nBkg");
 		fprintf(f,"\t%-8s\t%-8s\t%-8s\t\%-8s","Bkg_av","Fg_av","Bkg_sd","Fg_sd");
-		fprintf(f,"\t%-9s\t%-8s\t%-7s","tot_cor", "Mann-Z","p-value");
+		fprintf(f,"\t%-9s\t%-8s\t%-8s\t%-7s","tot_cor","avCorr", "Mann-Z","p-value");
 		fprintf(f,"\t%-6s\n", "pc");
 	}
 	//==================================================== write the statistics
@@ -129,7 +129,7 @@ void printStat(){
 		fprintf(f,"%lx\t%-10s\t%-10s",id,alTable.convert(bTrack1.name), alTable.convert(bTrack2.name));
 		fprintf(f,"\t%-6i\t%-6s\t%6i\t%6i",wSize,getKernelType(),nFg, nBkg);
 		fprintf(f,"\t%8.4f\t%8.4f\t%8.4f\t%8.4f",avBg,avFg,sdBg,sdFg);
-		fprintf(f,"\t%8.4f\t%8.1f\t%-7.2e\t%-6c\n",totCorr,MannW->z,MannW->pVal, pc);
+		fprintf(f,"\t%8.4f\t%8.4f\t%8.1f\t%-7.2e\t%-6c\n",totCorr,FgAvCorr,MannW->z,MannW->pVal, pc);
 		funlockFile(f);
 		fclose(f);
 	}

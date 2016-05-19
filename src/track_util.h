@@ -577,6 +577,8 @@ extern PairEntry *pairs;				// array for pair's correlation (foreground)
 extern int nPairs;						// number of foreground observations
 extern Histogram bgHist;				// Background Histogram initiation
 extern Histogram fgHist;				// Foreground Histogram initiation
+extern double BgAvCorr;					// average Background correlation
+extern double FgAvCorr;					// average Foreground correlation
 
 //=============================== Chromosomes ===========================
 int  readChromSizes(char *fname);			// read chromosomes

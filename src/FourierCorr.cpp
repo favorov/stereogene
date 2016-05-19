@@ -236,6 +236,7 @@ void distrBkg(){
 	//================================================== simulations
 	int tst=0;								// count runs with zero/NA frames
 	sprod11=0; sprod12=0; sprod22=0; prod11=0; prod12=0; prod22=0; nProd=0;
+	int n_corr=0; BgAvCorr=0;
 	for(int i=0; i<nSimul; i++){
 		int p1;
 		int p2;
@@ -258,6 +259,7 @@ void distrBkg(){
 			}
 			continue;
 		}
+		n_corr++; BgAvCorr+=d;
 		if(i%10000 ==0) verb("\nsimul: %i/%li",i,nSimul);
 		else if(i%1000 ==0) verb(".");
 		tst=0;
@@ -267,7 +269,8 @@ void distrBkg(){
 	}
 
 	double cc=calcCC();
-	xverb("\nrandom cc=%f",cc);
+	BgAvCorr/=n_corr;
+	xverb("\nrandom cc=%f bg_average=%f\n",cc,BgAvCorr);
 	if(writeDistr) fclose(f);
 	bgHist.normBeta();								// finalize the histogram
 	errStatus=0;
@@ -377,40 +380,40 @@ void distrCorr(){
 	sprod11=0; sprod12=0; sprod22=0; prod11=0; prod12=0; prod22=0; nProd=0;
 
 	//=================== calculate correlations
+	int n_corr=0; FgAvCorr=0;
 	for(int i=0,k=0; i<l; i+=wProfStep,k++){
 
 		double d;
 		d=100.*k/(l/wProfStep);
 		if(k%10000 ==0) verb("\ndist: %4.1f%% (%6i/%i) ",d,k,l/wProfStep);
 		else if(k%1000 ==0) verb(".");
-
 		if((complFg&COLLINEAR)!=0 ||								// analyze collinear chains
 				   ((!bTrack1.hasCompl) && (!bTrack2.hasCompl))){	// OR if both tracks are NOT strand-dependent
 			if((d=calcCorelations(i,i, false,false,false)) >=-10){	    // => =>  valid pair
-				storePair(i,d);
+				storePair(i,d); n_corr++; FgAvCorr+=d;
 			}
 			if((bTrack1.hasCompl && bTrack2.hasCompl) &&		// first tacks is strand-dependent
 			   (d=calcCorelations(i,i,true,true,false)) >=-10){		// <= <=  valid pair
-					storePair(i,d);
+					storePair(i,d); n_corr++; FgAvCorr+=d;
 			}
 			if((!bTrack1.hasCompl && bTrack2.hasCompl) &&		// second tacks is strand-dependent
 			   (d=calcCorelations(i,i,false,true,false)) >=-10){		// => <=  valid pair
-					storePair(i,d);
+					storePair(i,d); n_corr++; FgAvCorr+=d;
 			}
 			if((bTrack1.hasCompl && !bTrack2.hasCompl) &&		// both of the tacks is strand-dependent
 			   (d=calcCorelations(i,i,true,false,false)) >=-10){		// <= =>  valid pair
-					storePair(i,d);
+					storePair(i,d); n_corr++; FgAvCorr+=d;
 			}
 		}
 		if((complFg&COMPLEMENT)!=0 &&
 				((bTrack1.hasCompl) && (bTrack2.hasCompl))){ 							// analyze complement chains
 			if((bTrack1.hasCompl) &&						    // profile 1 is strand dependent
 			   (d=calcCorelations(i,i, true, false,false)) >=-10){	// <= =>  valid pair
-					storePair(i,d);
+					storePair(i,d); n_corr++; FgAvCorr+=d;
 			}
 			if((bTrack2.hasCompl) && 							// profile 2 is strand dependent
 				(d=calcCorelations(i,i, false, true,false)) >=-10) {	// => <=  valid pair
-					storePair(i,d);
+					storePair(i,d); n_corr++; FgAvCorr+=d;
 			}
 		}
 
@@ -418,6 +421,7 @@ void distrCorr(){
 	//=================================================== Define rank for q-value calculation
 
 	bTrack1.finStatistics(); bTrack2.finStatistics();
+	FgAvCorr/=n_corr;
 
 	finOutWig();
 
@@ -425,7 +429,7 @@ void distrCorr(){
 
 	totCorr=calcCC();
 
-	xverb("\n cc=%f\n",totCorr);
+	xverb("\n cc=%f avCorr=%f",totCorr, FgAvCorr);
 	errStatus=0;
 }
 

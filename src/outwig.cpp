@@ -77,18 +77,16 @@ double lmax=-1000;
 	if((outWIG & WIG_SUM)   == WIG_SUM   ) fprintf(outWigFile,"SUM "   );
 	if((outWIG & WIG_MULT)  == WIG_MULT  ) fprintf(outWigFile,"MULT "  );
 	fprintf(outWigFile,"\n");
-	fprintf(outWigFile,"#Scale data: min=%.4f;  max=%.4f;   LOG scale: x=1000*log(a*array[i]+b); a=(e-1)/(max-min); b=1-min*a\n", min,max);
+	fprintf(outWigFile,"#Scale data: min=%.4f;  max=%.4f;   LOG scale: x=1000*log(a*array[i]+b); a=(2.718281828-1)/(max-min); b=1-min*a\n", min,max);
 	fprintf(outWigFile,"#Source statstics: av1=%.4f;  av2=%.4f; sd1=%.4f; sd2=%.4f\n", bTrack1.av0,bTrack2.av0, bTrack1.sd0,bTrack2.sd0);
 int kmin=1000, kmax=0;
 	double a=(2.718281828-1)/(max-min), b=1-min*a;
 	for(int i=0; i<profileLength; i++){
 		double z=a*array[i]+b;
-//		double z=(array[i]+max-2*min)/(max-min);
-if(lmax < z) lmax=z;
+		if(lmax < z) lmax=z;
 		int k=(int)(log(z)*1000);
 		if(kmin > k) kmin=k;
 		if(kmax < k) kmax=k;
-//if(k > 998) deb("maxPos=%i k=%i",i,kmax);
 		double v1=bTrack1.getValue(i,0), v2=bTrack2.getValue(i,0);
 		if(k>=outThreshold && v1*v2!=0){
 			filePos2Pos(i,&pos,stepSize);
@@ -98,15 +96,8 @@ if(lmax < z) lmax=z;
 			}
 			pos0.chrom=pos.chrom; pos0.beg=pos.beg;
 			fprintf(outWigFile,"%i\n",k);
-//int bb1=bTrack1.bytes[i], bb2=bTrack2.bytes[i];
-//double cc=(v1-bTrack1.av0)*(v2-bTrack2.av0)/bTrack1.sd0/bTrack2.sd0;
-//			fprintf(outWigFile,"%i\t%.3f\t%.4f\tv1=%.2f\tv2=%.2f\t%i\t%i\n",k,array[i],cc,v1,v2,bb1,bb2);
-//if(cc>10000){
-//	deb("%i\t%.3f\t%.4f\tv1=%.2f\tv2=%.2f\t%i\t%i",k,array[i],cc,v1,v2,bb1,bb2);
-//}
 		}
 	}
-//deb("\nkmin=%i  kmax=%i lmax=%f",kmin, kmax,lmax);
 	fclose(outWigFile);
 }
 //==================================================================
@@ -165,6 +156,6 @@ double storeCorrTrack(int pos, bool cmpl1, bool cmpl2){
 		}
 	}
 	av/=profileLength;
-	wigCorr.addArray(wCorrelation.re+LFlankProfSize,pos);
+	wigCorr.addArray(wCorrelation.re,pos);
 	return av;
 }
