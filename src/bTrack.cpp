@@ -15,7 +15,7 @@ void removeNA(unsigned char *s, int l){
 }
 
 void failParam(const char* s){
-	verb("parameter \'%s\' faled\n",s);
+	verb("parameter \'%s\' failed\n",s);
 }
 
 bool bTrack::check(const char *fname){

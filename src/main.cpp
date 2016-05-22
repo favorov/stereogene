@@ -459,6 +459,7 @@ void parseArgs(int argc, char **argv){
 // deb("OK");
 
 int main(int argc, char **argv) {
+//	test();
 //	clearDeb();
 //	debugFg=DEBUG_LOG|DEBUG_PRINT;
 

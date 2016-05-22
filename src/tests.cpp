@@ -4,7 +4,7 @@
  *  Created on: 22.02.2013
  *      Author: 1
  */
-//#include <zlib.h>
+#include <stdio.h>
 
 #include "track_util.h"
 
@@ -418,18 +418,14 @@ void checkCrossCorr(){
 }
 
 void test(){
-//	DecodeGENECODE();
-	checkCrossCorr();
-
-//const char *fname="Fourier.cfg";
-//FILE *f=fopen(fname,"rt");
-//int h=fileno(f);
-//timeb ft;
-//getftime(h,&ft);
-
+//	const char *pcname="proj";
+//	const char *b="xxx";
+//	double avBg=1,avFg=2.5,sdBg=3.78,sdFg=1.735;
+//	statTest *MannW=new statTest();
+//	MannW->z=0.35; MannW->pVal=1.e-75;
+//	FILE *xml=fopen("t.xml","wt");
 
 	exit(0);
-//===
 }
 
 

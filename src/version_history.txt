@@ -77,5 +77,6 @@
 ========== Version 1.63 ====================
 1. List of compilers expanded
 ========== Version 1.64 ====================
-1. The program reports total correlation and average correlation 
+1. The program reports total correlation and average correlation (the statistics file is changed!)
+2. Corrected xml output
 
