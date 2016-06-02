@@ -79,4 +79,5 @@
 ========== Version 1.64 ====================
 1. The program reports total correlation and average correlation (the statistics file is changed!)
 2. Corrected xml output
+3. Strong syntax control for input profiles
 

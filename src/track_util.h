@@ -167,6 +167,8 @@ extern int corrScale;			// scale for correlations
 extern bool corrOnly;			// only calculate corr functions
 extern bool writeBPeak;			// write BroadPeak
 extern bool silent;				// inhibit stdout
+extern bool syntax;				// Strong syntax control
+
 extern int writeDistCorr;		// write BroadPeak
 
 extern int outWIG;
@@ -611,7 +613,7 @@ char *getFname(char *s);					// get filename without path
 bool fileExists(const char *fname);				// check if the file exists
 bool fileExists(const char* path, const char *fname);				// check if the file exists
 bool fileExists(const char* path, const char *fname, const char *ext); // check if the file exists
-
+void makeDirs();
 const char *getExt(const char *fname);					// extract file extension
 char *getFnameWithoutExt(char *buf, char *fname);
 int   getTrackType(const char *fname);

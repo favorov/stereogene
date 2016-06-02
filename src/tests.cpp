@@ -6,6 +6,7 @@
  */
 #include <stdio.h>
 
+
 #include "track_util.h"
 
 int wigStep=300;
@@ -418,6 +419,24 @@ void checkCrossCorr(){
 }
 
 void test(){
+	clearDeb();
+	debugFg=DEBUG_LOG|DEBUG_PRINT;
+	FILE *xml=0;
+
+
+	xml=fopen("statistics.xml","r+");
+	int ll=fseek(xml,-7,SEEK_END);
+
+	const char*bb="<run> </run> \n</xml>\n";
+	fprintf(xml,"<run> </run> \n</xml>\n");
+
+//deb("$$$$$$$$$$$$$$$$$$ %ld",ll);
+
+//fprintf(xml,"<run> </run> \n</xml>\n");
+fclose(xml);
+
+
+
 //	const char *pcname="proj";
 //	const char *b="xxx";
 //	double avBg=1,avFg=2.5,sdBg=3.78,sdFg=1.735;

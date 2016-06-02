@@ -36,7 +36,7 @@ char *trackPath=0;
 
 char *trackFil=0;		// Track file
 char *aliaseFil=0;
-char *logFileName=0;
+char *logFileName=(char*)"./stereogene.log";
 char *outFile=0;
 char *profile1=0;		// first profile file file name
 char *profile2=0;		// second profile file file name
@@ -49,6 +49,7 @@ char *outTrackFile=0; // Filename for write out track
 
 bool  verbose=0;
 bool  silent=0;				// inhibit stdout
+bool  syntax=1;				// Strong syntax control
 
 bool  strandFg0=1;
 bool  writeDistr=1;
@@ -175,14 +176,6 @@ char *AliaseTable::convert(char*oldName){
 	return strdup(b0);
 }
 
-void testAliases(){
-	alTable.readTable("aliaces");
-	char *s0=(char*)"UCSF-UBC.Brain_Germinal_Matrix.mRNA-Seq.HuFGM02.wig";
-	char *s1=alTable.convert(s0);
-	printf("%s\n%s",s0,s1);
-	exit(0);
-}
-
 void AliaseTable::readTable(const char* fname){
 	FILE *f=gopen(fname,"rt");
 	if(f==0) return;
@@ -244,8 +237,8 @@ void clearChromosomes(){
 int CHROM_BUFF=30;
 
 int readChromSizes(char *fname){
+
 	if(fname==0) errorExit("Chromosome file undfined");
-	if(verbose) printf("read chrom...\n");
 	FILE *f=xopen(fname,"rt");
 	if(f==0)return 0;
 	char buff[2048];
@@ -256,7 +249,6 @@ int readChromSizes(char *fname){
 
 	for(char *s; (s=fgets(buff,2048,f))!=0;){
 		if (strcmp(s, "") == 0) continue;
-		deb("============ 1 >>>>>>>>>>>>>>>>>>");
 		if(n_chrom>=max_chrom) {
 			max_chrom+=CHROM_BUFF;
 			chrom_list=(Chromosome *)realloc(chrom_list,max_chrom*sizeof(Chromosome));
@@ -271,6 +263,7 @@ int readChromSizes(char *fname){
 
 		GenomeLength+=chrom_list[n_chrom].length;
 	    n_chrom++;
+
 	}
 	curChrom=chrom_list;
 	return 1;
@@ -938,18 +931,6 @@ int nearFactor(int n){
 	}
 return qMin;
 }
-
-void printFactors(int l){
-	int kk=sqrt(l)+1;
-	for(int i=2; i<kk; i++){
-		while(l%i==0){
-			printf("%i; ",i);
-			l/=i;
-		}
-	}
-	printf("\n");
-}
-
 
 //=================== extract file name
 char *getFname(char *s){

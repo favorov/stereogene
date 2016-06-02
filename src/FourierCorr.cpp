@@ -463,7 +463,6 @@ char * makeOutFilename(char * prof1, char*prof2){
 int Correlator(){
 	Timer timer;
 	id=0;	// id is undefined yet
-
 	wProfSize=wSize/stepSize;       		// size of widow (profile scale)
 	wProfStep=wStep/stepSize;       		// window step   (profile scale)
 	wProfSize=wSize/stepSize;
@@ -521,7 +520,6 @@ int Correlator(){
 	int nnf=nfiles; if(nnf>1) nnf--;
 	wCorrelation.init(profWithFlanksLength);
 	getMem0(wCorrelation.datRe,profWithFlanksLength, "Correlator");
-
 	for(int i=0; i<nnf; i++){
 		id=0;	// id is undefined yet
 		profile1=files[i].fname;

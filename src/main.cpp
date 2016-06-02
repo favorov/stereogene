@@ -143,6 +143,7 @@ Param *pparams[]={
 //================================================== Common parameters
 		new Param("common parameters"),
 		new Param("v"		    , &verbose		,1, "verbose"),
+		new Param("syntax"		, &syntax		,1, "strong syntax control in input files"),
 		new Param("verbose"	    , &verbose		,"verbose"),
 		new Param("s"		    , &silent		,1, "no output to stdout"),
 		new Param("silent"	    , &silent		,"no output to stdout"),
@@ -284,7 +285,10 @@ int Param::readVal(char *s){
 		else fg=1;
 		break;
 	}
-	case PRM_STRING:   	*(char**) (prm)=strdup(s);		break;
+	case PRM_STRING:
+		if(s==0 || strlen(s)) *(char**) (prm)=strdup(s);
+		else prm=0;
+		break;
 	case PRM_MAPIV:   	((MapIv *) (prm))->read(s);		break;
 	case PRM_ENUM:		{
 		int vl=readEnum(s);
@@ -464,13 +468,13 @@ int main(int argc, char **argv) {
 //	debugFg=DEBUG_LOG|DEBUG_PRINT;
 
 	const char * progName="StereoGene";
-	verb("===== %s version %s =====\n",progName,version);
 	char *chrom=getenv("SG_CHROM");
 	if(chrom!=0) chromFile=strdup(chrom);
 
 	unsigned long t=time(0);	id=t&0xffffff;	// define run id
 	parseArgs(argc, argv);
-
+	verb("===== %s version %s =====\n",progName,version);
+	makeDirs();
 	if(nfiles==0){
 		printf("\n");
 		printf("The %s program compares pairs of tracks and calculates kernel correlations\n",progName);
@@ -484,7 +488,6 @@ int main(int argc, char **argv) {
 	}
 	if(aliaseFil!=0)  alTable.readTable(aliaseFil);		// read aliases
 	readChromSizes(chromFile);							// read chromosomes
-
 	if(cage) {CageMin(files[0].fname,files[1].fname); exit(0);}
 
 	if(pcaFg) pcaMain(profile1);

@@ -125,8 +125,22 @@ int checkWig(char *b){
 	return WIG_TRACK;
 }
 
+char * readChrom(char *s){return strtok(s," \t\n\r");}
+char* readChrom(){return strtok(0," \t\n\r");}
+long readInt(){
+	char *s=strtok(0," \t\n\r");
+	if(s==0) return -1;
+	if(! isdigit(*s)) return -1;
+	return atol(s);
+}
+double readFloat(){
+	char *s=strtok(0," \t\n\r");
+	if(s==0) return -1;
+	return atof(s);
+}
 
-int ndeb=0;
+
+
 void bTrack::readTrack(const char *fname, int cage){
 	char *chrom=0;
     int fg=-1;
@@ -135,7 +149,7 @@ void bTrack::readTrack(const char *fname, int cage){
 	float score=0;
     ScoredRange bed;
     const int BUFFSIZE=20000;
-	char buff[BUFFSIZE], abuf[1000], chBuf[100], *s;
+	char buff[BUFFSIZE], buff0[BUFFSIZE], abuf[1000], chBuf[100], *s,*sx;
 	long i=0;
 	char strand=0;
 	int nStrand=0;
@@ -147,10 +161,10 @@ void bTrack::readTrack(const char *fname, int cage){
 	FILE *f=xopen(fname, "rt"); setvbuf ( f , NULL , _IOFBF , 65536 );
 	for(;(s=fgets(buff,BUFFSIZE,f))!=0; i++){
 		strtok(s,"\n\r");
+		strcpy(buff0,buff);
 		int dataFg=1;									 	//======== remove end-of-line signes
 		if(i%10000000 ==0)
 			{verb("%li  %s...\n",i,curChrom->chrom); }
-//if(i>10000000) return;
 		if(EmptyString(buff)) continue;
 
 		if(strncmp(s,"browser"  ,7)==0) continue;					//========= browser line => skip
@@ -159,13 +173,15 @@ void bTrack::readTrack(const char *fname, int cage){
 		if(*s=='#' || *s==0) continue;							//======== comment line
 		if(trackType==WIG_TRACK) trackType=checkWig(s);
 
+		chrom=0; beg=-1; end=-1;
+
 		switch(trackType){
 			case BED_TRACK:										//======== BED
 				score=1;										//======== default score=1
 				strand=0;										//======== default strand=unknown
-				chrom=strtok(s," \t\n\r");						//======== find chrom field
-				beg=atol(strtok(0," \t\r\n"));					//======== find beg field
-				end=atol(strtok(0," \t\n\r"));					//======== find end field
+				chrom=readChrom(s);								//======== find chrom field
+				beg=readInt();									//======== find beg field
+				end=readInt();									//======== find end field
 				s=strtok(0," \t\n"); if(s==0) break;			//======== ignore name field
 				s=strtok(0," \t\n"); if(s==0) break;			//======== take score field
 				if(*s!=0 && (isdigit(*s) || *s=='-')) score=atof(s);
@@ -194,8 +210,16 @@ void bTrack::readTrack(const char *fname, int cage){
 				int lExn[nn];
 				int posExn[nn];
 				bed.chrom=chrom; bed.score=score=1;
-				for(int i=0; i<nn; i++) lExn[i]=atoi(s=strtok(0,",\t"));
-				for(int i=0; i<nn; i++) posExn[i]=atoi(s=strtok(0,",\t"));
+				for(int i=0; i<nn; i++) {
+					sx=strtok(0,",\t");
+					if(sx==0){beg=-1; break;}
+					lExn[i]=atoi(sx);
+				}
+				for(int i=0; i<nn; i++) {
+					sx=strtok(0,",\t");
+					if(sx==0){beg=-1; break;}
+					posExn[i]=atoi(sx);
+				}
 				int genePos=beg;
 //===== now 'beg' and 'end' are positions relative to gene beg/
 				if((intervFlag&EXON)==EXON){
@@ -234,10 +258,10 @@ void bTrack::readTrack(const char *fname, int cage){
 				}
 				break;
 			case BED_GRAPH:
-				chrom=strtok(s," \t\n\r");						//======== find chrom field
-				beg=atol(strtok(0," \t\r\n"));					//======== find beg field
-				end=atol(strtok(0," \t\n\r"));					//======== find end field
-				score=atof(strtok(0," \t\n\r"));				//======== find score field
+				chrom=readChrom(s);		//======== find chrom field
+				beg=readInt();			//======== find beg field
+				end=readInt();			//======== find end field
+				score=readFloat();		//======== find score field
 				break;
 			case WIG_TRACK:
 				if(strncmp(s,"variableStep", 12)==0){			//======== read parameters for variableStep
@@ -265,17 +289,18 @@ void bTrack::readTrack(const char *fname, int cage){
 					}
 					else if(fg==1){										//======== fixedStep
 						beg=start; end=beg+span; start=beg+step;
-						score=atof(strtok(s," \t\n\r"));
+						sx=strtok(s," \t\n\r"); if(sx==0) break;
+						score=atof(sx);
 					}
 					else errorExit("wrong WIG format");
 				}
 				break;
 			case BROAD_PEAK:
-				chrom=strtok(s," \t\n\r");						//======== find chrom field
-				beg=atol(strtok(0," \t\r\n"));					//======== find beg field
-				end=atol(strtok(0," \t\n\r"));					//======== find end field
+				chrom=readChrom(s);				//======== find chrom field
+				beg=readInt();					//======== find beg field
+				end=readInt();					//======== find end field
 				strtok(0," \t\n\r");							//======== skip name
-				s=strtok(0," \t\n\r");
+				s=strtok(0," \t\n\r"); if(s==0) break;
 				if(bpType==BP_SCORE) score=atof(s);				//======== find score field
 				s=strtok(0," \t\n"); if(s==0) break;			//======== take strand field
 				if(*s!=0 && *s!='.') {strand=*s; nStrand++;}
@@ -287,6 +312,15 @@ void bTrack::readTrack(const char *fname, int cage){
 				break;
 			default:
 				errorExit("track type undefined or unknown"); break;
+		}
+		if(chrom==0 || beg < 0  || end < 0){
+			if(syntax)
+				errorExit("wrong line in input file <%s> :\n <%s>\n",fname,buff0);
+			else{
+				writeLog("wrong line in input file <%s> :\n <%s>\n",fname,buff0);
+				verb("wrong line in input file <%s> :\n <%s>\n",fname,buff0);
+			}
+			continue;
 		}
 		bed.chrom=chrom; bed.beg=beg; bed.end=end; bed.score=score;
 		if(cage > 0) bed.end=bed.beg+cage;

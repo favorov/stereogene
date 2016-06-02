@@ -172,8 +172,12 @@ void printStat(){
 	if((outRes & XML)!=0) {
 		sprintf(b,"%s.xml",statFileName);
 		fg=fileExists(b);
-		FILE *xml=xopen(b,"a+t");
-		if(!fg) fprintf(xml,"<xml>\n");
+		FILE *xml=0;
+		if(!fg) {xml=xopen(b,"w"); fprintf(xml,"<xml>\n");}
+		else{
+			xml=xopen(b,"r+");
+			fseek(xml,-7,SEEK_END);
+		}
 		flockFile(xml);
 		fprintf(xml,"<run id=\"%lx\" ver=\"%s\">\n", id, version);
 		fprintf(xml,"\t<input track1=\"%s\" track2=\"%s\"/>\n",bTrack1.name,bTrack2.name);
@@ -217,7 +221,7 @@ void printStat(){
 		fprintf(xml,"sdFg=\"%.4f\" ",sdFg);
 		fprintf(xml,"/>\n");
 		fprintf(xml,"</run>\n");
-		fclose(xml);
+		fprintf(xml,"</xml>\n");
 		funlockFile(xml);
 		fclose(xml);
 	}
