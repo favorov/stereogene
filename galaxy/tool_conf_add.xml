@@ -1,0 +1,6 @@
+<?xml version='1.0' encoding='utf-8'?>
+<toolbox monitor="true">
+  <section name="Correlation" id="correlation_tools">
+    <tool file="correlation/stereogene.xml" />
+  </section>
+</toolbox>
