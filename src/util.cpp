@@ -238,7 +238,7 @@ int CHROM_BUFF=30;
 
 int readChromSizes(char *fname){
 
-	if(fname==0) errorExit("Chromosome file undfined");
+	if(fname==0) errorExit("Chromosome file undefined");
 	FILE *f=xopen(fname,"rt");
 	if(f==0)return 0;
 	char buff[2048];
