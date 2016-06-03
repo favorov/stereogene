@@ -9,8 +9,13 @@ You can upload the chromosome length file from our local folder or get it from G
 Modify the creature name according to what you need.
 
 Data files - I did not succeed in downloading full tracks from UCSC using 'Get data' interface. 
-Happily, Galaxy can download files by ftp (Fetch Data button in Upload File tool).
-UCSC provides BigWig for ftp, you are to convert it to Wig or Bed and then upload to Galaxy.
-But, you con download data files from say Epigenomic roadmap directly to Galaxy using the data URL's.
+Galaxy can download files by ftp (Fetch Data button in Upload File tool) if you have a bed/wigg URL.
 
+UCSC provides BigWig for ftp, you are to convert it to Wig or Bed and then upload to Galaxy.
+
+You can download data files from say Epigenomic roadmap directly to Galaxy using the data URL's. Examples:
+
+ftp://ftp.genboree.org/EpigenomeAtlas/Current-Release/sample-experiment/CD8_Primary_Cells/Histone_H3K27ac/UW.CD8_Primary_Cells.H3K27ac.RO_01679.Histone.DS21779.wig.gz
+ftp://ftp.genboree.org/EpigenomeAtlas/Current-Release/sample-experiment/CD8_Primary_Cells/Histone_H3K4me3/UW.CD8_Primary_Cells.H3K4me3.RO_01679.Histone.DS21778.wig.gz
+ftp://ftp.genboree.org/EpigenomeAtlas/Current-Release/sample-experiment/CD8_Primary_Cells/Chromatin_Accessibility/UW.CD8_Primary_Cells.ChromatinAccessibility.RO_01701.DS17885.wig.gz
 
