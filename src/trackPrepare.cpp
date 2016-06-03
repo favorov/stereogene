@@ -173,7 +173,7 @@ void bTrack::readTrack(const char *fname, int cage){
 		if(*s=='#' || *s==0) continue;							//======== comment line
 		if(trackType==WIG_TRACK) trackType=checkWig(s);
 
-		chrom=0; beg=-1; end=-1;
+		beg=-1; end=-1;
 
 		switch(trackType){
 			case BED_TRACK:										//======== BED
@@ -313,7 +313,7 @@ void bTrack::readTrack(const char *fname, int cage){
 			default:
 				errorExit("track type undefined or unknown"); break;
 		}
-		if(chrom==0 || beg < 0  || end < 0){
+		if(dataFg && (chrom==0 || beg < 0  || end < 0)){
 			if(syntax)
 				errorExit("wrong line in input file <%s> :\n <%s>\n",fname,buff0);
 			else{

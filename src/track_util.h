@@ -84,6 +84,7 @@ const int MAX_GENES=100000;
 #define getMem0(a,n,err) if(a==0) a=(typeof a)xmalloc((n+100)*sizeof(*a),err)
 #define getMem(a,n,err) a=(typeof a)xmalloc((n+100)*sizeof(*a),err)
 #define zeroMem(a,n) memset(a,0,n*sizeof(*a))
+#define xfree(a) {if(a) free(a); a=0;}
 #define max(a,b) a<b ? b : a
 #define min(a,b) a>b ? b : a
 #define abs(a) (a<0 ? -a : a)

@@ -31,9 +31,9 @@ Fourier::~Fourier(){
 }
 
 void Fourier::freeMem(){
-	if(re) free(re); re=0;
-	if(im) free(im); im=0;
-	if(datIm) free(datIm); datIm=0;
+	xfree(re);
+	xfree(im);
+	xfree(datIm);
 }
 
 void Fourier::setDat(double *reD){

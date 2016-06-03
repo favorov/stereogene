@@ -23,9 +23,11 @@ PairEntry *pairs;				// array for pair's correlation (foreground)
 int nPairs;						// number of foreground observations
 
 void clear(){
-	free(FgSet); FgSet=0;
-	free(pairs); pairs=0;
+	writeLog("clear Correlator\n");
+	xfree(FgSet);
+	xfree(pairs);
 	nBkg=0; nFg=0; nPairs=0;
+	writeLog("OK\n");
 }
 
 //============================================== subtract profile from profile

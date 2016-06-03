@@ -135,6 +135,7 @@ void printStat(){
 	}
 
 	//================================================== write parameters
+	writeLog("Write params...\n");
 	fg=fileExists(paramsFileName);
 	if((outRes&TAB)!=0){
 		f=gopen(paramsFileName,"a+t");
@@ -168,7 +169,9 @@ void printStat(){
 		funlockFile(f);
 		fclose(f);
 	}
+	writeLog("OK\n");
 
+	writeLog("Write XML ...\n");
 	if((outRes & XML)!=0) {
 		sprintf(b,"%s.xml",statFileName);
 		fg=fileExists(b);
@@ -225,6 +228,7 @@ void printStat(){
 		funlockFile(xml);
 		fclose(xml);
 	}
+	writeLog("WriteStat - OK\n");
 }
 
 void Correlation::printSpect(char *fname){
@@ -317,12 +321,13 @@ void printBroadPeak(){
 				pe->chrom, pe->beg, pe->end, score,pv,qv);
 	}
 	fclose(fBpeak);
-	free(pPair); pPair=0;
+	xfree(pPair);
 }
 
 
 
 void printR(){
+	writeLog("Write R ...");
 	char *fn=alTable.convert(outFile), *s,b[2048], fname[1024];
 	const char *cex="cex.axis = 0.8,  cex.lab = 0.8,  cex.main = 0.8", *lwd="lwd=2",
 			*lab="xlab=\'correlation coefficient\',ylab=\'density\'";
@@ -379,5 +384,6 @@ void printR(){
 	fprintf(f,"par( old.par )\n");
 
 	fclose(f);
+	writeLog("OK\n");
 }
 

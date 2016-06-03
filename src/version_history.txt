@@ -80,4 +80,5 @@
 1. The program reports total correlation and average correlation (the statistics file is changed!)
 2. Corrected xml output
 3. Strong syntax control for input profiles
-
+4. Bugfix
+5. Chromosome files for hg18 and hg19 added

@@ -263,7 +263,9 @@ int bTrack::getRnd(bool cmpl){
 
 //========================================================================
 void bTrack::clear(){
+	writeLog("clear bTrack\n");
 	ivs.clear();
+	writeLog("OK\n");
 }
 
 //========================================================================
@@ -470,11 +472,11 @@ void bTrack::trackAutoCorrelation(){
 		fprintf(fil,"%i\t%.5f\n",k,autoCorr[i]);
 	}
 	fclose(fil);
-	free(xDat); xDat=0;
-	free(yDat); yDat=0;
-	free(autoCorr); autoCorr=0;
-	free(dat); dat=0;
-
+	xfree(xDat);
+	xfree(xDat);
+	xfree(yDat);
+	xfree(autoCorr);
+	xfree(dat);
 	verb("OK\n");
 	errStatus=0;
 }
