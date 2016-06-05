@@ -421,19 +421,18 @@ void checkCrossCorr(){
 void test(){
 	clearDeb();
 	debugFg=DEBUG_LOG|DEBUG_PRINT;
-	FILE *xml=0;
-
-
-	xml=fopen("statistics.xml","r+");
-	int ll=fseek(xml,-7,SEEK_END);
-
-	const char*bb="<run> </run> \n</xml>\n";
-	fprintf(xml,"<run> </run> \n</xml>\n");
-
-//deb("$$$$$$$$$$$$$$$$$$ %ld",ll);
-
-//fprintf(xml,"<run> </run> \n</xml>\n");
-fclose(xml);
+//	FILE *xml=0;
+//
+//
+//	xml=fopen("statistics.xml","r+");
+//
+//	const char*bb="<run> </run> \n</xml>\n";
+//	fprintf(xml,"<run> </run> \n</xml>\n");
+//
+////deb("$$$$$$$$$$$$$$$$$$ %ld",ll);
+//
+////fprintf(xml,"<run> </run> \n</xml>\n");
+//fclose(xml);
 
 
 
