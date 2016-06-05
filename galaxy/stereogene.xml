@@ -1,18 +1,27 @@
 <tool id="stereogene" name="Stereogene">
   <description>FFT-based correlation between two files of genomic intervals</description>
+   <!-- We wold prefer to avoid config
   <command> StereoGene -cfg $cfg -chrom $chrom $query $reference $output</command>
+  -->
+  <version_command>StereoGene -v</version_command>
+  <command interpreter="bash">stereogene-galaxy-simple.sh $chrom $query ${query.ext} $reference ${reference.ext} $statistics</command>
   <inputs>
+    
+    <!-- We wold prefer to avoid config
     <param format="text" name="cfg" type="data" label="Configuration file"/>
+    -->
     <param format="text" name="chrom" type="data" label="Chromosome file"/>
     <param format="text" name="query" type="data" label="tracks/coverage file 1"/>
     <param format="text" name="reference" type="data" label="tracks/coverage file 2"/>
+    <!--
     <param name="output_options" type="select" label="Type of output">
        <option value="outBPeak">BroadPeak file output</option>
        <option value="stats">Text output of statistics</option>
     </param>
+    -->
   </inputs>
   <outputs>
-     <data name="output" format="txt"/>
+     <data name="statistics" label="Stereogene: ${query.name} vs ${reference.name}" hidden='false' format="txt"/>
   </outputs>
 
   <help>

@@ -19,3 +19,6 @@ ftp://ftp.genboree.org/EpigenomeAtlas/Current-Release/sample-experiment/CD8_Prim
 ftp://ftp.genboree.org/EpigenomeAtlas/Current-Release/sample-experiment/CD8_Primary_Cells/Histone_H3K4me3/UW.CD8_Primary_Cells.H3K4me3.RO_01679.Histone.DS21778.wig.gz
 ftp://ftp.genboree.org/EpigenomeAtlas/Current-Release/sample-experiment/CD8_Primary_Cells/Chromatin_Accessibility/UW.CD8_Primary_Cells.ChromatinAccessibility.RO_01701.DS17885.wig.gz
 
+Eventually, we use sh script as wrapper, and the thing started to work.
+
+Critical: galaxy is to know the file format, do not use 'unknown'.
