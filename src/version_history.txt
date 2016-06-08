@@ -82,3 +82,5 @@
 3. Strong syntax control for input profiles
 4. Bugfix
 5. Chromosome files for hg18 and hg19 added
+6. Additional memory checks added
+7. Stdout format was changed
