@@ -18,6 +18,11 @@ void failParam(const char* s){
 	verb("parameter \'%s\' failed\n",s);
 }
 
+int chkVersion(char *ver){
+	char ver1[1024], ver0[1024];
+	return strcmp(getMajorVer(version,ver0), getMajorVer(ver,ver1));
+}
+
 bool bTrack::check(const char *fname){
 	if(clearProfile){
 		verb("forced profile recalculation");
@@ -76,11 +81,12 @@ bool bTrack::check(const char *fname){
 		}
 	}
 	fclose(f);
-	if(strcmp(version,bver)){
+	if(chkVersion(bver)){
 		failParam("program version"); return false;
 	}
 	return fg;
 }
+
 
 //=============================================================================
 void bTrack::read(const char *fname){
@@ -472,11 +478,10 @@ void bTrack::trackAutoCorrelation(){
 		fprintf(fil,"%i\t%.5f\n",k,autoCorr[i]);
 	}
 	fclose(fil);
-	xfree(xDat);
-	xfree(xDat);
-	xfree(yDat);
-	xfree(autoCorr);
-	xfree(dat);
+	xfree(xDat,"xDat");
+	xfree(yDat,"yDat");
+	xfree(autoCorr,"autoCorr");
+	xfree(dat,"dat");
 	verb("OK\n");
 	errStatus=0;
 }

@@ -13,6 +13,9 @@
 #include <ctype.h>
 #include <time.h>
 #include <sys/time.h>
+#ifndef errno
+#include <errno.h>
+#endif
 
 #ifndef TRACK_UTIL_H_
 #define TRACK_UTIL_H_
@@ -84,7 +87,7 @@ const int MAX_GENES=100000;
 #define getMem0(a,n,err) if(a==0) a=(typeof a)xmalloc((n+100)*sizeof(*a),err)
 #define getMem(a,n,err) a=(typeof a)xmalloc((n+100)*sizeof(*a),err)
 #define zeroMem(a,n) memset(a,0,n*sizeof(*a))
-#define xfree(a) {if(a) free(a); a=0;}
+#define xfree(a,b) {if(a) free(a); else writeLog("error in free %s\n",b); a=0;}
 #define max(a,b) a<b ? b : a
 #define min(a,b) a>b ? b : a
 #define abs(a) (a<0 ? -a : a)
@@ -601,6 +604,7 @@ int EmptyString(const char*buff);
 bool isInt(const char *s);
 bool isDouble(const char *s);
 bool isUInt(const char *s);
+char* getMajorVer(const char *ver, char *buf);
 //=============================== File names ===========================
 void makeDir(const char *path);
 char *makeFileName(char *b, const char *path, const char*fname);	// make filename using path and name

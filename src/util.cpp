@@ -14,7 +14,7 @@
 #include <sys/file.h>
 //#include <dir.h>
 
-const char* version="1.64";
+const char* version="1.64.2";
 
 int debugFg=0;
 //int debugFg=DEBUG_LOG|DEBUG_PRINT;
@@ -370,6 +370,18 @@ char *strtoupper(char*s){
 	for(char *ss=s;*ss;ss++) *ss=toupper(*ss);
 	return s;
 }
+
+// get major version number (1.64.2 -> 1.64)
+char * getMajorVer(const char *ver, char *buf){
+	char b[1024];
+	strcpy(b,ver);
+	strcpy(buf,strtok(b,"."));
+	strcat(buf,".");
+	strcat(buf,strtok(0,"."));
+	return buf;
+}
+
+
 // Errors
 //================
 const char *errStatus=0;
@@ -379,7 +391,7 @@ FILE *openLog(){
 		FILE *f=gopen(logFileName,"at");
 		if(f!=0) return f;
 		else{
-			fprintf(stderr, "Error in opening log file%s\n", logFileName);
+			fprintf(stderr, "Error in opening log file%s Error code=%i\n", logFileName, errno);
 		}
 	}
 	return 0;

@@ -418,9 +418,17 @@ void checkCrossCorr(){
 	fclose(f);
 }
 
+
 void test(){
 	clearDeb();
 	debugFg=DEBUG_LOG|DEBUG_PRINT;
+//	char v0[256];
+//	char *ver="1.64.2";
+//	getMajorVer(ver,v0);
+//	deb("<%s>",ver);
+//	deb("<%s>",v0);
+
+
 //	FILE *xml=0;
 //
 //

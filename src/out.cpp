@@ -93,8 +93,8 @@ void printStat(){
 	char b[2048];
 
 	MannW=MannWhitney(FgSet, nFg, BkgSet, nBkg);	// do Mann-Whitney test
-	xverb("p-val=%e nWindows=%i Kern=%s\n",
-		MannW->pVal, nFg, getKernelType());
+	xverb("p-val=%e\nnWindows=%i\n=================================\n",
+		MannW->pVal, nFg);
 
 	double avBg,sdBg,avFg,sdFg;
 	getStat(FgSet,nFg,avFg,sdFg);
@@ -113,7 +113,7 @@ void printStat(){
 		f=gopen(statFileName,"a+t");
 		if(f!=0) flockFile(f);
 		else {
-			fprintf(stderr,"Can not open file %s\n",statFileName);
+			fprintf(stderr,"Can not open file %s Error code=%i\n",statFileName, errno);
 			writeLog("Can not open file %s\n",statFileName);
 		}
 	}
@@ -141,7 +141,7 @@ void printStat(){
 		f=gopen(paramsFileName,"a+t");
 		if(f) flockFile(f);
 		else {
-			fprintf(stderr,"Can not open file %s\n",paramsFileName);
+			fprintf(stderr,"Can not open file %s  Error code=%i\n",paramsFileName,errno);
 			writeLog("Can not open file %s\n",paramsFileName);
 		}
 	}
@@ -321,7 +321,7 @@ void printBroadPeak(){
 				pe->chrom, pe->beg, pe->end, score,pv,qv);
 	}
 	fclose(fBpeak);
-	xfree(pPair);
+	xfree(pPair,"pPair");
 }
 
 

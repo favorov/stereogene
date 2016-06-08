@@ -24,8 +24,8 @@ int nPairs;						// number of foreground observations
 
 void clear(){
 	writeLog("clear Correlator\n");
-	xfree(FgSet);
-	xfree(pairs);
+	xfree(FgSet,"FgSet");
+	xfree(pairs,"pairs");
 	nBkg=0; nFg=0; nPairs=0;
 	writeLog("OK\n");
 }
@@ -272,7 +272,7 @@ void distrBkg(){
 
 	double cc=calcCC();
 	BgAvCorr/=n_corr;
-	xverb("\nrandom cc=%f bg_average=%f\n",cc,BgAvCorr);
+	xverb("\nbg_cc=%f \nbg_average=%f\n",cc,BgAvCorr);
 	if(writeDistr) fclose(f);
 	bgHist.normBeta();								// finalize the histogram
 	errStatus=0;
@@ -431,7 +431,7 @@ void distrCorr(){
 
 	totCorr=calcCC();
 
-	xverb("\n cc=%f avCorr=%f",totCorr, FgAvCorr);
+	xverb("\ncc=%f\navCorr=%f\n",totCorr, FgAvCorr);
 	errStatus=0;
 }
 
@@ -537,6 +537,11 @@ int Correlator(){
 			writeLog("  in1=%s\n", profile1);
 			writeLog("  in2=%s\n", profile2);
 			writeLog("  out=%s\n", outFile);
+
+			xverb("in1=\"%s\"\n", profile1);
+			xverb("in2=\"%s\"\n", profile2);
+			xverb("out=\"%s\"\n", outFile);
+
 			verb("read profile2...\n");
 			bTrack2.read(profile2);
 			if(pcorProfile) bTrack2.ortProject();
