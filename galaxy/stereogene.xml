@@ -4,7 +4,7 @@
   <command> StereoGene -cfg $cfg -chrom $chrom $query $reference $output</command>
   -->
   <version_command>StereoGene -v</version_command>
-  <command interpreter="bash">stereogene-galaxy-simple.sh $chrom $query ${query.ext} $reference ${reference.ext} $statistics $pdf</command>
+  <command interpreter="bash">stereogene-galaxy-simple.sh $chrom $query ${query.ext} $reference ${reference.ext} $wsize $pdf</command>
   <inputs>
     
     <!-- We wold prefer to avoid config
@@ -21,7 +21,6 @@
     <param name="corrtrack" type="boolean" label="Save correlation track" checked="false"/>
   </inputs>
   <outputs>
-     <data name="statistics" label="SG correlations: ${query.name} vs ${reference.name}" hidden='false' format="txt"/>
      <data name="pdf" label="SG results: ${query.name} vs ${reference.name}" hidden='false' format="pdf"/>
   </outputs>
 
