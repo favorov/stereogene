@@ -1,0 +1,24 @@
+<head>
+<title>StereoGene tool page</title>
+</head>
+<body>
+<h1>StereoGene tool</h1>
+The modern high-throughput sequencing methods provide massive amounts of genome-focused, DNA-positioned data. This data is often represented as a function (e.g. coverage) on the DNA coordinate. The genome- or chromosome-wide correlations between data from different sources may provide information about functional biological interrelation of the investigated features, e.g., about the trancription and histone modification. The task to compute the correlation was already successfully solved for interval annotations [1] as well as for coverage (functional) data ([2], [3], [4]). The key idea of the correlation studies is that two features that are similarly distributed along a chromosome may be functionally related. The point we are addressing here is a that peaks of dependent functional features can be located in a similar, although somewhat different, way. To account for these similarities, we propose here a fast method for calculation of kerneled correlation between two numeric annotations of the genome. The kernel represents the mutual position of related features; e.g., a Gaussian shape corresponds to 'somewhere around', etc. The approach is implemented as a computer program using C++ language. It allows counting of correlation not only for single features, but also for their combinations.
+<p>
+Poster presented in MCCMB'2013 with method description can be found <a href = "MCCMB2013_poster.pdf">here</a>.
+</p>
+<h2>Program description</h2>
+Input of the StereoGene program are files in one of standard Genome Browser formats: BED, WIG, BedGraph, BroadPeak. Program parameters are taken from config file, some parameters can be listed in comand line.
+Full program and parameter description is presented <a href = "StereoGene_read_me.doc">here</a>. Some example of configuration file is <a href="StereoGene.cfg">here</a>.
+<h2>Downloads</h2>
+The source code of command-line version is available <a href="https://github.com/favorov/stereogene">here</a>.
+<h2>Contacts</h2>
+If you find some bug or need additional information, please mail to <a href="mailto:stavrovskaya@gmail.com">Elena Stavrovskaya</a>.
+<h2>References</h2>
+<OL>
+	<li>A.Favorov et al. (2012) Exploring massive, genome scale datasets with the GenometriCorr package. PLoS Comput Biol, 8(5) :e1002529
+	<li>S.A.Ramsey et al. (2010) Genome-wide histone acetylation data improve prediction of mammalian transcription factor binding sites. Bioinformatics (Oxford, England), 26(17):2071-2075 
+	<li>P.J.Bickel et al. (2010) Subsampling methods for genomic inference. The Annals of Applied Statistics 4(4):1660-1697
+	<li>P.J.Bickel et al. (2009) An overview of recent developments in genomics and associated statistical methods. Philosophical transactions. Series A, Mathematical, physical, and engineering sciences 367(1906):4313-4337
+</OL>
+</body>
