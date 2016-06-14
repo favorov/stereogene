@@ -84,3 +84,5 @@
 5. Chromosome files for hg18 and hg19 added
 6. Additional memory checks added
 7. Stdout format was changed
+========== Version 1.65 ====================
+1. R script changed
