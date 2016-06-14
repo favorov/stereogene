@@ -345,7 +345,7 @@ void printR(){
 
 	fprintf(f," #  Read parameters to view \n");
 	fprintf(f," #file name \n");
-	fprintf(f," Name <-  \'%s\' \n",fname);
+	fprintf(f," name <-  \'%s\' \n",fname);
 	fprintf(f," n_lines = 12 \n\n");
 
 	fprintf(f," fname1 <- \"%s\"  \n",bTrack1.name);
