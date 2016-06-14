@@ -5,6 +5,7 @@
 #$4 is reference
 #$5 is reference type 
 #$6 is statistics as Galaxy asks for
+#$7 is statistics as Galaxy asks for
 rm -f statictics
 #not to increse old statistics, we start new one!
 qname=${2}.${3}
@@ -14,7 +15,8 @@ ln $2 $qname
 ln $4 $rname
 #debug
 #echo StereoGene -s -chrom $1 $qname $rname >> ~/tmp/log-galaxy/simplecmd.log
-StereoGene -s -chrom $1 $rname $qname
+StereoGene -chrom $1 $rname $qname > out.txt
 unlink $qname
 unlink $rname
-mv statistics $6
+mv out.txt $6
+mv ~/example/fw4.pdf $7

@@ -22,3 +22,5 @@ ftp://ftp.genboree.org/EpigenomeAtlas/Current-Release/sample-experiment/CD8_Prim
 Eventually, we use sh script as wrapper, and the thing started to work.
 
 Critical: galaxy is to know the file format, do not use 'unknown'.
+
+Galaxy can give full name of a data set and its type (extension): ${query.name} ${query.ext}
