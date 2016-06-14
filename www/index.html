@@ -6,7 +6,7 @@
 <h1>StereoGene tool</h1>
 The modern high-throughput sequencing methods provide massive amounts of genome-focused, DNA-positioned data. This data is often represented as a function (e.g. coverage) on the DNA coordinate. The genome- or chromosome-wide correlations between data from different sources may provide information about functional biological interrelation of the investigated features, e.g., about the trancription and histone modification. The task to compute the correlation was already successfully solved for interval annotations [1] as well as for coverage (functional) data ([2], [3], [4]). The key idea of the correlation studies is that two features that are similarly distributed along a chromosome may be functionally related. The point we are addressing here is a that peaks of dependent functional features can be located in a similar, although somewhat different, way. To account for these similarities, we propose here a fast method for calculation of kerneled correlation between two numeric annotations of the genome. The kernel represents the mutual position of related features; e.g., a Gaussian shape corresponds to 'somewhere around', etc. The approach is implemented as a computer program using C++ language. It allows counting of correlation not only for single features, but also for their combinations.
 <p>
-Poster presented in MCCMB'2013 with method description can be found <a href = "2016poster.pdf">here</a>.
+Poster that present the method description is <a href = "2016poster.pdf">here</a>.
 </p>
 <h2>Program test: Human Epigenome Atlas Pairwise Correlation Anthology</h2>
 <p>
