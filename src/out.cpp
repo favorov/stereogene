@@ -404,7 +404,7 @@ void printR(){
 	fprintf(f," cex.axis = 0.8,  cex.lab = 1,  cex.main = 1,lwd=2) \n");
 	fprintf(f," lines(density(fg[,4]), col='blue', lwd=2) \n");
 	fprintf(f,"  \n");
-	fprintf(f," mtext(\"  Report\", 3, adj=0, line=n_lines, outer=TRUE, cex = 1) \n");
+	fprintf(f," mtext(\"  Stereogene report:\", 3, adj=0, line=n_lines, outer=TRUE, cex = 1) \n");
 	fprintf(f," if (fname1 != \"\"){ \n");
 	fprintf(f,"   mtext(paste('  track1:  ',fname1, sep=''), 3, adj=0, line=n_lines-1, outer=TRUE, cex = 0.8) \n");
 	fprintf(f,"   mtext(paste('  track2:  ',fname2, sep=''), 3, adj=0, line=n_lines-2, outer=TRUE, cex = 0.8) \n");
