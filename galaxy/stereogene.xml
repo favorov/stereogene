@@ -1,10 +1,24 @@
+<!--
+Script parameters:
+#$1 is chrom file
+#$2 is query file
+#$3 is query type
+#$4 is reference file 
+#$5 is reference type 
+#$6 is window size
+#$7 is query long Galaxy name
+#$8 is reference long Galaxy name
+#$9 is pdf name as Galaxy asks for
+#$10 is NONE/BASE wigg?
+#$11 is wigg name for correlation track
+-->
 <tool id="stereogene" name="Stereogene">
   <description>FFT-based correlation between two files of genomic intervals</description>
    <!-- We wold prefer to avoid config
   <command> StereoGene -cfg $cfg -chrom $chrom $query $reference $output</command>
   -->
   <version_command>StereoGene -v</version_command>
-  <command interpreter="bash">stereogene-galaxy-simple.sh $chrom $query ${query.ext} $reference ${reference.ext} $wsize $pdf</command>
+  <command interpreter="bash">stereogene-galaxy-simple.sh $chrom $query ${query.ext} $reference ${reference.ext} $wsize ${query.name} ${reference.name} $report $ifcorrtrack $corrtrack</command>
   <inputs>
     
     <!-- We wold prefer to avoid config
@@ -18,14 +32,17 @@
 	<option value='100000' select='true'>100000</option>
 	<option value='1000000'>1000000</option>
     </param>
-    <param name="corrtrack" type="boolean" label="Save correlation track" checked="false"/>
+    <param name="ifcorrtrack" type="boolean" label="Save correlation track" truevalue='BASE' falsevalue='NONE' checked="false"/>
   </inputs>
   <outputs>
-     <data name="pdf" label="SG results: ${query.name} vs ${reference.name}" hidden='false' format="pdf"/>
+    <data name="report" label="SG results: ${query.name} vs ${reference.name}" hidden='false' format="pdf"/>
+    <data format="wig" name="corrtrack" label="SG local correlation: ${query.name} vs ${reference.name}" hidden='false'  >
+    	<filter>ifcorrtrack</filter>
+    </data>  
   </outputs>
 
   <help>
-This tool determines the genomewide spatial correlation between two tracks or coverage files.
+This tool calculated the genomewide spatial correlation between two tracks or coverage files.
   </help>
 
 </tool>
