@@ -670,7 +670,10 @@ void finOutWig();
 void printStat();
 void printFgDistr();
 void printBroadPeak();
+void printRreport();
 void printR();
+void printRmd();
+
 void printCorrelations();
 void printChomosomes(char *fname);
 void printChrDistances(char *fname);

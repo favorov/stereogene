@@ -86,3 +86,4 @@
 7. Stdout format was changed
 ========== Version 1.65 ====================
 1. R script changed
+2. _repor.R script to generate html report and Rmd file creation added

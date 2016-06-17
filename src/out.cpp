@@ -323,8 +323,124 @@ void printBroadPeak(){
 	fclose(fBpeak);
 	xfree(pPair,"pPair");
 }
+void printRmd(){
+	writeLog("Write Rmd ...");
+	char *dn=makePath(resPath), b[2048];
+	strcat(strcpy(b,dn),"report_r_template.Rmd");
+	
+	if(!fileExists(b)){
+		FILE *f=xopen(b,"wt");
+		fprintf(f, "---	\n");
+		fprintf(f, "title: \"Report\"	\n");
+		fprintf(f, "output: html_document	\n");
+		fprintf(f, "params:	\n");
+		fprintf(f, " track1: !r as.character(\"\")	\n");
+		fprintf(f, " track2: !r as.character(\"\")	\n");
+		fprintf(f, " pc: !r as.character(\"\")	\n");
+		fprintf(f, " name: !r as.character(\"\")	\n");
+		fprintf(f, " window: !r NA	\n");
+		fprintf(f, " kernel: !r NA	\n");
+		fprintf(f, " nFgr: !r NA	\n");
+		fprintf(f, " nBkg: !r NA	\n");
+		fprintf(f, " Bkg_av: !r NA	\n");
+		fprintf(f, " Fg_av: !r NA	\n");
+		fprintf(f, " Bkg_sd: !r NA	\n");
+		fprintf(f, " Fg_sd: !r NA	\n");
+		fprintf(f, " tot_cor: !r NA	\n");
+		fprintf(f, " avCorr: !r NA	\n");
+		fprintf(f, " Mann_Z: !r NA	\n");
+		fprintf(f, " p_value: !r NA	\n");
+		fprintf(f, "\n");
+		fprintf(f, "---	\n");
+		fprintf(f, "```{r echo=FALSE}	\n");
+		fprintf(f, "window <- params$window	\n");
+		fprintf(f, "kernel <- params$kernel	\n");
+		fprintf(f, "nFgr <- params$nFgr	\n");
+		fprintf(f, "nBkg <- params$nBkg	\n");
+		fprintf(f, "Bkg_av <- params$Bkg_av	\n");
+		fprintf(f, "Fg_av <- params$Fg_av	\n");
+		fprintf(f, "Bkg_sd <- params$Bkg_sd   	\n");
+		fprintf(f, "Fg_sd <- params$Fg_sd	\n");
+		fprintf(f, "tot_cor <- params$tot_cor	\n");
+		fprintf(f, "avCorr <- params$avCorr	\n");
+		fprintf(f, "Mann_Z <- params$Mann_Z  	\n");
+		fprintf(f, "p_value <- params$p_value	\n");
+		fprintf(f, "```	\n");
+		fprintf(f, "\n");
+		fprintf(f, "```{r eval=(params$track1!=\"\"), echo=FALSE, comment=\"\", results=\'asis\'}	\n");
+		fprintf(f, "	cat(paste(\"<p word-break: break-all>track1: \", params$track1, \"</p>\",\"<p>track2: \", params$track2, \"</p>\", sep=\"\"))	\n");
+		fprintf(f, "```	\n");
+		fprintf(f, "```{r eval=(params$pc!=\"\"), echo=FALSE, comment=\"\", results=\'asis\'}	\n");
+		fprintf(f, "	cat(paste(\"<p word-break: break-all>partial correlation track: \", params$pc, \"</p>\", sep=\"\"))	\n");
+		fprintf(f, "```	\n");
+		fprintf(f, "\n");
+		fprintf(f, "\n");
+		fprintf(f, "Parameter | Value  	\n");
+		fprintf(f, "------------- | -------------  	\n");
+		fprintf(f, "window | `r window`  	\n");
+		fprintf(f, "kernel | `r kernel` 	\n");
+		fprintf(f, "nFgr | `r nFgr`	\n");
+		fprintf(f, "Fg_av | `r Fg_av`	\n");
+		fprintf(f, "Fg_sd | `r Fg_sd`	\n");
+		fprintf(f, "nBkg | `r nBkg`	\n");
+		fprintf(f, "Bkg_av | `r Bkg_av`	\n");
+		fprintf(f, "Bkg_sd | `r Bkg_sd`	\n");
+		fprintf(f, "tot_cor | `r tot_cor`	\n");
+		fprintf(f, "avCorr | `r avCorr`	\n");
+		fprintf(f, "Mann_Z | `r Mann_Z`	\n");
+		fprintf(f, "p_value | `r p_value`	\n");
+		fprintf(f, "\n");
+		fprintf(f, "```{r eval=(params$name!=\"\"), echo=FALSE}	\n");
+		fprintf(f, "name <- params$name	\n");
+		fprintf(f, "\n");
+		fprintf(f, "fg <- read.table(paste(name, \'.fg\', sep = \'\'))	\n");
+		fprintf(f, "bkg<- read.table(paste(name, \'.bkg\', sep = \'\'))	\n");
+		fprintf(f, "dist <- read.table(paste(name, \'.dist\', sep = \'\'), header=TRUE)	\n");
+		fprintf(f, "#  Define plot limits	\n");
+		fprintf(f, "\n");
+		fprintf(f, "y_lim1 <- max(max(density(bkg[,1])$y),max(density(fg[,4])$y))	\n");
+		fprintf(f, "y_lim2 <- c(min(min(dist$Fg),min(dist$Fg)),max(max(dist$Fg),max(dist$Fg)))	\n");
+		fprintf(f, "\n");
+		fprintf(f, "x_lim2 <- c(-10000,10000)	\n");
+		fprintf(f, "\n");
+		fprintf(f, "# set x scale to kilobases	\n");
+		fprintf(f, "x_lim2 <- x_lim2/1000	\n");
+		fprintf(f, "\n");
+		fprintf(f, "#get chromosome data for plots, example for chr1. 	\n");
+		fprintf(f, "#Some times you should also reset y_lim for plots	\n");
+		fprintf(f, "#fg_chrom <- fg[fg[,1]==\"chr1\",]	\n");
+		fprintf(f, "#dist_chrom <- dist$chr1	\n");
+		fprintf(f, "\n");
+		fprintf(f, "\n");
+		fprintf(f, "# save plot to pdf	\n");
+		fprintf(f, "#  create the plot	\n");
+		fprintf(f, "old.par <- par( no.readonly = TRUE )	\n");
+		fprintf(f, "par( mfrow = c( 2, 1 ), oma = c( 0, 0, 0, 0 ),mar=c(3,3,2,1),mgp=c(1.6,0.45,0))	\n");
+		fprintf(f, "\n");
+		fprintf(f, "\n");
+		fprintf(f, "plot(density(bkg[[1]]), xlim=c(-1,1), ylim=c(0, y_lim1), xlab=\'correlation coefficient\',ylab=\'density\',	\n");
+		fprintf(f, "col=\'red\', main=\'Distribution of correlations\',	\n");
+		fprintf(f, "cex.axis = 0.8,  cex.lab = 1,  cex.main = 1,lwd=2)	\n");
+		fprintf(f, "lines(density(fg[,4]), col=\'blue\', lwd=2)	\n");
+		fprintf(f, "\n");
+		fprintf(f, "#plot line for chomosome	\n");
+		fprintf(f, "#lines(density(fg[,4]), col=\'green\', lwd=2)	\n");
+		fprintf(f, "\n");
+		fprintf(f, "\n");
+		fprintf(f, "plot(dist$x/1000, dist$Fg, type=\'l\',col=\'blue\', ylim=y_lim2, xlim=x_lim2,	\n");
+		fprintf(f, "main=\'Cross-correlation function\',xlab=\'Distance (kb)\',ylab=\'density*100\',cex.axis = 0.8,  cex.lab = 1,  cex.main = 1,lwd=2)	\n");
+		fprintf(f, "lines(dist$x/1000,dist$Bkg , col=\'red\',lwd=2)	\n");
+		fprintf(f, "#plot line for chomosome	\n");
+		fprintf(f, "#lines(dist$x/1000, dist_chrom , col=\'green\',lwd=2)	\n");
+		fprintf(f, "\n");
+		fprintf(f, "par( old.par )	\n");
+		fprintf(f, "```	\n");
 
-void printR(){
+		fclose(f);		
+	}
+	
+}
+void printRreport(){
 	writeLog("Write RR ...");
 	char *fn=alTable.convert(outFile), *s,b[2048], fname[1024];
 //	const char *cex="cex.axis = 0.8,  cex.lab = 0.8,  cex.main = 0.8", *lwd="lwd=2",
@@ -337,107 +453,58 @@ void printR(){
 	if(sdFg==0) getStat(FgSet,nFg,avFg,sdFg);
 	if(sdBg==0) getStat(BkgSet,nBkg,avBg,sdBg);
 
-	strcat(strcpy(b,fn),".r");
+	strcat(strcpy(b,fn),"_report.r");
 	FILE *f=xopen(b,"wt");
 
 	strcpy(b,outFile);
 	s=strrchr(b,'/'); if(s==0) s=outFile; else s++; strcpy(fname,s);
 
-	fprintf(f," #  Read parameters to view \n");
-	fprintf(f," #file name \n");
-	fprintf(f," name <-  \'%s\' \n",fname);
-	fprintf(f," n_lines = 12 \n\n");
-
-	fprintf(f," fname1 <- \"%s\"  \n",bTrack1.name);
-	fprintf(f," fname2 <- \"%s\"  \n",bTrack2.name);
-	fprintf(f," pc <- \"\"  \n");
+	
+	fprintf(f, "library(\"markdown\")\n");
+	
+	fprintf(f, "args = commandArgs(TRUE)\n");
+	fprintf(f, "fname1<-\"%s\"\n", bTrack1.name);
+	fprintf(f, "fname2<-\"%s\"\n", bTrack2.name);
 	if (pcorProfile!=0) {
-		fprintf(f,"pc <- \"%s\" ",pcorProfile);
+		fprintf(f,"pc_fname <- \"%s\"\n",pcorProfile);
 	}
-	fprintf(f," args = commandArgs(TRUE) \n");
-	fprintf(f," print(args) \n");
-	fprintf(f," if (length(args)>=2) { \n");
-	fprintf(f,"   #track names \n");
-	fprintf(f,"   fname1 <- args[1]  \n");
-	fprintf(f,"   fname2 <- args[2]    \n");
-	fprintf(f,"   n_lines <- n_lines + 2 \n\n");
-	fprintf(f," }  \n");
+	else {
+		fprintf(f,"pc_fname <- \"\"\n");
+	}
+	fprintf(f, "\nif (length(args)>=2) {\n");
+  	fprintf(f, "#track names\n");
+  	fprintf(f, "	fname1 <- args[1]\n"); 
+  	fprintf(f, "	fname2 <- args[2]\n");
+	fprintf(f, "} \n\n");
+	fprintf(f, "if (length(args)==3){\n");
+  	fprintf(f, "#partial correlation track\n");
+  	fprintf(f, "	pc_fname <- args[3]\n");
+	fprintf(f, "} \n\n");
 
-	fprintf(f," if (length(args)==3){   \n");
-	fprintf(f,"   #partial correlation track   \n");
-	fprintf(f,"   pc <- args[3] \n");
-	fprintf(f,"   n_lines <- n_lines + 1 \n");
-	fprintf(f," }  \n");
-	fprintf(f," print(n_lines) \n");
-	fprintf(f," #  Read the data  \n\n");
-	fprintf(f," Window <- \"%i\" \n",wSize);
-	fprintf(f," kernel <- \"%s\" \n",getKernelType());
-	fprintf(f," nFgr <- \"%i\" \n",nFg);
-	fprintf(f," nBkg <- \"%i\" \n",nBkg);
-	fprintf(f," Bkg_av <- \"%.4f\" \n",BgAvCorr);
-	fprintf(f," Fg_av <- \"%.4f\" \n",FgAvCorr);
-	fprintf(f," Bkg_sd <- \"%.4f\" \n",sdBg);
-	fprintf(f," Fg_sd <- \"%.4f\" \n",sdFg);
-	fprintf(f," tot_cor <- \"%.4f\" \n",totCorr);
-	fprintf(f," avCorr <- \"%.4f\" \n",FgAvCorr);
-	fprintf(f," Mann_Z <- \"%.4f\" \n",MannW->z);
-	fprintf(f," p_value <- \"%.2e\" \n\n",MannW->pVal);
-	fprintf(f," fg <- read.table(paste(name, '.fg', sep = '')) \n");
-	fprintf(f," bkg<- read.table(paste(name, '.bkg', sep = '')) \n");
-	fprintf(f," dist <- read.table(paste(name, '.dist', sep = ''), header=TRUE) \n\n");
-	fprintf(f," #  Define plot limits \n\n");
-	fprintf(f," y_lim1 <- max(max(density(bkg[,1])$y),max(density(fg[,4])$y)) \n\n");
-	fprintf(f," x_lim2 <- c(-10000,10000) \n\n");
-	fprintf(f," # set x scale to kilobases \n");
-	fprintf(f," x_lim2 <- x_lim2/1000 \n\n");
-	fprintf(f," #get chromosome data for plots, example for chr1.  \n");
-	fprintf(f," #Some times you should also reset y_lim for plots \n");
-	fprintf(f," #fg_chrom <- fg[fg[,1]==\"chr1\",] \n");
-	fprintf(f," #dist_chrom <- dist$chr1 \n\n\n");
-	fprintf(f," # save plot to pdf \n");
-	fprintf(f," pdf(paste(name,'.pdf', sep=''), height = 10, width = 5) \n\n");
-	fprintf(f," #  create the plot \n");
-	fprintf(f," old.par <- par( no.readonly = TRUE ) \n");
-	fprintf(f," par( mfrow = c( 2, 1 ), oma = c( 0, 0, 16, 0 ),mar=c(3,3,2,1),mgp=c(1.6,0.45,0)) \n\n\n");
-	fprintf(f," plot(density(bkg[[1]]), xlim=c(-1,1), ylim=c(0, y_lim1), xlab='correlation coefficient',ylab='density', \n");
-	fprintf(f," col='red', main='Distribution of correlations', \n");
-	fprintf(f," cex.axis = 0.8,  cex.lab = 1,  cex.main = 1,lwd=2) \n");
-	fprintf(f," lines(density(fg[,4]), col='blue', lwd=2) \n");
-	fprintf(f,"  \n");
-	fprintf(f," mtext(\"  Stereogene report:\", 3, adj=0, line=n_lines, outer=TRUE, cex = 1) \n");
-	fprintf(f," if (fname1 != \"\"){ \n");
-	fprintf(f,"   mtext(paste('  track1:  ',fname1, sep=''), 3, adj=0, line=n_lines-1, outer=TRUE, cex = 0.8) \n");
-	fprintf(f,"   mtext(paste('  track2:  ',fname2, sep=''), 3, adj=0, line=n_lines-2, outer=TRUE, cex = 0.8) \n");
-	fprintf(f,"   n_lines<-n_lines-2 \n");
-	fprintf(f," } \n");
-	fprintf(f," mtext(paste('  window:  ',Window, sep=''), 3, adj=0, line=n_lines-1, outer=TRUE, cex = 0.8) \n");
-	fprintf(f," mtext(paste('  kernel:  ',kernel, sep=''), 3, adj=0, line=n_lines-2, outer=TRUE, cex = 0.8) \n");
-	fprintf(f," mtext(paste('  nFgr:  ',nFgr, sep=''), 3, adj=0, line=n_lines-3, outer=TRUE, cex = 0.8) \n");
-	fprintf(f," mtext(paste('  nBkg:  ',nBkg, sep=''), 3, adj=0, line=n_lines-4, outer=TRUE, cex = 0.8) \n");
-	fprintf(f," mtext(paste('  Bkg_av:  ',Bkg_av, sep=''), 3, adj=0, line=n_lines-5, outer=TRUE, cex = 0.8) \n");
-	fprintf(f," mtext(paste('  Fg_av:  ',Fg_av, sep=''), 3, adj=0, line=n_lines-6, outer=TRUE, cex = 0.8) \n");
-	fprintf(f," mtext(paste('  Bkg_sd:  ',Bkg_sd, sep=''), 3, adj=0, line=n_lines-7, outer=TRUE, cex = 0.8) \n");
-	fprintf(f," mtext(paste('  tot_cor:  ',tot_cor, sep=''), 3, adj=0, line=n_lines-8, outer=TRUE, cex = 0.8) \n");
-	fprintf(f," mtext(paste('  avCorr:  ',avCorr, sep=''), 3, adj=0, line=n_lines-9, outer=TRUE, cex = 0.8) \n");
-	fprintf(f," mtext(paste('  Mann_Z:  ',Mann_Z, sep=''), 3, adj=0, line=n_lines-10, outer=TRUE, cex = 0.8) \n");
-	fprintf(f," mtext(paste('  p_value:  ',p_value, sep=''), 3, adj=0, line=n_lines-11, outer=TRUE, cex = 0.8) \n");
-	fprintf(f," if (pc != \"\"){ \n");
-	fprintf(f,"   mtext(paste('  partial correlation:  ', pc, sep=''), 3, adj=0, line=n_lines-12, outer=TRUE, cex = 0.8) \n");
-	fprintf(f," } \n\n");
-	fprintf(f," #plot line for chomosome \n");
-	fprintf(f," #lines(density(fg[,4]), col='green', lwd=2) \n\n\n");
-	fprintf(f," plot(dist$x/1000, dist$Fg, type='l',col='blue',  xlim=x_lim2, \n");
-	fprintf(f," main='Cross-correlation function',xlab='Distance (kb)',ylab='density*100',cex.axis = 0.8,  cex.lab = 1,  cex.main = 1,lwd=2) \n");
-	fprintf(f," lines(dist$x/1000,dist$Bkg , col='red',lwd=2) \n");
-	fprintf(f," #plot line for chomosome \n");
-	fprintf(f," #lines(dist$x/1000, dist_chrom , col='green',lwd=2) \n\n");
-	fprintf(f," par( old.par ) \n");
-	fprintf(f,"  \n");
-	fprintf(f," dev.off() \n");
-
+	fprintf(f, "rmarkdown::render(\"report_r_template.Rmd\", \"html_document\", \n");
+    fprintf(f, "              params=list(\n");
+  	fprintf(f, "track1=fname1, \n");
+  	fprintf(f, "track2=fname2, \n");
+  	fprintf(f, "pc=pc_fname, \n");
+  	fprintf(f, "name=\"%s\", \n", fname);
+  	fprintf(f, "window=\"%i\", \n", wSize);
+  	fprintf(f, "kernel=\"%s\",\n", getKernelType());
+  	fprintf(f, "nFgr=\"%i\",\n", nFg);
+  	fprintf(f, "nBkg=\"%i\",\n", nBkg);
+  	fprintf(f, "Bkg_av=\"%.4f\",\n", BgAvCorr);
+  	fprintf(f, "Fg_av=\"%.4f\",\n", FgAvCorr);
+  	fprintf(f, "Bkg_sd=\"%.4f\", \n", sdBg);
+  	fprintf(f, "Fg_sd=\"%.4f\",\n", sdFg);
+  	fprintf(f, "tot_cor=\"%.4f\",\n", totCorr);
+  	fprintf(f, "avCorr=\"%.4f\",\n", FgAvCorr);
+  	fprintf(f, "Mann_Z=\"%.4f\",  \n", MannW->z);
+  	fprintf(f, "p_value=\"%.2e\" \n", MannW->pVal);	
+  	fprintf(f, "), output_file = file.path(getwd(), \"%s.html\"))\n", fname);
+	
+	fclose(f);
 }
 
-void printR0(){
+void printR(){
 	writeLog("Write R ...");
 
 	char *fn=alTable.convert(outFile), *s,b[2048], fname[1024];

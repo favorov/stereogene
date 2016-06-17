@@ -560,7 +560,11 @@ int Correlator(){
 				printStat();					// write report
 			}
 			resultAutoCorrelation();		// write autocorrelation
-			if(RScriptFg) {printR();}
+			if(RScriptFg) {
+				printR();
+				printRreport();
+				printRmd();
+			}
 			n_cmp++;
 			clear();
 			bTrack2.clear();
