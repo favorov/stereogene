@@ -8,7 +8,7 @@ Script parameters:
 #$6 is window size
 #$7 is query long Galaxy name
 #$8 is reference long Galaxy name
-#$9 is pdf name as Galaxy asks for
+#$9 is html name as Galaxy asks for
 #$10 is NONE/BASE wigg?
 #$11 is wigg name for correlation track
 -->
@@ -35,8 +35,8 @@ Script parameters:
     <param name="ifcorrtrack" type="boolean" label="Save correlation track" truevalue='BASE' falsevalue='NONE' checked="false"/>
   </inputs>
   <outputs>
-    <data name="report" label="SG results: ${query.name} vs ${reference.name}" hidden='false' format="pdf"/>
-    <data format="wig" name="corrtrack" label="SG local correlation track: ${query.name} vs ${reference.name}" hidden='false'  >
+    <data name="report" label="SG results: ${query.name} vs ${reference.name}" hidden='false' format="html"/>
+    <data format="wig" name="corrtrack" label="SG local correlation track: ${query.name} vs ${reference.name}" hidden='false' >
     	<filter>ifcorrtrack</filter>
     </data>  
   </outputs>
