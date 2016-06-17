@@ -18,7 +18,7 @@ Script parameters:
   <command> StereoGene -cfg $cfg -chrom $chrom $query $reference $output</command>
   -->
   <version_command>StereoGene -v</version_command>
-  <command interpreter="bash">stereogene-galaxy-simple.sh $chrom $query ${query.ext} $reference ${reference.ext} $wsize ${query.name} ${reference.name} $report $ifcorrtrack $corrtrack</command>
+  <command interpreter="bash">stereogene-galaxy-simple.sh $chrom $query ${query.ext} $reference ${reference.ext} $wsize "${query.name}" "${reference.name}" $report $ifcorrtrack $corrtrack</command>
   <inputs>
     
     <!-- We wold prefer to avoid config
@@ -36,7 +36,7 @@ Script parameters:
   </inputs>
   <outputs>
     <data name="report" label="SG results: ${query.name} vs ${reference.name}" hidden='false' format="pdf"/>
-    <data format="wig" name="corrtrack" label="SG local correlation: ${query.name} vs ${reference.name}" hidden='false'  >
+    <data format="wig" name="corrtrack" label="SG local correlation track: ${query.name} vs ${reference.name}" hidden='false'  >
     	<filter>ifcorrtrack</filter>
     </data>  
   </outputs>

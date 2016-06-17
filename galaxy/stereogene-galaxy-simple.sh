@@ -19,7 +19,7 @@ ln -f $4 $rname
 #echo StereoGene -s -chrom $1 $qname $rname >> ~/tmp/log-galaxy/simplecmd.log
 StereoGene -chrom $1 -wSize $6 -outWig ${10} -R $rname $qname > out.txt
 outname=`awk -e '/^out=\"(.+)\"/{match($_,"^out=\"(.+)\"",a);print a[1]}' out.txt`
-Rscript ${outname}.r $7 $8 > /dev/null
+Rscript ${outname}.r "\"$7\"" "\"$8\"" > /dev/null
 unlink $qname
 unlink $rname
 mv ${outname}.pdf $9
