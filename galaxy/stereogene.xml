@@ -18,7 +18,7 @@ Script parameters:
   <command> StereoGene -cfg $cfg -chrom $chrom $query $reference $output</command>
   -->
   <version_command>StereoGene -v</version_command>
-  <command interpreter="bash">stereogene-galaxy-simple.sh $chrom $query ${query.ext} $reference ${reference.ext} $wsize "${query.name}" "${reference.name}" $report $ifcorrtrack $corrtrack</command>
+  <command interpreter="bash">stereogene-galaxy-2-way.sh $chrom $query ${query.ext} $reference ${reference.ext} $wsize "${query.name}" "${reference.name}" $report $ifcorrtrack $corrtrack</command>
   <inputs>
     
     <!-- We wold prefer to avoid config
