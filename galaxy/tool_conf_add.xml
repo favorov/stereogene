@@ -2,5 +2,6 @@
 <toolbox monitor="true">
   <section name="Correlation" id="correlation_tools">
     <tool file="correlation/stereogene.xml" />
+    <tool file="correlation/stereogene-partial.xml" />
   </section>
 </toolbox>
