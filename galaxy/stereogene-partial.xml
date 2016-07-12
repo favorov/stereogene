@@ -18,7 +18,7 @@ Script parameters:
 <tool id="stereogene-partial" name="Stereogene partial">
   <description>FFT-based partial correlation between two genomic features removing the influence of the third (confounding) feauture </description>
   <version_command>StereoGene -v</version_command>
-  <command interpreter="bash">stereogene-galaxy-partial.sh $chrom $query ${query.ext} $reference ${reference.ext} $wsize "${query.name}" "${reference.name}" $report $ifcorrtrack $corrtrack $cfound ${cfound.type} "${cfound.name}" </command>
+  <command interpreter="bash">stereogene-galaxy-partial.sh $chrom $query ${query.ext} $reference ${reference.ext} $wsize "${query.name}" "${reference.name}" $report $ifcorrtrack $corrtrack $cfound ${cfound.ext} "${cfound.name}" </command>
   <inputs>
     <param format="text" name="chrom" type="data" label="Chromosome file"/>
     <param format="text" name="query" type="data" label="Track with feature  1"/>
