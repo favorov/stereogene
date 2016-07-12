@@ -13,20 +13,16 @@ Script parameters:
 #$11 is wigg name for correlation track
 -->
 <tool id="stereogene" name="Stereogene">
-  <description>FFT-based correlation between two files of genomic intervals</description>
+  <description>FFT-based correlation between two genomic features</description>
    <!-- We wold prefer to avoid config
   <command> StereoGene -cfg $cfg -chrom $chrom $query $reference $output</command>
   -->
   <version_command>StereoGene -v</version_command>
   <command interpreter="bash">stereogene-galaxy-2-way.sh $chrom $query ${query.ext} $reference ${reference.ext} $wsize "${query.name}" "${reference.name}" $report $ifcorrtrack $corrtrack</command>
   <inputs>
-    
-    <!-- We wold prefer to avoid config
-    <param format="text" name="cfg" type="data" label="Configuration file"/>
-    -->
     <param format="text" name="chrom" type="data" label="Chromosome file"/>
-    <param format="text" name="query" type="data" label="Track 1"/>
-    <param format="text" name="reference" type="data" label="Track 2"/>
+    <param format="text" name="query" type="data" label="Track with feature 1"/>
+    <param format="text" name="reference" type="data" label="Track with feature 2"/>
     <param name="wsize" type="select" label="Window size">
 	<option value='10000'>10000</option>
 	<option value='100000' select='true'>100000</option>

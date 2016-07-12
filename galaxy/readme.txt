@@ -24,3 +24,7 @@ Eventually, we use sh script as wrapper, and the thing started to work.
 Critical: galaxy is to know the file format, do not use 'unknown'.
 
 Galaxy can give full name of a data set and its type (extension): ${query.name} ${query.ext}
+
+We provide tools  for 2-way calculation count and for partial correlation by Stereogene
+Both are xml+sh wrapper.
+Do not forget to add tool_conf_add.xml to Galaxy configuration!
