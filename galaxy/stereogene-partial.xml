@@ -20,10 +20,6 @@ Script parameters:
   <version_command>StereoGene -v</version_command>
   <command interpreter="bash">stereogene-galaxy-partial.sh $chrom $query ${query.ext} $reference ${reference.ext} $wsize "${query.name}" "${reference.name}" $report $ifcorrtrack $corrtrack $cfound ${cfound.type} "${cfound.name}" </command>
   <inputs>
-    
-    <!-- We wold prefer to avoid config
-    <param format="text" name="cfg" type="data" label="Configuration file"/>
-    -->
     <param format="text" name="chrom" type="data" label="Chromosome file"/>
     <param format="text" name="query" type="data" label="Track with feature  1"/>
     <param format="text" name="reference" type="data" label="Track with feature 2"/>
@@ -36,8 +32,8 @@ Script parameters:
     <param name="ifcorrtrack" type="boolean" label="Save correlation track" truevalue='BASE' falsevalue='NONE' checked="false"/>
   </inputs>
   <outputs>
-    <data name="report" label="SG results: ${query.name} vs ${reference.name}" hidden='false' format="html"/>
-    <data format="wig" name="corrtrack" label="SG local correlation track: ${query.name} vs ${reference.name}" hidden='false' >
+    <data name="report" label="SG partial corr results: ${query.name} vs ${reference.name} proj to ${cfound.name}" hidden='false' format="html"/>
+    <data format="wig" name="corrtrack" label="SG local partial corr track: ${query.name} vs ${reference.name} proj to ${cfound.name}" hidden='false' >
     	<filter>ifcorrtrack</filter>
     </data>  
   </outputs>
