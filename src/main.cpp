@@ -31,6 +31,7 @@ const int PRM_STRING=3;
 const int PRM_ENUM=4;
 const int PRM_FG=5;
 const int PRM_MAPIV=6;
+const int PRM_PATH=7;
 
 const int PRM_UNKNOWN=-0XFFFFFFF;
 
@@ -58,6 +59,8 @@ struct Param{
 	Param(const char* _name, double *prm, const char* descr);
 	Param(const char* _name, char * *prm, const char* descr);
 	Param(const char* _name, MapIv  *prm, const char* descr);
+	Param(const char* _name,  char*  *_prm, const char* descr, bool path);
+
 	void setVal();
 	void init(const char* _name, void* _prm, int type, Name_Value **fg, const char* descr);
 	void printDescr();
@@ -160,9 +163,9 @@ Param *pparams[]={
 //=============================================================================================================
 		new Param("paths and files"),
 		new Param("cfg" 		, &cfgFile 		,"config file"),
-		new Param("profPath" 	, &profPath 	,"path for binary profiles"),
-		new Param("trackPath" 	, &trackPath 	,"path for tracks"),
-		new Param("resPath" 	, &resPath 		,"path for results"),
+		new Param("profPath" 	, &profPath 	,"path for binary profiles", true),
+		new Param("trackPath" 	, &trackPath 	,"path for tracks", true),
+		new Param("resPath" 	, &resPath 		,"path for results", true),
 
 		new Param("statistics" 	, &statFileName	 ,"cumulative file with statistics"),
 		new Param("params" 		, &paramsFileName,"cumulative file with parameters"),
@@ -246,6 +249,7 @@ Param::Param(const char* _name,  int    *_prm, Name_Value **fg, const char* desc
 Param::Param(const char* _name,  bool   *_prm,  const char* descr)			{init(_name,_prm,PRM_FG		,0 ,descr);}
 Param::Param(const char* _name,  double *_prm,  const char* descr)			{init(_name,_prm,PRM_DOUBLE	,0 ,descr);}
 Param::Param(const char* _name,  char*  *_prm, const char* descr)			{init(_name,_prm,PRM_STRING	,0 ,descr);}
+Param::Param(const char* _name,  char*  *_prm, const char* descr, bool path) {init(_name,_prm,PRM_PATH	,0 ,descr);}
 Param::Param(const char* _name, MapIv   *_prm, const char* descr)			{init(_name,_prm,PRM_MAPIV	,0 ,descr);}
 Param::Param(const char* _name,  int    *_prm, int val, const char* descr)	{init(_name,_prm,PRM_INT	,0 ,descr);
 	value=val;}
@@ -289,6 +293,10 @@ int Param::readVal(char *s){
 		if(s==0 || strlen(s)) *(char**) (prm)=strdup(s);
 		else prm=0;
 		break;
+	case PRM_PATH:
+		if(s==0 || strlen(s)) *(char**) (prm)=makePath(s);
+		else prm=0;
+		break;
 	case PRM_MAPIV:   	((MapIv *) (prm))->read(s);		break;
 	case PRM_ENUM:		{
 		int vl=readEnum(s);
@@ -325,6 +333,7 @@ void Param::printDescr(){
 		if(type==PRM_INT) 	 printf("<int>");
 		if(type==PRM_DOUBLE) printf("<float>");
 		if(type==PRM_STRING) printf("<string>");
+		if(type==PRM_PATH) printf("<string>");
 		if(type==PRM_FG)     printf("<0|1>");
 	}
 	if(enums){
@@ -465,7 +474,7 @@ void parseArgs(int argc, char **argv){
 int main(int argc, char **argv) {
 //	test();
 //	clearDeb();
-//	debugFg=DEBUG_LOG|DEBUG_PRINT;
+	debugFg=DEBUG_LOG|DEBUG_PRINT;
 
 	const char * progName="StereoGene";
 	char *chrom=getenv("SG_CHROM");

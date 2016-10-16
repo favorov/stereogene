@@ -14,7 +14,7 @@
 #include <sys/file.h>
 //#include <dir.h>
 
-const char* version="1.65";
+const char* version="1.66";
 
 int debugFg=0;
 //int debugFg=DEBUG_LOG|DEBUG_PRINT;
@@ -310,10 +310,20 @@ void filePos2Pos(int pos, ScoredRange *gr, int length){
 	return;
 }
 //========================================================================================
-Chromosome *checkRange(ScoredRange *gr){
+Chromosome *checkRange(char* b, ScoredRange *gr){
 	Chromosome* chr=findChrom(gr->chrom);
 	if(chr==0) return 0;
-	if((gr->beg < 0) || (gr->end >= chr->length)) return 0;
+
+	if(gr->beg < 0){
+		writeLog("Line <%s>: incorrect segment start: chrom=%s  beg=%i.  Trimmed\n",b,gr->chrom, gr->beg);
+		fprintf(stderr,"Line <%s>: incorrect segment start: chrom=%s  beg=%ld.  Trimmed\n",b,gr->chrom, gr->beg);
+		gr->beg=0;
+	}
+	if(gr->end  > chr->length){
+		writeLog("Line <%s>: incorrect segment end: chrom=%s  end=%i.  Trimmed\n",b,gr->chrom, gr->end);
+		fprintf(stderr,"Line <%s>: incorrect segment end: chrom=%s  end=%ld.  Trimmed\n",b,gr->chrom, gr->end);
+		gr->end  = chr->length;
+	}
 	return chr;
 }
 //========================================================================================
@@ -827,7 +837,11 @@ int _makeDir(const char * path){
     struct stat sb;
     if (stat(path, &sb) == 0 && S_ISDIR(sb.st_mode)) return 0;
 #if defined(_WIN32)
+#if __GNUC__ > 4
 	return _mkdir(path);
+#else
+	return mkdir(path);
+#endif
 #else
 	mode_t mode=S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH;
 	return mkdir(path, mode); // notice that 777 is different than 0777

@@ -37,8 +37,8 @@ OBJS=$(od)/FourierCorr.o \
 	$(od)/trackPrepare.o \
 	$(od)/util.o \
 	$(od)/mixfft.o \
-	$(od)/main.o
-
+	$(od)/main.o 
+	
 objs:$(OBJS)
 
 $(od)/%.o: %.c

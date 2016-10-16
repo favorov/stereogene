@@ -32,8 +32,8 @@ void bTrack::initProfile(){
 	errStatus=0;
 };
 //================================================================= Add segment
-void bTrack::addSgm(ScoredRange *bed, float *prof){
-	if(!checkRange(bed)) return;
+int bTrack::addSgm(char* b, ScoredRange *bed, float *prof){
+	if(!checkRange(b,bed)) return 0;
 	if(intervFlag) bed->score=1;
 	else bed->score+=NA;
 	int p1=pos2filePos(bed->chrom, bed->beg);
@@ -51,14 +51,15 @@ void bTrack::addSgm(ScoredRange *bed, float *prof){
 		d=(int)(bed->score)*(bed->end - (p2-curChrom->base)*stepSize);
 		prof[p2]+=d;
 	}
+	return 1;
 }
 
-void bTrack::addSgm(char strnd, ScoredRange *bed, float *prof, float *profc, int strndFg){
+int bTrack::addSgm(char* b, char strnd, ScoredRange *bed, float *prof, float *profc, int strndFg){
 	if(strndFg){								            //========== Strand dependent
-		if(strnd=='-') addSgm(bed, profc);
-		else 		   addSgm(bed, prof );
+		if(strnd=='-') return addSgm(b,bed, profc);
+		else 		   return addSgm(b,bed, prof );
 	}
-	else			   addSgm(bed, prof);
+	else			   return addSgm(b,bed, prof);
 }
 
 //=====================================================================================
@@ -234,7 +235,7 @@ void bTrack::readTrack(const char *fname, int cage){
 							else  			beg=end-1;
 						}
 					bed.beg=genePos+beg; bed.end=genePos+end;
-						addSgm(strand, &bed, profile, profilec, strandFg);
+						addSgm(buff0, strand, &bed, profile, profilec, strandFg);
 					}
 					break;
 				}
@@ -251,7 +252,7 @@ void bTrack::readTrack(const char *fname, int cage){
 							else  			beg=end-1;
 						}
 						bed.beg=genePos+beg; bed.end=genePos+end;
-						addSgm(strand, &bed, profile, profilec, strandFg);
+						addSgm(buff0, strand, &bed, profile, profilec, strandFg);
 					}
 					break;
 				}
@@ -326,7 +327,7 @@ void bTrack::readTrack(const char *fname, int cage){
 		if(cage > 0) bed.end=bed.beg+cage;
 		if(cage < 0) bed.beg=bed.end+cage;
 		if(dataFg && intervFlag!=IVS && intervFlag!=EXON) {
-			addSgm(strand, &bed, profile, profilec, strandFg);
+			addSgm(buff0, strand, &bed, profile, profilec, strandFg);
 		}
 	}
 	if(nStrand==0) strandFg=0;
@@ -374,9 +375,8 @@ void bTrack::finProfile(){
 	maxP=-5.e+20;      // Maximal profile value
 	//============================ calculate min, max, average, std deviation
 	double x2=0;
-
 	if(NAFlag==0){
-		if(trackType==BED_TRACK){
+		if(trackType==BED_TRACK || trackType==BED_GRAPH){
 			for(int i=0; i<profileLength; i++){
 				if(profile [i] == NA) profile [i]=0;
 				if(profilec && profilec[i] == NA) profilec[i]=0;
@@ -408,6 +408,7 @@ void bTrack::finProfile(){
 	if(maxP==minP){	errorExit("=== !!!!  The profile contains only zero: min=%.2e max=%.2e  !!!===\n",minP,maxP);}
 	x2-=av*av*nn;
 	sd=sqrt(x2/(nn-1));
+
 //	if(lScale==AUTO_SCALE  && maxP/sd > 10){
 //		lScale=LOG_SCALE;
 //		finProfile();

@@ -86,4 +86,9 @@
 7. Stdout format was changed
 ========== Version 1.65 ====================
 1. R script changed
-2. _repor.R script to generate html report and Rmd file creation added
+2. _repor.R script to generate html report from Rmd file and the Rmd file are created by the program 
+========== Version 1.66 ====================
+1. fixed bug in work with track lists
+2. A diagnostic for incorrect segments added
+3. GNU version check to choose between mkdir and_mkdir if WIN32
+

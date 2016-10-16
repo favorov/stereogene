@@ -460,7 +460,7 @@ void printRreport(){
 	s=strrchr(b,'/'); if(s==0) s=outFile; else s++; strcpy(fname,s);
 
 	
-	fprintf(f, "library(\"rmarkdown\")\n");
+	fprintf(f, "library(\"markdown\")\n");
 	
 	fprintf(f, "args = commandArgs(TRUE)\n");
 	fprintf(f, "fname1<-\"%s\"\n", bTrack1.name);

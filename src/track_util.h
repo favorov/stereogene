@@ -346,8 +346,8 @@ struct bTrack{		        // Binary track
 	float normProf(float x);
 	void writeByteProfile();
 	void writeProfilePrm();
-	void addSgm(ScoredRange *bed, float *prof);
-	void addSgm(char strnd, ScoredRange *bed, float *prof, float *profc, int strndFg);
+	int addSgm(char* b, ScoredRange *bed, float *prof);
+	int addSgm(char* b, char strnd, ScoredRange *bed, float *prof, float *profc, int strndFg);
 };
 //==============================
 struct Term{
@@ -592,7 +592,7 @@ Chromosome *getChromByPos(int pos);			// get Chromosome by file position
 long pos2filePos(char*chrom,long pos);		// transform genome position to byte-profile position
 void filePos2Pos(int pos, ScoredRange *gr, int length); // transform byte-profile position to genome position
 Chromosome* findChrom(char *ch);			// Find chromosome record by name
-Chromosome *checkRange(ScoredRange *gr);    // check if genome range is valid
+Chromosome *checkRange(char *b,ScoredRange *gr);    // check if genome range is valid
 void clearChromosomes();
 void addChromStat(int pos, bool cmpl1,bool cmpl2,double corr);
 //=============================== Parsing ===========================
