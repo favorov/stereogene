@@ -32,8 +32,8 @@ void bTrack::initProfile(){
 	errStatus=0;
 };
 //================================================================= Add segment
-int bTrack::addSgm(char* b, ScoredRange *bed, float *prof){
-	if(!checkRange(b,bed)) return 0;
+int bTrack::addSgm(ScoredRange *bed, float *prof){
+	if(!checkRange(bed)) return 0;
 	if(intervFlag) bed->score=1;
 	else bed->score+=NA;
 	int p1=pos2filePos(bed->chrom, bed->beg);
@@ -43,23 +43,23 @@ int bTrack::addSgm(char* b, ScoredRange *bed, float *prof){
 		prof[p1]+=bed->score*(bed->end-bed->beg);
 	}
 	else{
-		int d=(int)(bed->score)*(stepSize*(p1 + 1 - curChrom->base) - bed->beg);
+		int d=(int)(bed->score)*(binSize*(p1 + 1 - curChrom->base) - bed->beg);
 		prof[p1]+=d;
 		for(int i=p1+1; i<p2; i++){
-			prof[i]+=bed->score*stepSize;
+			prof[i]+=bed->score*binSize;
 		}
-		d=(int)(bed->score)*(bed->end - (p2-curChrom->base)*stepSize);
+		d=(int)(bed->score)*(bed->end - (p2-curChrom->base)*binSize);
 		prof[p2]+=d;
 	}
 	return 1;
 }
 
-int bTrack::addSgm(char* b, char strnd, ScoredRange *bed, float *prof, float *profc, int strndFg){
+int bTrack::addSgm(char strnd, ScoredRange *bed, float *prof, float *profc, int strndFg){
 	if(strndFg){								            //========== Strand dependent
-		if(strnd=='-') return addSgm(b,bed, profc);
-		else 		   return addSgm(b,bed, prof );
+		if(strnd=='-') return addSgm(bed, profc);
+		else 		   return addSgm(bed, prof );
 	}
-	else			   return addSgm(b,bed, prof);
+	else			   return addSgm(bed, prof);
 }
 
 //=====================================================================================
@@ -160,7 +160,11 @@ void bTrack::readTrack(const char *fname, int cage){
 	lScale=intervFlag ? LIN_SCALE : logScale;
 
 	FILE *f=xopen(fname, "rt"); setvbuf ( f , NULL , _IOFBF , 65536 );
+	strcpy(curFname,fname);
+	inputErrLine=inputErr = 0;		// flag: if input track has no errors
+
 	for(;(s=fgets(buff,BUFFSIZE,f))!=0; i++){
+		inputErrLine++;
 		strtok(s,"\n\r");
 		strcpy(buff0,buff);
 		int dataFg=1;									 	//======== remove end-of-line signes
@@ -235,7 +239,7 @@ void bTrack::readTrack(const char *fname, int cage){
 							else  			beg=end-1;
 						}
 					bed.beg=genePos+beg; bed.end=genePos+end;
-						addSgm(buff0, strand, &bed, profile, profilec, strandFg);
+						addSgm(strand, &bed, profile, profilec, strandFg);
 					}
 					break;
 				}
@@ -252,7 +256,7 @@ void bTrack::readTrack(const char *fname, int cage){
 							else  			beg=end-1;
 						}
 						bed.beg=genePos+beg; bed.end=genePos+end;
-						addSgm(buff0, strand, &bed, profile, profilec, strandFg);
+						addSgm(strand, &bed, profile, profilec, strandFg);
 					}
 					break;
 				}
@@ -327,7 +331,7 @@ void bTrack::readTrack(const char *fname, int cage){
 		if(cage > 0) bed.end=bed.beg+cage;
 		if(cage < 0) bed.beg=bed.end+cage;
 		if(dataFg && intervFlag!=IVS && intervFlag!=EXON) {
-			addSgm(buff0, strand, &bed, profile, profilec, strandFg);
+			addSgm(strand, &bed, profile, profilec, strandFg);
 		}
 	}
 	if(nStrand==0) strandFg=0;
@@ -336,7 +340,7 @@ void bTrack::readTrack(const char *fname, int cage){
 //=====================================================================================
 //========================================================================================
 float bTrack::normProf(float x){
-	float a=x/stepSize;
+	float a=x/binSize;
 	if(lScale==LOG_SCALE)
 		{if(a<=-1) a=-0.9999; a=a*scaleFactor; a=log(a+1);}
 	return a;
@@ -387,7 +391,7 @@ void bTrack::finProfile(){
 	int nn=0;
 	for(int i=0; i<profileLength; i++){
 		if(profile[i] != NA){       // we take into account only valid profile values
-			float z=profile[i]/stepSize;
+			float z=profile[i]/binSize;
 			float a=normProf(profile[i]);
 			av+=z; x2+=z*z; nn++;
 			lprof+=1;
@@ -395,7 +399,7 @@ void bTrack::finProfile(){
 			if(a > maxP) maxP=a;
 		}
 		if(profilec && profilec[i] != NA){       // we take into account only valid profile values
-			float z=profilec[i]/stepSize;
+			float z=profilec[i]/binSize;
 			float a=normProf(profilec[i]);
 			av+=z; x2+=z*z; nn++;
 			lprof+=1;
@@ -409,15 +413,15 @@ void bTrack::finProfile(){
 	x2-=av*av*nn;
 	sd=sqrt(x2/(nn-1));
 
-//	if(lScale==AUTO_SCALE  && maxP/sd > 10){
-//		lScale=LOG_SCALE;
-//		finProfile();
-//		return;
-//	}
-//	else{
-//		lScale=LIN_SCALE;
-//	}
-//
+	if(lScale==AUTO_SCALE  && maxP/sd > 10){
+		lScale=LOG_SCALE;
+		finProfile();
+		return;
+	}
+	else{
+		lScale=LIN_SCALE;
+	}
+
 	for(int i=0; i<profileLength; i++){
 		if(profile[i] != NA){       				// we take into account only valid profile values
 			profile[i]=normProf(profile[i]);
@@ -477,7 +481,7 @@ void bTrack::writeProfilePrm(){
 		fprintf(f,"input=%s\n",name);
 
     fprintf(f,"#=== Parameters ===\n");
-    fprintf(f,"step=%i\n",stepSize);
+    fprintf(f,"step=%i\n",binSize);
     fprintf(f,"strand=%i\n",strandFg);
     if(trackType == BROAD_PEAK)  fprintf(f,"bpType=%i\n",bpType);
     if(trackType == BED_TRACK)   fprintf(f, "intervFlag=%i\n", intervFlag);

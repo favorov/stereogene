@@ -418,39 +418,139 @@ void checkCrossCorr(){
 	fclose(f);
 }
 
+//=====================================================
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
+double drand()   /* uniform distribution, (0..1] */
+{
+  return (rand()+1.0)/(RAND_MAX+1.0);
+}
+
+double random_normal()
+ /* normal distribution, centered on 0, std dev 1 */
+{
+  return sqrt(-2*log(drand())) * cos(2*M_PI*drand());
+}
+
+
+double* GaussProcess(double *w,int  n, int kk){
+	getMem0(w,n,"tst");
+	double a=0.995, b=1;
+	double x=0, xmin=1.e+200, xmax=-xmin;
+	for(int i=0; i<n; i++){
+		x=a*x+b*random_normal();
+		double xx=exp(-0.1*x);
+		w[i]=xx;
+	}
+
+	for(int i=0; i<n; i++){
+		if(kk && ((i/kk)%2 == 0)) {
+			w[i]+=10;
+		}
+		double xx=w[i];
+		if(xmin > xx) xmin=xx;
+		if(xmax < xx) xmax=xx;
+	}
+
+
+	for(int i=0; i<n; i++){
+		w[i]=1000*(w[i]-xmin)/(xmax-xmin);
+	}
+	return w;
+}
+
+
+int genomeSize=100000;
+int lStep_test=1000;
+double * random_wig(double *w,int num){
+	int genomeSize=100000;
+
+	w=GaussProcess(w,genomeSize, num*lStep_test);
+
+	char b[256]; sprintf(b,"rnd_%02i.wig",num);
+deb(b);
+
+	FILE *f=fopen(b,"wt");
+	fprintf(f,"track type=wiggle_0 description=\"-sin\"\n");
+	fprintf(f,"fixedStep chrom=chr1 start=0 step=100 span=100\n");
+		for(int i=0; i<genomeSize; i++){
+			int k=(int)w[i];
+			fprintf(f,"%i\n",k);
+		}
+	fclose(f);
+	return w;
+}
 
 void test(){
 	clearDeb();
 	debugFg=DEBUG_LOG|DEBUG_PRINT;
-//	char v0[256];
-//	char *ver="1.64.2";
-//	getMajorVer(ver,v0);
-//	deb("<%s>",ver);
-//	deb("<%s>",v0);
+deb(444);
+int l=1000000, n=100, step=1000;
+double *xx, *yy, *gauss;
+getMem(xx,l,"");
+getMem(yy,l,"");
+getMem(gauss,n,"");
 
+double sigma=20;
+deb(0);
+zeroMem(xx,l); zeroMem(yy,l);
+deb(1);
+for(int i=0; i<n; i++) {
+	double x=(i-n/2)/sigma;
+	gauss[i]=exp(-x*x);
+}
+deb(2);
+for(int k=0; k<10; k++){
+	for(int p=k*step, j=0; p<l && j<n; p++,j++)
+		xx[p]=gauss[j];
+	for(int p=k*step+5*n, j=0; p<l && j<n; p++,j++)
+		yy[p]=gauss[j];
+}
+deb(3);
+FILE *f=fopen("g0.wig","wt");
+fprintf(f,"track type=wiggle_0 description=\"gauss\"\n");
+for(int i=0; i<1000000; i++){
+	int k=1000.*xx[i];
+	if(i%100 ==0)
+		fprintf(f,"fixedStep chrom=chr1 start=%i step=100 span=100\n",i*100);
+			fprintf(f,"%i\n",k);
+}
+fclose(f);
 
-//	FILE *xml=0;
+f=fopen("g3.wig","wt");
+fprintf(f,"track type=wiggle_0 description=\"gauss\"\n");
+for(int i=0; i<1000000; i++){
+	int k=1000.*yy[i];
+	if(i%100 ==0)
+		fprintf(f,"fixedStep chrom=chr1 start=%i step=100 span=100\n",i*100);
+			fprintf(f,"%i\n",k);
+}
+fclose(f);
+
+//FILE *f=fopen("cos.wig","wt");
 //
+//fprintf(f,"track type=wiggle_0 description=\"cos\"\n");
+//	for(int i=0; i<1000000; i++){
+//		double x=cos(i/100.)+1;
+//		int k=500.*x;
+//if(i%100 ==0)
+//	fprintf(f,"fixedStep chrom=chr1 start=%i step=100 span=100\n",i*100);
+//		fprintf(f,"%i\n",k);
+//	}
+//fclose(f);
+//f=fopen("sin.wig","wt");
 //
-//	xml=fopen("statistics.xml","r+");
-//
-//	const char*bb="<run> </run> \n</xml>\n";
-//	fprintf(xml,"<run> </run> \n</xml>\n");
-//
-////deb("$$$$$$$$$$$$$$$$$$ %ld",ll);
-//
-////fprintf(xml,"<run> </run> \n</xml>\n");
-//fclose(xml);
-
-
-
-//	const char *pcname="proj";
-//	const char *b="xxx";
-//	double avBg=1,avFg=2.5,sdBg=3.78,sdFg=1.735;
-//	statTest *MannW=new statTest();
-//	MannW->z=0.35; MannW->pVal=1.e-75;
-//	FILE *xml=fopen("t.xml","wt");
-
+//fprintf(f,"track type=wiggle_0 description=\"cos\"\n");
+//	for(int i=0; i<1000000; i++){
+//		double x=sin(i/100.)+1;
+//		int k=500.*x;
+//if(i%100 ==0)
+//	fprintf(f,"fixedStep chrom=chr1 start=%i step=100 span=100\n",i*100);
+//		fprintf(f,"%i\n",k);
+//	}
+//fclose(f);
 	exit(0);
 }
 

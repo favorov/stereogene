@@ -39,7 +39,7 @@ void printChrDistances(char *fname){
 	fprintf(f,"\n");
 	for(int j=0; j<profWithFlanksLength; j++){
 		int k=(j+profWithFlanksLength/2)%profWithFlanksLength;
-		fprintf(f,"%i",(j-profWithFlanksLength/2)*stepSize);
+		fprintf(f,"%i",(j-profWithFlanksLength/2)*binSize);
 		fprintf(f,"\t%9.5f\t%9.5f\t%9.5f\t%9.5f", bgcorrelation.correlation[k]*100,
 				correlation.correlation[k]*100, correlation.corrPlus[k]*100, correlation.corrMinus[k]*100);
 		if(writeDistCorr==CHR_DETAIL){
@@ -150,7 +150,7 @@ void printStat(){
 		fprintf(f,"\t%-20s\t%-12s\t%-20s","map","mapIv","pcorProfile");
 		fprintf(f,"\t%-2s\t%-6s\t%-6s","NA", "maxNA","maxZer");
 		fprintf(f,"\t%-6s\t%-6s\t%-6s","interv", "strand","compl");
-		fprintf(f,"\t%-4s\t%-6s","step", "bpType");
+		fprintf(f,"\t%-4s\t%-6s","bin", "bpType");
 		fprintf(f,"\t%-6s\t%-6s\t%-6s\t%-6s","wSize", "wStep","flank","noise");
 		fprintf(f,"\t%-6s\t%-8s\t%-8s","kernel", "Kern-Sgm","kern-Sh");
 		fprintf(f,"\t%-8s\t%-8s\t%-8s\n","nShuffle", "MaxShfl","threshold");
@@ -162,7 +162,7 @@ void printStat(){
 		fprintf(f,"\t%-20s\t%-12s\t%-20s",mf,miv.print(b),pcname);
 		fprintf(f,"\t%-2i\t-%6.1f\t%-6.1f",NAFlag, maxNA0,maxZero0);
 		fprintf(f,"\t%-6i\t%-6i\t%-6i",intervFlag0, strandFg0,complFg);
-		fprintf(f,"\t%-4i\t%-6i",stepSize, bpType);
+		fprintf(f,"\t%-4i\t%-6i",binSize, bpType);
 		fprintf(f,"\t%-6i\t%-6i\t%-6i\t%-6.2f",wSize, wStep,flankSize,noiseLevel);
 		fprintf(f,"\t%-6s\t%-8.0f\t%-8.0f",getKernelType(), kernelSigma,kernelShift);
 		fprintf(f,"\t%-i\t%-i\t%-8i\n",nShuffle, maxShuffle,threshold);
@@ -197,7 +197,7 @@ void printStat(){
 		fprintf(xml,"nShuffle=\"%i\" ",nShuffle);
 		fprintf(xml,"maxShuffle=\"%i\" ", maxShuffle);
 		fprintf(xml,"threshold=\"%i\" ",threshold);
-		fprintf(xml,"stepSize=\"%i\" ",stepSize);
+		fprintf(xml,"binSize=\"%i\" ",binSize);
 		fprintf(xml,"bpType=\"%i\" ", bpType);
 		fprintf(xml,"NAFlag=\"%i\" ",NAFlag);
 		fprintf(xml,"maxNA=\"%.1f\" ", maxNA0);
@@ -243,7 +243,7 @@ void Correlation::printSpect(char *fname){
 	}
 
 	for(int i=5; i<profWithFlanksLength/2; i++){
-		double l=(double)(profWithFlanksLength)*stepSize/(i+1);
+		double l=(double)(profWithFlanksLength)*binSize/(i+1);
 		fprintf(f,"%.2f\t%g\t%g\n",l,spectrumX[i],spectrumY[i]);
 	}
 

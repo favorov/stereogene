@@ -91,4 +91,8 @@
 1. fixed bug in work with track lists
 2. A diagnostic for incorrect segments added
 3. GNU version check to choose between mkdir and_mkdir if WIN32
-
+4. Fixed bug with incorrect positions on the chromosomes
+========== Version 1.67 ====================
+1. parameter 'step' is renamed to 'bin' 
+2. parameter 'outWig' is renamed to 'outLC'
+3. Introduced the distributions for the local correlation (file *.hist) 

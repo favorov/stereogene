@@ -154,7 +154,7 @@ Param *pparams[]={
 
 //=============================================================================================================
 		new Param("preparation parameters"),
-		new Param("step" 	 	, &stepSize  	,"step for input averaging"),
+		new Param("bin" 	 	, &binSize  	,"bin size for input averaging"),
 		new Param("scale" 	 	, &logScale  	,scaleTypes,"use Logarithmic or linear scale"),
 		new Param("scaleFactor"	, &scaleFactor0 ,0),
 		new Param("clear" 	  	, &clearProfile ,"force binary profile preparation"),
@@ -188,7 +188,7 @@ Param *pparams[]={
 		new Param("bpType" 	  	, &bpType  		,bpTypes	,"The value used as a score for BroadPeak input file"),
 		new Param("pcorProfile" , &pcorProfile	,"Track for partial correlation"),
 		new Param("NA"       	, &NAFlag     	,1 , "use NA values as unknown and fill them by noise"),
-		new Param("threshold"	, &threshold	,"threshold for input data for removing too small values"),
+		new Param("threshold"	, &threshold	,"threshold for input data for removing too small values: 0..250"),
 		new Param("map" 		, &mapFil 		,0),
 		new Param("mapIv" 		, &miv			,0),
 //=============================================================================================================
@@ -218,8 +218,8 @@ Param *pparams[]={
 		new Param("Rscrpit" 	, &RScriptFg   	,0),
 		new Param("r" 			, &RScriptFg   	,1,"write R script for the result presentation"),
 		new Param("Distances" 	, &writeDistCorr,distTypes	,"Write distance correlations"),
-		new Param("outWig"		, &outWIG		,outWigTypes,"parameters for local correlation file"),
-		new Param("outThreshold", &outThreshold	,"threshold for output to correlation profile"),
+		new Param("outLC"		, &outWIG		,outWigTypes,"parameters for local correlation file"),
+		new Param("outThreshold", &outThreshold	,"threshold for output to correlation profile scaled to 0..1000"),
 		new Param("corrOnly" 	, &corrOnly   	,0),
 		new Param("corr" 		, &corrOnly   	,1, 0),
 		new Param("lAuto"	  	, &lAuto  		,0),
@@ -228,6 +228,7 @@ Param *pparams[]={
 		new Param("nPca" 		, &nPca			,0),
 		new Param("cage" 		, &cage			,0),
 
+		new Param("inpThreshold", &inpThreshold  		,0),	//input binarization testing, %of max
 		new Param("Happy correlations!"),
 		0,
 };
@@ -473,7 +474,7 @@ void parseArgs(int argc, char **argv){
 
 int main(int argc, char **argv) {
 //	test();
-//	clearDeb();
+	clearDeb();
 	debugFg=DEBUG_LOG|DEBUG_PRINT;
 
 	const char * progName="StereoGene";

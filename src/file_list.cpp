@@ -42,7 +42,7 @@ TrackFile::TrackFile(){
 void TrackFile::printH(){
 	fprintf(outPCA,"\t%s",alTable.convert(name));
 }
-int TrackFile::getFilePos(unsigned long pos){ return (int)((double)pos*stepSize/step);}
+int TrackFile::getFilePos(unsigned long pos){ return (int)((double)pos*binSize/step);}
 
 TrackFile::TrackFile(char *fname){
 	buffsize=TRACK_BUFF_SIZE;
@@ -82,7 +82,7 @@ TrackFile::TrackFile(char *fname){
 	fseek(file, 0L, SEEK_SET);
 	getMem0(prof,nPca, "init Track file #2");
 	for(int i=0; i<nPca; i++){
-		unsigned long k=(int)( (double)positions[i]*stepSize/step);
+		unsigned long k=(int)( (double)positions[i]*binSize/step);
 		prof[i]=getProfile(k);
 	}
 	errStatus=0;
@@ -153,7 +153,7 @@ void pcaMain(const char *fname){
 	int nn=0;
 	for(int i=0; i<nPca; i++){
 		int k=tracks[0]->getFilePos(positions[i]);
-		filePos2Pos(k,&sr,stepSize);
+		filePos2Pos(k,&sr,binSize);
 
 		double z=0;
 		for(int k=0; k< nFiles; k++) z=tracks[k]->prof[i];

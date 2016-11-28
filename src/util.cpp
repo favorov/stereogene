@@ -14,7 +14,7 @@
 #include <sys/file.h>
 //#include <dir.h>
 
-const char* version="1.66";
+const char* version="1.67";
 
 int debugFg=0;
 //int debugFg=DEBUG_LOG|DEBUG_PRINT;
@@ -23,7 +23,7 @@ const char *debS=0;
 
 Chromosome *chrom_list;       // list of chromosomes
 Chromosome *curChrom=chrom_list;
-int  stepSize=100;   // frame size fo profile
+int  binSize=100;   // frame size fo profile
 int  intervFlag0=GENE;   // Flag: for bed tracks uncovered values=0 otherwise uncovered values=NA
 bool  NAFlag=0;
 
@@ -58,7 +58,7 @@ int  writeDistCorr=TOTAL;		    // write BroadPeak
 bool  outSpectr=0;
 bool  outChrom=0;
 int  outRes=XML|TAB;
-
+int  inpThreshold=0;		// Testing of binarized input data, % of max
 
 int   complFg=0;
 int   profileLength;			// size of the profile array
@@ -258,7 +258,7 @@ int readChromSizes(char *fname){
 
 	    chrom_list[n_chrom]=Chromosome(strdup(s1), atol(s2), profileLength);
 
-		int filLen=(chrom_list[n_chrom].length+stepSize-1)/stepSize;
+		int filLen=(chrom_list[n_chrom].length+binSize-1)/binSize;
 		profileLength+=filLen;
 
 		GenomeLength+=chrom_list[n_chrom].length;
@@ -283,7 +283,7 @@ long pos2filePos(char*chrom,long pos){
 	Chromosome *ch=findChrom(chrom);
 	if(ch==0) return 0;
 	curChrom=ch;
-	long p=pos/stepSize+curChrom->base;
+	long p=pos/binSize+curChrom->base;
 	return p;
 }
 
@@ -303,27 +303,40 @@ void filePos2Pos(int pos, ScoredRange *gr, int length){
 
 	if(ch0==0) return;
 	pos-=ch0->base;
-	long p1=stepSize*long(pos);
+	long p1=binSize*long(pos);
 	gr->chr=ch0;
 	gr->chrom=ch0->chrom;
 	gr->end=(gr->beg=p1)+length;
 	return;
 }
 //========================================================================================
-Chromosome *checkRange(char* b, ScoredRange *gr){
+int inputErr;		// flag: if input track has errors
+int inputErrLine;	// Error line in the input
+char curFname[4048];	// current input file
+
+Chromosome *checkRange(ScoredRange *gr){
 	Chromosome* chr=findChrom(gr->chrom);
 	if(chr==0) return 0;
 
 	if(gr->beg < 0){
-		writeLog("Line <%s>: incorrect segment start: chrom=%s  beg=%i.  Trimmed\n",b,gr->chrom, gr->beg);
-		fprintf(stderr,"Line <%s>: incorrect segment start: chrom=%s  beg=%ld.  Trimmed\n",b,gr->chrom, gr->beg);
-		gr->beg=0;
+		if(inputErr == 0){ inputErr=1;
+			writeLog(
+					"File <%s> line #%d: incorrect segment start: chrom=%s  beg=%ld.  Ignored\n",curFname, inputErrLine,gr->chrom, gr->beg);
+			fprintf(stderr,
+					"File <%s> line #%d: incorrect segment start: chrom=%s  beg=%ld.  Ignored\n",curFname, inputErrLine,gr->chrom, gr->beg);
+		}
+		return 0;
 	}
-	if(gr->end  > chr->length){
-		writeLog("Line <%s>: incorrect segment end: chrom=%s  end=%i.  Trimmed\n",b,gr->chrom, gr->end);
-		fprintf(stderr,"Line <%s>: incorrect segment end: chrom=%s  end=%ld.  Trimmed\n",b,gr->chrom, gr->end);
-		gr->end  = chr->length;
+	if(gr->end  >= chr->length){
+		if(inputErr == 0){ inputErr=1;
+			writeLog(
+					"File <%s> line #%d: incorrect segment end: chrom=%s  end=%ld.  Ignored\n",curFname, inputErrLine,gr->chrom, gr->end);
+			fprintf(stderr,
+					"File <%s> line #%d: incorrect segment end: chrom=%s  end=%ld.  Ignored\n",curFname, inputErrLine,gr->chrom, gr->end);
+		}
+		return 0;
 	}
+	if(gr->end < gr->beg) return 0;
 	return chr;
 }
 //========================================================================================
@@ -783,7 +796,113 @@ void Histogram::print(FILE *f){
 		fprintf(f,"%f\t%f\t%.2e\t%.2e\t%.2e\n",x,dd[i], db[i],Fp[i],Fm[i]);
 	}
 }
+//========================================================================
+DinHistogram::DinHistogram(int ll){
+	l=ll;
+	getMem(hist[0],l,"Dinamic histogram 0");
+	getMem(hist[1],l,"Dinamic histogram 1");
+	clear();
+}
 
+void DinHistogram::clear(){
+	n[0]=n[1]=0;					//number of observations
+	min=1.e+200; max=-min;			//min max values
+	bin=hMin=hMax=0;				//bin width, max-min value in the histogram
+	e[0]=e[1]=sd[0]=sd[1]=0;		//mean and std deviation
+	zeroMem(hist[0],l);
+	zeroMem(hist[1],l);
+}
+
+
+int DinHistogram::getIdx(double value){ //get index by value
+	if(bin==0) return 0;
+	if(value==hMax) return l-1;
+	return (int)((value-hMin)/bin);
+}
+double DinHistogram::getValue(int idx){	//get value by index
+	return hMin+idx*bin+bin/2;
+}
+
+int DinHistogram::compress2Left(double value){  //Compress the histogram to the Left
+	for(int i=0, j=0; i<l; i+=2, j++){			// Compress the values
+		hist[0][j]=hist[0][i]+hist[0][i+1];
+		hist[1][j]=hist[1][i]+hist[1][i+1];
+	}
+	for(int i=l/2; i<l; i++) hist[0][i]=hist[1][i]=0;	// Clear new space
+	bin*=2;												// redefine bin size
+	hMax=hMin+bin*l;									// redefine boundaries
+	return getIdx(value);
+}
+
+int DinHistogram::compress2Right(double value){	//Compress the histogram to the Right
+	for(int i=l-1,j=l-1; i > 0; i-=2,j--){		// Compress the values
+		hist[0][j]=hist[0][i]+hist[0][i-1];
+		hist[1][j]=hist[1][i]+hist[1][i-1];
+	}
+	for(int i=0; i<l/2; i++) hist[0][i]=hist[1][i]=0;	// Clear new space
+	bin*=2;												// redefine bin size
+	hMin=hMax-bin*l;									// redefine boundaries
+	return getIdx(value);
+}
+
+void DinHistogram::addStat(double value, int type){		//add the value to the statistics
+	n[type]++; e[type]+=value; sd[type]+=value*value;	//count, mean, std dev.
+	if(value > max) max=value;
+	if(value < min) min=value;
+}
+
+void DinHistogram::add(double value, int type){			// add the value to the histogram
+	if(n[0]==0 && n[1]==0){								// the histogram is empty
+		hist[type][0]=1; addStat(value,type);			// set the value
+		hMin=hMax=value;								// define boundaries
+		return;
+	}
+	if(hMin==hMax){										// the histogram contains only single bin
+		if(value==hMin){								// new value equal to the single bin
+			hist[type][0]++; addStat(value,type);		//
+			return;
+		}
+		else if(value > hMin){							// the new value is right to single bin
+			hist[type][l-1]++; addStat(value,type);		// the new value defines the right bin
+			max=hMax=value;								// redefine the boundaries
+		}
+		else{											// the new value is less than single bin
+			hist[0][l-1]=hist[0][0];					// Put the old value to the right end of the histogram
+			hist[1][l-1]=hist[1][0];					//
+			hist[type][0]=1; addStat(value,type);		// Put the new value to the left bin
+			min=hMin=value;								// redefine the boundaries
+		}
+		bin=(hMax-hMin)/l;								// Define the bin
+		return;
+	}
+	int i=getIdx(value);								// The histogram contains some values
+	while(i < 0){i=compress2Right(value);}				// The new value is less than the first bin
+	while(i >=l){i=compress2Left(value);}				// The new value is grater than the last bin
+	hist[type][i]++; addStat(value,type);				// Put the new value
+}
+
+void DinHistogram::fin(){								// Normalize and calculate the statistics
+	for(int t=0; t<2; t++){
+		for(int i=0; i<l; i++) hist[t][i]=hist[t][i]/n[t]/bin;
+		e[t]/=n[t];
+		sd[t]=(sd[t]-e[t]*e[t]*n[t])/(n[t]-1);
+	}
+}
+
+void DinHistogram::print(FILE* f){						// print the histogram
+	fprintf(f,"#  min=%.3f max=%.3f \n",min,max);
+	fprintf(f,"#  hMin=%.3f  hMax=%.3f bin=%.3f\n",hMin,hMax,bin);
+	fprintf(f,"#  e0=%.3f sd0=%.3f n0=%i\n",e[0],sd[0],n[0]);
+	fprintf(f,"#  e1=%.3f sd1=%.3f n1=%i\n",e[1],sd[1],n[1]);
+	for(int i=getIdx(min); i<getIdx(max); i++){
+		double h0=hist[0][i];
+		double h1=hist[1][i];
+		fprintf(f,"%.3f\t%.6f\t%.6f\n",getValue(i),h0,h1);
+	}
+}
+
+
+//==================================================================================
 double norm(double *x, int l){
 	double d=0,e=0,dd,ee;
 	for(int i=0; i<l; i++){d+=x[i]*x[i]; e+=x[i];}
@@ -1112,7 +1231,7 @@ unsigned int hashx(unsigned int h,double c){
 void makeId(){
 	id=hashx(id,outFile);
 	id=hashx(id,chromFile);
-	id=hashx(id,stepSize);
+	id=hashx(id,binSize);
 	id=hashx(id,intervFlag0);
 	id=hashx(id,qVal);
 	id=hashx(id,pVal);

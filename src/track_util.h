@@ -94,7 +94,7 @@ const int MAX_GENES=100000;
 
 struct Model;
 //========================= Common parameters ================================
-extern int  stepSize;          // frame size of profile
+extern int  binSize;          // frame size of profile
 extern long long GenomeLength;      // TOTAL LENGTH OF THE GENOME
 extern char *chromFile;		   // Chromosomes file name
 extern char *profile1;		   // first profile file file name
@@ -103,7 +103,7 @@ extern char *trackFil;		   // input track
 extern char *aliaseFil;		   // aliases
 extern char *mapFil;		   // map file
 extern char *inputProfiles;    // input formula for track combination
-extern int 	bpType;
+extern int 	bpType;			   // type of the input data in BroadPeak file
 
 extern bool  writeDistr;		// flag: write distributions
 
@@ -117,6 +117,11 @@ extern char *statFileName;	// File name for cummulative statistics
 extern char *paramsFileName; // Filename for save parameters of runs
 extern unsigned long id;
 
+extern int inputErr;		// flag: if input track has errors
+extern int inputErrLine;	// Error line in the input
+extern char curFname[4048];	// current input file
+
+extern int inpThreshold;		// Testing of binarized input data, % of max
 //============================ Track parameters ===============================
 extern int   complFg;		// Flag: IGNORE_STRAND - ignore strand; COLLINEAR - compare collinear strands; COMPLEMENT - compare complement strands
 extern int   intervFlag0;	// Flag: for bed tracks take intervals with score 1.
@@ -346,8 +351,8 @@ struct bTrack{		        // Binary track
 	float normProf(float x);
 	void writeByteProfile();
 	void writeProfilePrm();
-	int addSgm(char* b, ScoredRange *bed, float *prof);
-	int addSgm(char* b, char strnd, ScoredRange *bed, float *prof, float *profc, int strndFg);
+	int addSgm(ScoredRange *bed, float *prof);
+	int addSgm(char strnd, ScoredRange *bed, float *prof, float *profc, int strndFg);
 };
 //==============================
 struct Term{
@@ -377,7 +382,28 @@ struct Timer{
 	long getTimer();
 	char *getTime();
 };
+//=========================================================================
+struct DinHistogram{		// Dynamic histogram for two variables
+	int l;					//number of bins
+	int    n[2];			//number of observations
+	double min, max;		//min, max observed value
+	double hMin, hMax;		// max-min value in the histogram
+	double bin;				//bin width
+	double *hist[2];		//counts
+	double e[2],sd[2];		//mean and std deviation
 
+	DinHistogram(int ll);				//constructor
+	int getIdx(double value);			// Get index for the value
+	double getValue(int idx);			// Get value by index
+	int compress2Left(double value);	// Compress the histogram to left
+	int compress2Right(double value);	// Compress the histogram to left
+	void addStat(double value, int type);			// Add to statistics
+	void add(double value, int type);				// Add the value
+	void fin();
+	void print(FILE* f);
+	void clear();
+};
+//=========================================================================
 #define  maxPrimeFactor        11
 #define  maxPrimeFactor2       maxPrimeFactor*2
 #define  maxPrimeFactorDiv2    (maxPrimeFactor2+1)/2
@@ -592,7 +618,7 @@ Chromosome *getChromByPos(int pos);			// get Chromosome by file position
 long pos2filePos(char*chrom,long pos);		// transform genome position to byte-profile position
 void filePos2Pos(int pos, ScoredRange *gr, int length); // transform byte-profile position to genome position
 Chromosome* findChrom(char *ch);			// Find chromosome record by name
-Chromosome *checkRange(char *b,ScoredRange *gr);    // check if genome range is valid
+Chromosome *checkRange(ScoredRange *gr);    // check if genome range is valid
 void clearChromosomes();
 void addChromStat(int pos, bool cmpl1,bool cmpl2,double corr);
 //=============================== Parsing ===========================

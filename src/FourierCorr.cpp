@@ -40,9 +40,6 @@ double scalar(double *px, double *py, int l){	//partial correlation variant 1
 }
 
 void minusProf(double *profx, double *profz, double pcorCoef){	//partial correlation variant 1
-//get component z
-//	double xz = scalar(profx, profz);
-//	double zz = scalar(profz, profz);
 
 	for (int i = LFlankProfSize; i < LFlankProfSize + profileLength; i++){
 		profx[i] -= profz[i]*pcorCoef;
@@ -110,7 +107,7 @@ void Correlation::getLimits(int &left, int &right, double &bottom, double &top){
 	right+=2*d; left-=2*d;
 	if(left<l0) left=l0; if(right>=r0) right=r0;
 	left=left-profWithFlanksLength;
-	left*=stepSize; right*=stepSize;
+	left*=binSize; right*=binSize;
 	top=-1.e+128; bottom=1.e+128;
 	for(int i=0; i<profWithFlanksLength; i++){
 		top   =(top    > correlation[i])? top    : correlation[i];
@@ -160,19 +157,20 @@ void addChromStat(int pos, double corr, double lCorr, double av1, double av2){
 
 double calcCorelations(int pos1, int pos2, bool cmpl1, bool cmpl2, bool rnd){
 
-
-
 	int na1=bTrack1.countNA(pos1,cmpl1);			// count Na's  in the first profile
 	int na2=bTrack2.countNA(pos2,cmpl2);			// count Na's  in the second profile
 	int nz1=bTrack1.countZero(pos1,cmpl1);			// count zeros in the first profile
 	int nz2=bTrack2.countZero(pos2,cmpl2);			// count zeros in the second profile
 
-
-
-
-	if(na1 > maxNA) return -100;					// too many NA in the first profile
-	if(na2 > maxNA) return -200;					// too many NA in the second profile
-	if(nz1 > maxZero || nz2 > maxZero) return -300; // too many zeros in the profiles
+	if(na1 > maxNA) {
+		return -100;					// too many NA in the first profile
+	}
+	if(na2 > maxNA){
+		return -200;					// too many NA in the second profile
+	}
+	if(nz1 > maxZero || nz2 > maxZero) {
+		return -300; // too many zeros in the profiles
+	}
 	double *pr1=bTrack1.getProfile(pos1,cmpl1);		// decode the first profile. Decoder uses hasCompl and complFg flags and combines profiles
 	double *pr2=bTrack2.getProfile(pos2,cmpl2);		// decode the second profile
 
@@ -183,7 +181,6 @@ double calcCorelations(int pos1, int pos2, bool cmpl1, bool cmpl2, bool rnd){
 
 	double corr=kern->dist(cmpl1);					// Kernel strand is selected by the first profile
 
-
 	if(corr > -10){
 
 		if(!rnd) {
@@ -193,14 +190,10 @@ double calcCorelations(int pos1, int pos2, bool cmpl1, bool cmpl2, bool rnd){
 
 			if(outWIG){
 				//=============== Make local correlation track
-
 				lCorr=storeCorrTrack(pos1, cmpl1, cmpl2);
-
 			}
 			av1=bTrack1.addStatistics();
 			av2=bTrack2.addStatistics();
-
-
 
 			addChromStat(pos1,corr,lCorr, av1,av2);	// Add data to chromosome statistics
 
@@ -322,10 +315,10 @@ void resultAutoCorrelation(){
 	errStatus="resultAutoCorrelation";
 	verb("Autocorrelation...\n");
 
-	corrScale=lAuto*lAutoScale/(stepSize*nCorrelation);
+	corrScale=lAuto*lAutoScale/(binSize*nCorrelation);
 	if(corrScale <1) corrScale=1;
 
-	lProfAuto=lAuto*1000/(stepSize*corrScale);
+	lProfAuto=lAuto*1000/(binSize*corrScale);
 	getMem0(xDat,lProfAuto     , "resultAutoCorrelation #1");
 	getMem0(yDat,lProfAuto     , "resultAutoCorrelation #2");
 	getMem0(xyCorr,lProfAuto   , "resultAutoCorrelation #3");
@@ -344,7 +337,7 @@ void resultAutoCorrelation(){
 	fil=xopen(b,"wt");
 	fprintf(fil,"l\tauto1\tauto2\tcorrelation\n");
 	for(int i=0; i<lProfAuto/2; i++){
-		double k=1./1000*stepSize*corrScale*i;
+		double k=1./1000*binSize*corrScale*i;
 		autoCorrx[i]/=nn; autoCorry[i]/=nn; Corrxy[i]/=nn;
 		if(abs(autoCorrx[i]) < 0.001 &&
 		   abs(autoCorry[i]) < 0.001 &&
@@ -465,10 +458,10 @@ char * makeOutFilename(char * prof1, char*prof2){
 int Correlator(){
 	Timer timer;
 	id=0;	// id is undefined yet
-	wProfSize=wSize/stepSize;       		// size of widow (profile scale)
-	wProfStep=wStep/stepSize;       		// window step   (profile scale)
-	wProfSize=wSize/stepSize;
-	LFlankProfSize=flankSize/stepSize;
+	wProfSize=wSize/binSize;       		// size of widow (profile scale)
+	wProfStep=wStep/binSize;       		// window step   (profile scale)
+	wProfSize=wSize/binSize;
+	LFlankProfSize=flankSize/binSize;
 
 	int ll=nearFactor(2*LFlankProfSize+wProfSize);
 	LFlankProfSize=(ll-wProfSize)/2;
@@ -479,7 +472,7 @@ int Correlator(){
 	verb("========== Parameters ===========\n");
 	verb("==         chrom=<%s>\n", chromFile);
 	if (pcorProfile != 0) verb("==         pcorProfile=<%s>\n", pcorProfile);
-	verb("===        step=%i\n",stepSize);
+	verb("===        step=%i\n",binSize);
 	verb("==         wSize=%i\n",wSize);
 //	verb("==         wStep=%i\n",wStep);
 //	verb("==         flankSize=%i\n",LFlankProfSize*stepSize);
@@ -491,9 +484,9 @@ int Correlator(){
 	writeLog("Correlations:   wSize=%i   kernelType=%s   kernelSigma=%.0f\n",
 			wSize,getKernelType(),kernelSigma);
 	//====================================================================== Prepare parameters
-	kernelProfSigma=kernelSigma/stepSize;   // kernel width ((profile scale)
-	kernelProfShift=kernelShift/stepSize;   // kernel shift ((profile scale)
-	miv.scale(stepSize);
+	kernelProfSigma=kernelSigma/binSize;   // kernel width ((profile scale)
+	kernelProfShift=kernelShift/binSize;   // kernel shift ((profile scale)
+	miv.scale(binSize);
 	maxNA   =(int)(maxNA0  *wProfSize/100);			// rescale maxNA
 	maxZero =(int)(maxZero0*wProfSize/100);			// rescale maxZero
 	if(maxZero>=wProfSize) maxZero=wProfSize-1;

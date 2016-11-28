@@ -221,7 +221,7 @@ NormKernel::NormKernel(double ee,double sgm, int l){
 }
 
 double Kernel::NSCorrection(double x, double val){
-	double x0=x*stepSize;
+	double x0=x*binSize;
 	if(x0 < 100 && x0>-100){
 		val*=(1-kernelNS);
 	}

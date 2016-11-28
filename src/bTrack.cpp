@@ -11,6 +11,10 @@ void removeNA(unsigned char *s, int l){
 	if(NAFlag) return;
 	for(int i=0; i<l; i++){
 		if(s[i]==0) s[i]=1;
+		if(inpThreshold){
+			if((s[i]-1)*100./250 > inpThreshold) s[i]=250;
+			else s[i]=1;
+		}
 	}
 }
 
@@ -25,7 +29,7 @@ int chkVersion(char *ver){
 
 bool bTrack::check(const char *fname){
 	if(clearProfile){
-		verb("forced profile recalculation");
+		verb("forced profile recalculation\n");
 		return false;
 	}
 	char prmFile[4096], binFile[4096], b[4096];
@@ -68,7 +72,7 @@ bool bTrack::check(const char *fname){
 			else if(strcmp(s2,name)) {
 				failParam("input");  fg=false; break;}}
 		else if(strcmp(s1,"step")==0){
-			if(atoi(s2)!=stepSize) {failParam("step");  fg=false; break;}
+			if(atoi(s2)!=binSize) {failParam("step");  fg=false; break;}
 		}
 		else if(strcmp(s1,"bpType")==0){
 			if(atoi(s2)!=bpType) {failParam("bpType");  fg=false; break;}
@@ -438,7 +442,7 @@ void bTrack::trackAutoCorrelation(){
 	errStatus="Autocorrelation";
 	corrScale=1;
 
-	lProfAuto=lAuto/(stepSize*corrScale);
+	lProfAuto=lAuto/(binSize*corrScale);
 
 	getMem(xDat,lProfAuto, "Track auto #1");
 	getMem(yDat,lProfAuto, "Track auto #2");
@@ -469,12 +473,12 @@ void bTrack::trackAutoCorrelation(){
 	fprintf(fil,"l\tac\n");
 	for(int i=lProfAuto/2; i>0; i--){
 		if(abs(autoCorr[i])<0.01) continue;
-		int k=stepSize*(i-1);
+		int k=binSize*(i-1);
 		fprintf(fil,"%i\t%.5f\n",-k,autoCorr[i]);
 	}
 	for(int i=1; i<lProfAuto/2; i++){
 		if(abs(autoCorr[i])<0.01) continue;
-		int k=stepSize*(i-1);
+		int k=binSize*(i-1);
 		fprintf(fil,"%i\t%.5f\n",k,autoCorr[i]);
 	}
 	fclose(fil);
