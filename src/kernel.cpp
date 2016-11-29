@@ -54,16 +54,17 @@ void Fourier::calc(double *dRe, int deriv){
 	setDat(dRe);
 	calc(deriv);
 }
+//=========================================== Correlation with
 void Fourier::calc0(double *dRe, int deriv){
 	calc(dRe, deriv);
 	re0=re[0]; im0=im[0];
 	re[0]=0; im[0]=0;
 }
+
 void Fourier::calc(int deriv){
 	if(err) return;
+	zeroMem(datIm,length); 	zeroMem(re,length);	zeroMem(im,length);
 	fftl(length,datRe, datIm,re,im);
-
-
 	for(int i=0; i<deriv; i++) derivat();
 }
 void Fourier::derivat(){
@@ -162,41 +163,6 @@ double Kernel::dist(Fourier *f1, Fourier *f2, bool complem){
 	return cc;
 }
 
-double Kernel::dist(Fourier *f1, Fourier *f2, Fourier *fpc, bool complem){
-	Complex c0=Complex(), c1=Complex(), c2=Complex();
-
-	double d12=scalar(f1,f2, &c0, complem);//<xy>
-	double d11=scalar(f1,f1, &c1, complem);//<xx>
-	double d22=scalar(f2,f2, &c2, complem);//<yy>
-
-	d11=c1.Mod(); d22=c2.Mod(); //|x|, |y|
-
-	//partial correlation
-	Complex cx=Complex(), cy=Complex(), cz=Complex();
-	double dx = scalar(f1,fpc, &cx, complem);  //<xz>
-	double dy = scalar(f2,fpc, &cy, complem);  //<xz>
-	double dz2 = scalar(fpc,fpc, &cz, complem);//<zz>
-
-	dz2=cz.Mod();
-	dx = cx.Mod();
-	dy = cy.Mod();
-
-	double dxx = d11 - dx*dx/dz2;
-	double dyy = d22 - dy*dy/dz2;
-	double dxy = (cx.scalar(cy)).re; //<xz><yz>
-
-	if(d11==0 || d22==0 || dz2==0) return -400;
-	Fourier *zft=complem ? &cft : &ft;
-
-	double dd;
-
-	dd=f1->re0*f1->re0*zft->re0; prod11+=d11+dd; sprod11+=dd;
-	dd=f1->re0*f2->re0*zft->re0; prod12+=d12+dd; sprod12+=dd;
-	dd=f2->re0*f2->re0*zft->re0; prod22+=d22+dd; sprod22+=dd;
-	nProd++;
-//-------------------------------------
-	return (d12 - dxy/dz2) /sqrt(dxx*dyy);	// (<xy>-<xz><yz>/z^2)/sqrt((x^2-|xz|/z^2)(y^2-|yz|/z^2))
-}
 
 void Kernel::makeKernel(int n){
 	init(n);

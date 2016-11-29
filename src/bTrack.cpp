@@ -145,8 +145,7 @@ void bTrack::read(const char *fname){
 
 	getMem0(profWindow,(profWithFlanksLength+10), "bTrack read #2");
 	errStatus=0;
-	//==================================== Make intervals
-	if(lAuto) trackAutoCorrelation();
+//	if(lAuto) trackAutoCorrelation();
 }
 
 //===============================================================================
@@ -273,9 +272,7 @@ int bTrack::getRnd(bool cmpl){
 
 //========================================================================
 void bTrack::clear(){
-	writeLog("clear bTrack\n");
 	ivs.clear();
-	writeLog("OK\n");
 }
 
 //========================================================================
@@ -289,10 +286,9 @@ int  bTrack::countNA(int pos, bool cmpl){
 			c+=x;
 		}
 		else if(!cmpl || !hasCompl) 		// colinear or profile do not know the orient
-			{
-			if(bytes[pos+i]==0) 	c++;}
-		else if(cmpl){						// comlement
-			if(cbytes[pos+i]==0) 	c++;}
+			{if(bytes[pos+i]==0) 	c++;}
+		else if(cmpl)						// comlement
+			{if(cbytes[pos+i]==0) 	c++;}
 	}
 	return c;
 }
@@ -321,6 +317,8 @@ bTrack::bTrack(const char* fname){read(fname);}
 
 bTrack::bTrack(){
 	cbytes=bytes=0;name=0;profWindow=0;
+	avWindow=sdWindow=0;// mean and stdDev in current window
+
 	lProf=lScale=0;
 	av=sd=minP=maxP=bScale=delta=nn=0;
 	av0=sd0=0;
@@ -330,7 +328,7 @@ bTrack::bTrack(){
 	hasCompl=false;
 	scaleFactor=0.2;
 }
-
+//======================================= decode binary value to real value
 double bTrack::getVal(unsigned char b){
 	if(b==0 && NAFlag && trackType==WIG_TRACK) return rGauss()*sd*noiseLevel;
 	if(b < threshold) return 0;
@@ -340,7 +338,7 @@ double bTrack::getVal(unsigned char b){
 	return x;
 }
 
-
+//======================================= decode binary value at certain position
 double bTrack::getValue(int pos, int cmpl){
 	if(cmpl){
 		if(hasCompl) return getVal(cbytes[pos]);
@@ -349,6 +347,7 @@ double bTrack::getValue(int pos, int cmpl){
 	return getVal(bytes[pos]);
 }
 
+//====================================== calculate projection to orthogonal subspace
 void bTrack::ortProject(){
 	projCoeff=0;
 	if(pcorProfile==0) return;
@@ -367,6 +366,7 @@ void bTrack::ortProject(){
 	projCoeff=xy/xx;
 }
 
+//================================================= Get projected value
 double bTrack::getProjValue(int pos, bool cmpl){
 	if(pos >= lProf) return 0;
 	double x=getValue(pos,cmpl);
@@ -374,34 +374,39 @@ double bTrack::getProjValue(int pos, bool cmpl){
 	return x;
 }
 
+//================================================= decode the values to an array
 double * bTrack::getProfile(int pos, bool cmpl){ //====== pos - profile position; cmpl=true <=> +strand
 	double *a=profWindow;
 	//======================================================= fill window
-	double e=0, dd=0;
 	for(int i=0; i < wProfSize; i++, a++){
 		double x=0,y=0;
 		*a=0;
 		if(complFg==IGNORE_STRAND){				// ignore strand
-			x = getProjValue(pos+i,false);		// profile
+			x = getProjValue(pos+i+LFlankProfSize,false);		// profile
 			if(hasCompl)
-				y = getProjValue(pos+i,true);				// + complement profile
+				y = getProjValue(pos+i+LFlankProfSize,true);				// + complement profile
 		}
 		else if(cmpl)                          // colinear or profile do not know the orient
-			y=getProjValue(pos+i,hasCompl);
+			y=getProjValue(pos+i+LFlankProfSize,hasCompl);
 		else
-			x=getProjValue(pos+i,false);
+			x=getProjValue(pos+i+LFlankProfSize,false);
 		*a=x+y;
-		e+=*a; dd+=(*a) *(*a);
+		avWindow+=*a; sdWindow+=(*a) *(*a);
 	}
-	e/=wProfSize; dd=dd-e*e/wProfSize; dd/=wProfSize-1; dd=sqrt(dd);
-//	======================================== fill flanks
+	//======================================= Window Statistics
+	avWindow/=wProfSize;
+	sdWindow=sdWindow-avWindow*avWindow/wProfSize;
+	sdWindow/=wProfSize-1; sdWindow=sqrt(sdWindow);
+	//======================================== fill flanks
 	int x0=wProfSize+LFlankProfSize;
 	int x1=x0+LFlankProfSize+RFlankProfSize;
 	for(int x=x0; x<x1; x++){
-		profWindow[x%profWithFlanksLength]=rGauss(e,dd);
+		double xq=rGauss(avWindow,sdWindow);
+		profWindow[x%profWithFlanksLength]=xq;
 	}
 	return profWindow;
 }
+//======================================================
 double *autoCorr;
 double *dat;
 int lProfAuto;
@@ -412,82 +417,84 @@ double arrayMax(double *d, int n){
 	return mre;
 }
 
-void autoCorrelation(double *p, int from, int to){
-	Fourier ff(lProfAuto);
-	zeroMem(dat,lProfAuto);
-
-	for(int i=from; i<to; i++){
-		int k=(i-from)/corrScale;
-		if(p[k]!=NA && p[k]!=0) {
-			dat[k]+=p[k];
-		}
-	}
-
-	if(arrayMax(dat,lProfAuto) <=0) return;
-
-	ff.calc0(dat,0);
-	for(int i=0; i<lProfAuto; i++){
-		dat[i]=ff.re[i]*ff.re[i]+ff.im[i]*ff.im[i];
-	}
-
-	ff.calc0(dat,0);
-	double mre=arrayMax(ff.re, lProfAuto);
-	if(mre==0) return;
-
-	for(int i=0; i<lProfAuto; i++) autoCorr[i]+=ff.re[i]/mre;
-}
-
-void bTrack::trackAutoCorrelation(){
-	verb("Autocorrelation...\n");
-	errStatus="Autocorrelation";
-	corrScale=1;
-
-	lProfAuto=lAuto/(binSize*corrScale);
-
-	getMem(xDat,lProfAuto, "Track auto #1");
-	getMem(yDat,lProfAuto, "Track auto #2");
-
-	getMem0(autoCorr,lProfAuto, "Track auto #3"); zeroMem(autoCorr,lProfAuto);
-	getMem0(dat,lProfAuto, "Track auto #4");
-
-	int from=0, to=lProfAuto;
-	for(; to< profileLength; from+=lProfAuto, to+=lProfAuto){
-		verb("%i      \r",from);
-
-		if(readProfileToArray(xDat,corrScale,from,to,false)==0) return;
-		autoCorrelation(xDat,from,to);
-		if(profilec!=0){
-			if(readProfileToArray(yDat,corrScale,from,to,false)==0) return;
-			autoCorrelation(yDat,from,to);
-		}
-	}
-	verb("\n");
-
-	char b[1024];
-	//============================================= Write auotcorr
-	double ma=-1.e+200;
-	for(int i=0; i<lProfAuto; i++) ma=max(autoCorr[i],ma);
-	for(int i=0; i<lProfAuto; i++) autoCorr[i]/=ma;
-	makeFileName(b,resPath,name,"ac");
-	FILE *fil=xopen(b,"wt");
-	fprintf(fil,"l\tac\n");
-	for(int i=lProfAuto/2; i>0; i--){
-		if(abs(autoCorr[i])<0.01) continue;
-		int k=binSize*(i-1);
-		fprintf(fil,"%i\t%.5f\n",-k,autoCorr[i]);
-	}
-	for(int i=1; i<lProfAuto/2; i++){
-		if(abs(autoCorr[i])<0.01) continue;
-		int k=binSize*(i-1);
-		fprintf(fil,"%i\t%.5f\n",k,autoCorr[i]);
-	}
-	fclose(fil);
-	xfree(xDat,"xDat");
-	xfree(yDat,"yDat");
-	xfree(autoCorr,"autoCorr");
-	xfree(dat,"dat");
-	verb("OK\n");
-	errStatus=0;
-}
-
-
+////========================================== Generate autocorrelation function for an array
+//void autoCorrelation(double *p, int from, int to){
+//	Fourier ff(lProfAuto);
+//	zeroMem(dat,lProfAuto);
+//
+//	for(int i=from; i<to; i++){
+//		int k=(i-from)/corrScale;
+//		if(p[k]!=NA && p[k]!=0) {
+//			dat[k]+=p[k];
+//		}
+//	}
+//
+//	if(arrayMax(dat,lProfAuto) <=0) return;
+//
+//	ff.calc0(dat,0);
+//	for(int i=0; i<lProfAuto; i++){
+//		dat[i]=ff.re[i]*ff.re[i]+ff.im[i]*ff.im[i];
+//	}
+//
+//	ff.calc0(dat,0);
+//	double mre=arrayMax(ff.re, lProfAuto);
+//	if(mre==0) return;
+//
+//	for(int i=0; i<lProfAuto; i++) autoCorr[i]+=ff.re[i]/mre;
+//}
+//
+////========================================= Generate autocorrelation function for track
+//void bTrack::trackAutoCorrelation(){
+//	verb("Autocorrelation...\n");
+//	errStatus="Autocorrelation";
+//	corrScale=1;
+//
+//	lProfAuto=lAuto/(binSize*corrScale);
+//
+//	getMem(xDat,lProfAuto, "Track auto #1");
+//	getMem(yDat,lProfAuto, "Track auto #2");
+//
+//	getMem0(autoCorr,lProfAuto, "Track auto #3"); zeroMem(autoCorr,lProfAuto);
+//	getMem0(dat,lProfAuto, "Track auto #4");
+//
+//	int from=0, to=lProfAuto;
+//	for(; to< profileLength; from+=lProfAuto, to+=lProfAuto){
+//		verb("%i      \r",from);
+//
+//		if(readProfileToArray(xDat,corrScale,from,to,false)==0) return;
+//		autoCorrelation(xDat,from,to);
+//		if(profilec!=0){
+//			if(readProfileToArray(yDat,corrScale,from,to,false)==0) return;
+//			autoCorrelation(yDat,from,to);
+//		}
+//	}
+//	verb("\n");
+//
+//	char b[1024];
+//	//============================================= Write autocorrelation
+//	double ma=-1.e+200;
+//	for(int i=0; i<lProfAuto; i++) ma=max(autoCorr[i],ma);
+//	for(int i=0; i<lProfAuto; i++) autoCorr[i]/=ma;
+//	makeFileName(b,resPath,name,"ac");
+//	FILE *fil=xopen(b,"wt");
+//	fprintf(fil,"l\tac\n");
+//	for(int i=lProfAuto/2; i>0; i--){
+//		if(abs(autoCorr[i])<0.01) continue;
+//		int k=binSize*(i-1);
+//		fprintf(fil,"%i\t%.5f\n",-k,autoCorr[i]);
+//	}
+//	for(int i=1; i<lProfAuto/2; i++){
+//		if(abs(autoCorr[i])<0.01) continue;
+//		int k=binSize*(i-1);
+//		fprintf(fil,"%i\t%.5f\n",k,autoCorr[i]);
+//	}
+//	fclose(fil);
+//	xfree(xDat,"xDat");
+//	xfree(yDat,"yDat");
+//	xfree(autoCorr,"autoCorr");
+//	xfree(dat,"dat");
+//	verb("OK\n");
+//	errStatus=0;
+//}
+//
+//

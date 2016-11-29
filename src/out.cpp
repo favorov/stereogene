@@ -91,6 +91,7 @@ void getStat(double *set, int n, double &av, double &sd){
 double avBg,sdBg=0,avFg,sdFg=0;
 void printStat(){
 	verb("Write statistics\n");
+	writeLog("Write statistics\n");
 	char b[2048];
 
 	MannW=MannWhitney(FgSet, nFg, BkgSet, nBkg);	// do Mann-Whitney test
@@ -126,7 +127,7 @@ void printStat(){
 	}
 	//==================================================== write the statistics
 	if(f){
-		fprintf(f,"%lx\t%-10s\t%-10s",id,alTable.convert(bTrack1.name), alTable.convert(bTrack2.name));
+		fprintf(f,"%08lx\t%-10s\t%-10s",id,alTable.convert(bTrack1.name), alTable.convert(bTrack2.name));
 		fprintf(f,"\t%-6i\t%-6s\t%6i\t%6i",wSize,getKernelType(),nFg, nBkg);
 		fprintf(f,"\t%8.4f\t%8.4f\t%8.4f\t%8.4f",avBg,avFg,sdBg,sdFg);
 		fprintf(f,"\t%8.4f\t%8.4f\t%8.1f\t%-7.2e\t%-6c\n",totCorr,FgAvCorr,MannW->z,MannW->pVal, pc);
@@ -135,7 +136,7 @@ void printStat(){
 	}
 
 	//================================================== write parameters
-	writeLog("Write params...\n");
+//	writeLog("Write params\n");
 	fg=fileExists(paramsFileName);
 	if((outRes&TAB)!=0){
 		f=gopen(paramsFileName,"a+t");
@@ -157,7 +158,7 @@ void printStat(){
 	}
 	//==================================================== write the parameters
 	if(f){
-		fprintf(f,"%lx\t%-20s\t%-20s",id,trackPath,resPath);
+		fprintf(f,"%08lx\t%-20s\t%-20s",id,trackPath,resPath);
 		const char *mf=mapFil ? mapFil : "-";
 		fprintf(f,"\t%-20s\t%-12s\t%-20s",mf,miv.print(b),pcname);
 		fprintf(f,"\t%-2i\t-%6.1f\t%-6.1f",NAFlag, maxNA0,maxZero0);
@@ -169,9 +170,7 @@ void printStat(){
 		funlockFile(f);
 		fclose(f);
 	}
-	writeLog("OK\n");
-
-	writeLog("Write XML ...\n");
+//	writeLog("Write XML\n");
 	if((outRes & XML)!=0) {
 		sprintf(b,"%s.xml",statFileName);
 		fg=fileExists(b);
@@ -182,7 +181,7 @@ void printStat(){
 			fseek(xml,-7,SEEK_END);
 		}
 		flockFile(xml);
-		fprintf(xml,"<run id=\"%lx\" ver=\"%s\">\n", id, version);
+		fprintf(xml,"<run id=\"%08lx\" ver=\"%s\">\n", id, version);
 		fprintf(xml,"\t<input track1=\"%s\" track2=\"%s\"/>\n",bTrack1.name,bTrack2.name);
 		fprintf(xml,"\t<output out=\"%s\"/>\n",outFile);
 		fprintf(xml,"\t<prm ");
@@ -228,7 +227,7 @@ void printStat(){
 		funlockFile(xml);
 		fclose(xml);
 	}
-	writeLog("WriteStat - OK\n");
+	writeLog("Write Statistics -> Done\n");
 }
 
 void Correlation::printSpect(char *fname){
@@ -324,7 +323,6 @@ void printBroadPeak(){
 	xfree(pPair,"pPair");
 }
 void printRmd(){
-	writeLog("Write Rmd ...");
 	char *dn=makePath(resPath), b[2048];
 	strcat(strcpy(b,dn),"report_r_template.Rmd");
 	
@@ -441,15 +439,8 @@ void printRmd(){
 	
 }
 void printRreport(){
-	writeLog("Write RR ...");
 	char *fn=alTable.convert(outFile), *s,b[2048], fname[1024];
-//	const char *cex="cex.axis = 0.8,  cex.lab = 0.8,  cex.main = 0.8", *lwd="lwd=2",
-//			*lab="xlab=\'correlation coefficient\',ylab=\'density\'";
-//
-//	int    x0,x1;
-//	double y0,y1;
-//	correlation.getLimits(x0,x1, y0, y1);
-//
+
 	if(sdFg==0) getStat(FgSet,nFg,avFg,sdFg);
 	if(sdBg==0) getStat(BkgSet,nBkg,avBg,sdBg);
 
@@ -505,8 +496,6 @@ void printRreport(){
 }
 
 void printR(){
-	writeLog("Write R ...");
-
 	char *fn=alTable.convert(outFile), *s,b[2048], fname[1024];
 //	const char *cex="cex.axis = 0.8,  cex.lab = 0.8,  cex.main = 0.8", *lwd="lwd=2",
 //			*lab="xlab=\'correlation coefficient\',ylab=\'density\'";
@@ -597,6 +586,5 @@ void printR(){
 //	fprintf(f,"par( old.par )\n");
 
 	fclose(f);
-	writeLog("OK\n");
 }
 

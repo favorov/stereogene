@@ -209,9 +209,6 @@ Param *pparams[]={
 		new Param("complFg"		, &complFg		,complFlags,0),
 //=============================================================================================================
 		new Param("Output parameters"),
-		new Param("outBPeak" 	, &writeBPeak   ,"write BradPeak file"),
-		new Param("pVal"		, &pVal  		,"threshold for BroadPeak output"),
-		new Param("qVal"		, &qVal  		,"threshold for BroadPeak output"),
 		new Param("outSpectr" 	, &outSpectr   	,"write fourier spectrums"),
 		new Param("outChrom" 	, &outChrom   	,"write statistics by chromosomes"),
 		new Param("writeDistr" 	, &writeDistr   ,"write foreground and background distributions"),
@@ -222,13 +219,18 @@ Param *pparams[]={
 		new Param("outThreshold", &outThreshold	,"threshold for output to correlation profile scaled to 0..1000"),
 		new Param("corrOnly" 	, &corrOnly   	,0),
 		new Param("corr" 		, &corrOnly   	,1, 0),
-		new Param("lAuto"	  	, &lAuto  		,0),
 		new Param("outRes" 		, &outRes 		,outResTypes,"format for results in statistics file"),
+		new Param("lAuto"	  	, &lAuto  		,0),
+//=========================================== Additional parameters (see Undocumented) ===============================
+		new Param("outBPeak" 	, &writeBPeak   ,"write BradPeak file"),
+		new Param("pVal"		, &pVal  		,"threshold for BroadPeak output"),
+		new Param("qVal"		, &qVal  		,"threshold for BroadPeak output"),
 		new Param("pcaSegment" 	, &pcaSegment	,0),
 		new Param("nPca" 		, &nPca			,0),
 		new Param("cage" 		, &cage			,0),
-
 		new Param("inpThreshold", &inpThreshold  		,0),	//input binarization testing, %of max
+		new Param("d", &debugFg  	,1, 0),							//debug mode
+
 		new Param("Happy correlations!"),
 		0,
 };
@@ -457,7 +459,24 @@ void parseArgs(int argc, char **argv){
 }
 //==============================================================================
 //==============================================================================
-//=========================================================== read value ===============================
+//================================================== search appropriate cfg file
+//void readCfg(int argc, const char *argv[]) {
+//	argv[0]=correctFname(argv[0]);
+//	char b[1024];
+//  getFnameWithoutExt(b,argv[0]);
+//	strcat(b,".cfg");
+//	char *cfg=cfgName(b, (char*)"cfg");
+//	readCfg(cfg);					// deafult cfg
+//	char* cfg1=strrchr(cfg,'/');	// cfg in current directory
+//	if(cfg1 !=0) readCfg(cfg1+1);
+//	for(int i=0; i<argc; i++){
+//		if(strncmp(argv[i],"cfg=",4)==0) {
+//			verb("read cfg <%s>\n",cfg);
+//			readCfg((char*)(argv[i]+4));
+//		}
+//	}
+//}
+//==============================================================================
 // for debugging :
 // set debugFg=DEBUG_LOG|DEBUG_PRINT
 // set debS string for module identification//
@@ -474,17 +493,23 @@ void parseArgs(int argc, char **argv){
 
 int main(int argc, char **argv) {
 //	test();
-	clearDeb();
-	debugFg=DEBUG_LOG|DEBUG_PRINT;
+//	clearDeb();
+//	debugFg=DEBUG_LOG|DEBUG_PRINT;
+	clearLog(); debugFg=0;
 
 	const char * progName="StereoGene";
 	char *chrom=getenv("SG_CHROM");
 	if(chrom!=0) chromFile=strdup(chrom);
 
-	unsigned long t=time(0);	id=t&0xffffff;	// define run id
+	unsigned long t=time(0);	id=(unsigned int)t;	// define run id
 	parseArgs(argc, argv);
+	if(debugFg){
+		clearDeb();
+		debugFg=DEBUG_LOG|DEBUG_PRINT;
+	}
 	verb("===== %s version %s =====\n",progName,version);
 	makeDirs();
+	if(strcmp(logFileName,"null")==0 || strcmp(logFileName,"NULL")==0) logFileName=0;
 	if(nfiles==0){
 		printf("\n");
 		printf("The %s program compares pairs of tracks and calculates kernel correlations\n",progName);
@@ -498,9 +523,7 @@ int main(int argc, char **argv) {
 	}
 	if(aliaseFil!=0)  alTable.readTable(aliaseFil);		// read aliases
 	readChromSizes(chromFile);							// read chromosomes
-	if(cage) {CageMin(files[0].fname,files[1].fname); exit(0);}
-
-	if(pcaFg) pcaMain(profile1);
+//	if(cage) {CageMin(files[0].fname,files[1].fname); exit(0);}
 
 	Correlator();
 

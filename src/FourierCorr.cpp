@@ -27,7 +27,6 @@ void clear(){
 	xfree(FgSet,"FgSet");
 	xfree(pairs,"pairs");
 	nBkg=0; nFg=0; nPairs=0;
-	writeLog("OK\n");
 }
 
 //============================================== subtract profile from profile
@@ -91,35 +90,6 @@ void Correlation::calcWindowCorrelation(int pos, bool cmpl1, bool cmpl2, double 
 	if(corr < -delta) nMinus++;
 }
 
-
-void Correlation::getLimits(int &left, int &right, double &bottom, double &top){
-	int r0=right=profWithFlanksLength/2-1,  l0=left=profWithFlanksLength/2;
-	double w=(max+min)/2;
-	for(int i=left; i<profWithFlanksLength; i++){
-		if(correlation[i]-av >  w) {left=i; break;}
-		if(correlation[i]-av < -w) {left=i; break;}
-	}
-	for(int i=right; i>=0; i--){
-		if(correlation[i]-av >  w) {right=i; break;}
-		if(correlation[i]-av < -w) {right=i; break;}
-	}
-	int d=right-left+profWithFlanksLength; if(d<10) d=10;
-	right+=2*d; left-=2*d;
-	if(left<l0) left=l0; if(right>=r0) right=r0;
-	left=left-profWithFlanksLength;
-	left*=binSize; right*=binSize;
-	top=-1.e+128; bottom=1.e+128;
-	for(int i=0; i<profWithFlanksLength; i++){
-		top   =(top    > correlation[i])? top    : correlation[i];
-		bottom=(bottom < correlation[i])? bottom : correlation[i];
-		top   =(top    > corrPlus   [i])? top    : corrPlus   [i];
-		bottom=(bottom < corrPlus   [i])? bottom : corrPlus   [i];
-		top   =(top    > corrMinus  [i])? top    : corrMinus  [i];
-		bottom=(bottom < corrMinus  [i])? bottom : corrMinus  [i];
-	}
-	top*=100; bottom*=100;
-}
-
 void Correlation::norm(){
 	min=1.e+18; max=-1.e+18; av=sd=0;
 	int n=0;
@@ -161,13 +131,8 @@ double calcCorelations(int pos1, int pos2, bool cmpl1, bool cmpl2, bool rnd){
 	int na2=bTrack2.countNA(pos2,cmpl2);			// count Na's  in the second profile
 	int nz1=bTrack1.countZero(pos1,cmpl1);			// count zeros in the first profile
 	int nz2=bTrack2.countZero(pos2,cmpl2);			// count zeros in the second profile
-
-	if(na1 > maxNA) {
-		return -100;					// too many NA in the first profile
-	}
-	if(na2 > maxNA){
-		return -200;					// too many NA in the second profile
-	}
+	if(na1 > maxNA) {return -100;}					// too many NA in the first profile
+	if(na2 > maxNA) {return -200;}					// too many NA in the second profile
 	if(nz1 > maxZero || nz2 > maxZero) {
 		return -300; // too many zeros in the profiles
 	}
@@ -177,42 +142,32 @@ double calcCorelations(int pos1, int pos2, bool cmpl1, bool cmpl2, bool rnd){
 	kern->fftx(pr1,bTrack1.deriv);					// do fft for the profiles
 	kern->ffty(pr2,bTrack2.deriv);
 
-
-
 	double corr=kern->dist(cmpl1);					// Kernel strand is selected by the first profile
 
-	if(corr > -10){
-
-		if(!rnd) {
+	if(corr > -10){									// Error in the correlation => skip the pair of the windows
+		if(!rnd) {									// foreground distribution
 			double lCorr=0, av1, av2;
 			//======= Calc the correlation
 			correlation.calcWindowCorrelation(pos1,cmpl1, cmpl2,corr);
-
-			if(outWIG){
-				//=============== Make local correlation track
+			if(outWIG){				                 // Make local correlation track
 				lCorr=storeCorrTrack(pos1, cmpl1, cmpl2);
 			}
 			av1=bTrack1.addStatistics();
 			av2=bTrack2.addStatistics();
-
 			addChromStat(pos1,corr,lCorr, av1,av2);	// Add data to chromosome statistics
-
-
-
 		}
 		else
 			bgcorrelation.calcWindowCorrelation(-1,cmpl1, cmpl2,-100); //Do background correlation function
-
-
 	}
 	return corr;
 }
-//======================================================== Calculate background distributions
+//======================================================= Calculate the total correlation
 double calcCC(){
 	double cc=(prod12-sprod12)/sqrt((prod11-sprod11)*(prod22-sprod22));
 	return cc;
 }
 
+//======================================================== Calculate background distributions
 void distrBkg(){
 	errStatus="bkg Distrib.";
 	verb("\nBakcground...");
@@ -224,12 +179,12 @@ void distrBkg(){
 	nSimul=	(long)((double)nShuffle*l/wProfStep/100.);
 	if(nSimul > maxShuffle) nSimul = maxShuffle;
 	if(nSimul < minShuffle) nSimul = minShuffle;
-	getMem0(BkgSet,(nSimul+10), "bkg Distr"); nBkg=0; // allocate array for background observations
-	strcat(strcpy(b,outFile),".bkg");			// open file for background observations
+	getMem0(BkgSet,(nSimul+10), "bkg Distr"); nBkg=0; 	// allocate array for background observations
+	strcat(strcpy(b,outFile),".bkg");					// open file for background observations
 	FILE *f=0;
 	if(writeDistr) f=xopen(b,"wt");
 	//================================================== simulations
-	int tst=0;								// count runs with zero/NA frames
+	int tst=0;											// count runs with zero/NA frames
 	sprod11=0; sprod12=0; sprod22=0; prod11=0; prod12=0; prod22=0; nProd=0;
 	int n_corr=0; BgAvCorr=0;
 	for(int i=0; i<nSimul; i++){
@@ -249,13 +204,13 @@ void distrBkg(){
 
 		if(d<=-10) {							// invalid windows (too many NA's of Zeros)
 			i--;
-			if(tst++ > 10000){
+			if(tst++ > 10000){					// too many attempt to get a background correlations
 				errorExit("too many empty/zero windows\n");
 			}
 			continue;
 		}
 		n_corr++; BgAvCorr+=d;
-		if(i%10000 ==0) verb("\nsimul: %i/%li",i,nSimul);
+		if(i%10000 ==0) verb("\nShuffling: %i/%li",i,nSimul);
 		else if(i%1000 ==0) verb(".");
 		tst=0;
 		bgHist.add(d);							// store in the histogram
@@ -272,7 +227,6 @@ void distrBkg(){
 }
 
 //============================================= Auto correlations
-
 int bTrack::readProfileToArray(double *x, int scale, int from, int to, bool cmpl){
 	unsigned char *b=bytes;
 	double sum=0;
@@ -302,7 +256,6 @@ int resultAutoCorrelation(int from, int to, bool cmpl1, bool cmpl2){
 		Corrxy[i]	+=xyCorr[i];
 		if(xDat[i]!=0 && yDat[i]!=0 && xyCorr[i]!=0) fg=1;
 	}
-
 	return fg;
 }
 
@@ -324,7 +277,7 @@ void resultAutoCorrelation(){
 	getMem0(xyCorr,lProfAuto   , "resultAutoCorrelation #3");
 	getMem0(autoCorrx,lProfAuto, "resultAutoCorrelation #4"); 	zeroMem(autoCorrx,lProfAuto);
 	getMem0(autoCorry,lProfAuto, "resultAutoCorrelation #5");	zeroMem(autoCorry,lProfAuto);
-	getMem0(Corrxy,lProfAuto   , "resultAutoCorrelation #6");		zeroMem(Corrxy,lProfAuto);
+	getMem0(Corrxy,lProfAuto   , "resultAutoCorrelation #6");	zeroMem(Corrxy,lProfAuto);
 	int from=0, to=lProfAuto;
 	int nn=0;
 	for(; to< profileLength; from+=lProfAuto, to+=lProfAuto){
@@ -353,7 +306,7 @@ void resultAutoCorrelation(){
 inline void storePair(int i, double d){
 	PairEntry *pe=pairs+(nPairs++);						//== store pair of positions
 	if(i%fstep == 0) FgSet[nFg++]=d;					//== store distributions (the windows should not overlap)
-	pe->profPos=i; pe->d=(float)d;// pe->rank=0;			//== define the pair
+	pe->profPos=i; pe->d=(float)d;// pe->rank=0;		//== define the pair
 	fgHist.add(d);
 }
 
@@ -380,7 +333,7 @@ void distrCorr(){
 
 		double d;
 		d=100.*k/(l/wProfStep);
-		if(k%10000 ==0) verb("\ndist: %4.1f%% (%6i/%i) ",d,k,l/wProfStep);
+		if(k%10000 ==0) verb("\ncoherent: %4.1f%% (%6i/%i) ",d,k,l/wProfStep);
 		else if(k%1000 ==0) verb(".");
 		if((complFg&COLLINEAR)!=0 ||								// analyze collinear chains
 				   ((!bTrack1.hasCompl) && (!bTrack2.hasCompl))){	// OR if both tracks are NOT strand-dependent
@@ -411,7 +364,6 @@ void distrCorr(){
 					storePair(i,d); n_corr++; FgAvCorr+=d;
 			}
 		}
-
 	}
 	//=================================================== Define rank for q-value calculation
 
@@ -419,12 +371,10 @@ void distrCorr(){
 	FgAvCorr/=n_corr;
 
 	finOutWig();
-
 	fgHist.normF();
-
 	totCorr=calcCC();
 
-	xverb("\ncc=%f\navCorr=%f\n",totCorr, FgAvCorr);
+	xverb("\nCorrelation=%f\naverage Corrrelation=%f\n",totCorr, FgAvCorr);
 	errStatus=0;
 }
 
@@ -462,7 +412,6 @@ int Correlator(){
 	wProfStep=wStep/binSize;       		// window step   (profile scale)
 	wProfSize=wSize/binSize;
 	LFlankProfSize=flankSize/binSize;
-
 	int ll=nearFactor(2*LFlankProfSize+wProfSize);
 	LFlankProfSize=(ll-wProfSize)/2;
 	profWithFlanksLength=ll;
@@ -474,10 +423,7 @@ int Correlator(){
 	if (pcorProfile != 0) verb("==         pcorProfile=<%s>\n", pcorProfile);
 	verb("===        step=%i\n",binSize);
 	verb("==         wSize=%i\n",wSize);
-//	verb("==         wStep=%i\n",wStep);
-//	verb("==         flankSize=%i\n",LFlankProfSize*stepSize);
 	verb("==         kernelType=%i\n",kernelType);
-//	verb("==         kernelShift=%.0f\n",kernelShift);
 	verb("==         kernelSigma=%.0f\n",kernelSigma);
 	verb("==         nShuffle=%i\n",nShuffle);
 
@@ -516,7 +462,7 @@ int Correlator(){
 	wCorrelation.init(profWithFlanksLength);
 	getMem0(wCorrelation.datRe,profWithFlanksLength, "Correlator");
 	for(int i=0; i<nnf; i++){
-		id=0;	// id is undefined yet
+		id=(unsigned int)time(0);	// id is undefined yet
 		profile1=files[i].fname;
 		verb("read profile1...\n");
 		bTrack1.read(profile1);					// read byte profiles
@@ -527,9 +473,7 @@ int Correlator(){
 			profile2=files[j].fname;
 			outFile=makeOutFilename(profile1, profile2);
 			makeId();
-			writeLog("  in1=%s\n", profile1);
-			writeLog("  in2=%s\n", profile2);
-			writeLog("  out=%s\n", outFile);
+			writeLog("  in1=<%s> in2=<%s> out=<%s>\n", profile1, profile2, outFile);
 
 			xverb("in1=\"%s\"\n", profile1);
 			xverb("in2=\"%s\"\n", profile2);
@@ -547,13 +491,17 @@ int Correlator(){
 			bgcorrelation.init();
 			clearChromosomes();
 			if(corrOnly==0){
+				writeLog("Background\n");
 				distrBkg();						// Make background distribution
-				distrCorr();					// Calculate correlations
-				printCorrelations();			// write correlations
-				printStat();					// write report
 			}
+			writeLog("Foreground\n");
+			distrCorr();					// Calculate correlations
+			writeLog("Correlations -> Done\n");
+			printCorrelations();			// write correlations
+			printStat();					// write report
 			resultAutoCorrelation();		// write autocorrelation
 			if(RScriptFg) {
+//				writeLog("Write R\n");
 				printR();
 				printRreport();
 				printRmd();
@@ -561,9 +509,10 @@ int Correlator(){
 			n_cmp++;
 			clear();
 			bTrack2.clear();
-			writeLog("...OK\n");
+			writeLog("<%s> => Done\n",outFile);
 		}
 	bTrack1.clear();
+	writeLog("====== DONE ======\n");
 	}
 
     verb("***   calculation time for %i comparisons = %s\n",n_cmp, timer.getTime());

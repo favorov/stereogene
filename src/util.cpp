@@ -14,7 +14,7 @@
 #include <sys/file.h>
 //#include <dir.h>
 
-const char* version="1.67";
+const char* version="1.68";
 
 int debugFg=0;
 //int debugFg=DEBUG_LOG|DEBUG_PRINT;
@@ -76,8 +76,8 @@ int kernelType=KERN_NORM;
 double noiseLevel=0.2;
 int wSize=100000;        // size of widow (nucleotides)
 int wStep=0;             // window step   (nucleotides)
-int flankSize=500;
-double kernelSigma=1000.;    // kernel width (nucleotides)
+int flankSize=0;
+double kernelSigma=1000.;    	// kernel width (nucleotides)
 double kernelShift=0;      	    // Kernel mean (for Gauss) or Kernel start for exponent
 int intervFg0;
 double scaleFactor0=0.2;
@@ -85,12 +85,12 @@ int outWIG=NONE;
 int outThreshold=1;
 
 
-int wProfStep;          // window step   (profile scale)
-int wProfSize;          // size of widow (profile scale)
-int LFlankProfSize;        // size of flank (profile scale)
-int RFlankProfSize;        // size of flank (profile scale)
-int profWithFlanksLength; // size of profWindow array (including random flanks)
-double kernelProfSigma;      // kernel width ((profile scale)
+int wProfStep;          	// window step   (profile scale)
+int wProfSize;          	// size of widow (profile scale)
+int LFlankProfSize;         // size of flank (profile scale)
+int RFlankProfSize;         // size of flank (profile scale)
+int profWithFlanksLength; 	// size of profWindow array (including random flanks)
+double kernelProfSigma;     // kernel width ((profile scale)
 double kernelProfShift;
 double kernelNS;			// Correction for non-specifisity
 bTrack bTrack1, bTrack2, projTrack, mapTrack;
@@ -105,7 +105,6 @@ int minShuffle=1000;
 double pVal=2;
 double qVal=0;
 MapIv miv;				// interval for mapping
-//Map map;
 Model model;
 
 int threshold=0;
@@ -131,7 +130,7 @@ int bpType=BP_SIGNAL;
 int cage=0;
 bool clearProfile=false;
 int scoreType=AV_SCORE;
-AliaseTable alTable;
+AliasTable alTable;
 FileListEntry files[256];
 int   nfiles;
 
@@ -151,7 +150,7 @@ ScoredRange::ScoredRange(){
 	chr=0; chrom=0;	beg=end=0;	score=0;
 }
 //====================================================================================
-char *AliaseTable::convert(char*oldName){
+char *AliasTable::convert(char*oldName){
 
 	char b0[1024],b1[1024];
 	strcpy(b0,oldName);
@@ -176,7 +175,7 @@ char *AliaseTable::convert(char*oldName){
 	return strdup(b0);
 }
 
-void AliaseTable::readTable(const char* fname){
+void AliasTable::readTable(const char* fname){
 	FILE *f=gopen(fname,"rt");
 	if(f==0) return;
 	nAls=0;
@@ -202,7 +201,7 @@ void AliaseTable::readTable(const char* fname){
 		nAls++;
 		if(nAls >= capacity){
 			capacity+=100;
-			als=(Aliase*)realloc(als,capacity*sizeof(Aliase));
+			als=(Alias*)realloc(als,capacity*sizeof(Alias));
 		}
 	}
 	fclose(f);
@@ -408,7 +407,9 @@ char * getMajorVer(const char *ver, char *buf){
 // Errors
 //================
 const char *errStatus=0;
-
+void clearLog(){
+	if(logFileName) fclose(gopen(logFileName,"wt"));
+}
 FILE *openLog(){
 	if(logFileName) {
 		FILE *f=gopen(logFileName,"at");
@@ -431,7 +432,7 @@ void errorExit(const char *format, va_list args){
 	    FILE *f=openLog();
 		if(f) {
 			flockFile(f);
-			fprintf(f,"#%8lx-> %s",id,b);
+			fprintf(f,"#%08lx-> %s",id,b);
 			if(errStatus) fprintf(f, "%s\n", errStatus);
 			else fprintf(f, "\n");
 			funlockFile(f);
@@ -451,7 +452,7 @@ void writeLog(const char *format, va_list args){
 	FILE *f=openLog();
 	if(f) {
 		flockFile(f);
-		fprintf(f,"#%8lx-> ",id);
+		if(!debugFg) fprintf(f,"#%08lx-> ",id);
 		vfprintf(f,format,args);
 		funlockFile(f);
 		fclose(f);
@@ -577,7 +578,7 @@ long Timer::getTimer(){
 	return curTime-start;
 }
 
-long Timer::mtime()
+long mtime()
 {
   struct timeval t;
 
@@ -620,7 +621,9 @@ FILE *gopen(const char*fname, const char* type){		// open file with parsing ~
 }
 
 //===================
-
+void zfree(void *a, const char* b){
+	if(a) free(a); else writeLog("double free %s",b);
+}
 void *xmalloc(size_t n, const char *err){
 	void *a=malloc(n);
 	if(a==0){
@@ -636,8 +639,10 @@ void *xmalloc(size_t n, const char *err){
 double rGauss(){
 	double phi=(double)rand()/RAND_MAX * 2 * M_PI, r=0;
 	while(r==0) r=(double)rand()/RAND_MAX;
-	r=sqrt(-2.*log(r));
-	return r*sin(phi);
+//	if(r==0) r=0.e-200;
+	double rr=sqrt(-2.*log(r))*sin(phi);
+//	double rr=log(r)*sin(phi);
+	return rr;
 }
 
 // random gaussian variable with given mean anf std deviation
@@ -659,7 +664,7 @@ char *correctFname(const char* s){
 }
 
 Histogram::Histogram(int n){
-	minVal=-1; maxVal=1; e=0; sigma=0; beta=1; iq=iqq=im=0;
+	minVal=-1; maxVal=1; e=0; sigma=0; alpha=beta=1; iq=iqq=im=0;
 	nBin=n; count=0;
 	dd=0; db=0; Fp=0; Fm=0;
 	errStatus="init Histogram";
@@ -672,6 +677,8 @@ Histogram::Histogram(int n){
 	ready=false;
 	errStatus=0;
 }
+
+//=================== Add value to the histogram ===========
 void Histogram::add(double x){
 	if(ready) return;
 	int i=int((x-minVal)/bin);
@@ -679,44 +686,49 @@ void Histogram::add(double x){
 	dd[i]++; e+=x; sigma+=x*x;
 	count++;
 }
-
-void Histogram::normBeta(){		// Calculate cummulative Beta distribution
-//	printf("normBeta %i\n",ready);
+//============= Calculate cummulative Beta distribution for the background distribution
+void Histogram::normBeta(){
 	if(ready) return; ready=true;
 	norm();
-	fitBeta();
 	double eb=0;
-	for(int i=0; i<nBin; i++){
+	for(int i=0; i<nBin; i++){	// calculate the integral of the beta distrib.
 		double x=minVal+bin*i;
-		eb+=(db[i]=xBetaD(beta,beta,x));
+		eb+=(db[i]=xBetaD(alpha,beta,x));
 	}
-	for(int i=0; i<nBin; i++){db[i]/=eb*bin;}
+	for(int i=0; i<nBin; i++)	{	// normalyze beta distribution
+		db[i]/=eb*bin;
+	}
+	calcCDF(db);
+}
+//======================= calculate cumulative distributions
+void Histogram::calcCDF(double *d){
 	Fp[0]=Fm[nBin]=0; Fm[0]=1;
 	for(int i=1, j=nBin-1; i<nBin; i++,j--){
-		Fp[i]=Fp[i-1]+db[i]*bin;
-		Fm[j]=Fm[j+1]+db[j]*bin;
+		Fp[i]=Fp[i-1]+d[i]*bin;
+		Fm[j]=Fm[j+1]+d[j]*bin;
 	}
 
 }
+//======================== normalize the foreground distributions
 void Histogram::normF(){
 	if(ready) return; ready=true;
 	norm();
-	Fp[0]=Fm[nBin]=0; Fm[0]=1;
-	for(int i=1, j=nBin-1; i<nBin; i++,j--){
-		Fp[i]=Fp[i-1]+dd[i]*bin;
-		Fm[j]=Fm[j+1]+dd[j]*bin;
-	}
+	calcCDF(dd);
 }
-
+//===================== normalize the histogram and calculate the statistical parameters
 void Histogram::norm(){
 	e/=count; sigma=(sigma-count*e*e)/(count-1);
-	beta=(1/sigma-1)/2;
+	double eBeta=2e-1,  d=sigma/4, gg=(1-eBeta)/eBeta, gg1=gg+1;
+	alpha=(gg/(d*gg1*gg1) - 1)/(gg1);
+	beta=gg*alpha;
+
 	sigma=sqrt(sigma);
 	for(int i=0; i<nBin; i++){
 		dd[i]=dd[i]/count/bin;
 	}
 }
 
+//============================================ Interpolation
 double Histogram::interpol(double x, double *fun){
 	int i=int((x-minVal)/bin);
 	if(i<0) {i=0;}
@@ -726,62 +738,6 @@ double Histogram::interpol(double x, double *fun){
 	return exp((f0*dx1+f1*dx0)/bin);
 }
 //=======================================================
-double Histogram::error(double b){
-	double z=0;
-	for(int i=nBin-1; i>iqq; i--){
-		double x=bin*i + minVal;
-		z+=pow(1-x*x,b)*bin;
-	}
-	z=0.25/z;
-	double e=0,s=0;
-	for(int i=nBin-1; i>iqq; i--){
-		double x=bin*i + minVal;
-		x=z*pow(1-x*x,b)-dd[i];
-		e+=x;
-		s+=x*x;
-	}
-	s*=bin; s=sqrt(s);
-	return s;
-}
-
-
-void Histogram::fitBeta(){
-	double s=0;
-	for(int i=0; i<nBin; i++){
-		s+=dd[i]*bin;
-		if(s<0.25) iq=i;
-		if(s<0.5 ) im=i;
-		if(s<0.75) iqq=i;
-	}
-//	beta=1;
-	double d=1;
-	double d1=error(beta-d);
-	double d2=error(beta);
-	double d3=error(beta+d);
-	int k=0;
-	while(d > 0.01 && k<1000){
-		if(d1<=d2) {
-			beta-=d;
-			d3=d2; d2=d1; d1=error(beta-d);
-		}
-		else if(d3<=d2){
-			beta+=d;
-			d1=d2; d2=d3; d3=error(beta+d);
-		}
-		else{
-			double nn=(d3-d1), dd=d3+d1-2*d2;
-			if(dd==0) dd=1;
-			dd=d*nn/dd; if(dd>2) dd=2; if(dd<-2) dd=-2;
-			beta-=dd; d=abs(dd);
-			d1=error(beta-d); d2=error(beta); d3=error(beta+d);
-			if(d2<=d1 && d2<=d3) d/=3;
-			else d*=2;
-			if(d>2) d=randInt(4);
-		}
-//deb("d=%f  k=%i",d,k);
-		k++;
-	}
-}
 
 double Histogram::pValp(double x){return interpol(x,Fp);}
 double Histogram::pValm(double x){return interpol(x,Fm);}
@@ -902,7 +858,7 @@ void DinHistogram::print(FILE* f){						// print the histogram
 }
 
 
-//==================================================================================
+//===================== Normalize the function to mean and sigma
 double norm(double *x, int l){
 	double d=0,e=0,dd,ee;
 	for(int i=0; i<l; i++){d+=x[i]*x[i]; e+=x[i];}
@@ -915,27 +871,6 @@ double norm(double *x, int l){
 	return dd;
 }
 
-FileName::FileName(char *fn){
-	char bb[1024]; strcpy(bb,fn);
-	char *x=strrchr(bb,'/');
-	if(x==0) {x=bb; path=".";}
-	else {*x=0; x++; path=strdup(bb);}
-	char *s=strrchr(x,'.');
-	if(s==0){ext="";}
-	else	{*s=0; s++; ext=strdup(s);}
-	name=strdup(x);
-}
-
-char *FileName::fname(){
-	char bb[1024]; sprintf(bb,"%s/%s.%s",path,name,ext);
-	return strdup(bb);
-}
-//================ create filename without extension
-char *FileName::coreFname(){
-	char bb[1024]; sprintf(bb,"%s/%s",path,name);
-	return strdup(bb);
-}
-
 //================= create filename using path and name
 char* makeFileName(char *b, const char *path, const char*fname){
 	if(path==0) return strcpy(b,fname);
@@ -945,6 +880,7 @@ char* makeFileName(char *b, const char *path, const char*fname){
 	sprintf(b,"%s%s",path,fname);
 	return b;
 }
+//================= create filename using path and name
 char *makeFileName(char *b, const char *path, const char*fname, const char*ext){
 	makeFileName(b,path,fname);
 	char *ss=strrchr(b,'/'); if(ss==0) ss=b;
@@ -952,6 +888,7 @@ char *makeFileName(char *b, const char *path, const char*fname, const char*ext){
 	return strcat(strcat(b,"."),ext);
 }
 
+//===================== platform independent Make Directory
 int _makeDir(const char * path){
     struct stat sb;
     if (stat(path, &sb) == 0 && S_ISDIR(sb.st_mode)) return 0;
@@ -966,6 +903,7 @@ int _makeDir(const char * path){
 	return mkdir(path, mode); // notice that 777 is different than 0777
 #endif
 }
+//===================== platform independent Make Directory
 void makeDir(const char *path){
 	char b[2048];
 	parseTilda(b,path);
@@ -988,11 +926,7 @@ char* makePath(char* pt){
 	return strdup(strcat(strcpy(b,pt),"/"));
 }
 
-//=================== change file extension
-char * cfgName(char* p, char* ext){
-	FileName fn(p);	fn.ext=ext;
-	return fn.fname();
-}
+//====================== Lock file in platform - independent manner
 void flockFile(FILE *f){
 #if defined(_WIN32)
 	return;
@@ -1017,22 +951,25 @@ bool fileExists(const char *fname){
 	return fg;
 }
 
-bool fileExists(const char* path, const char *fname){				// check if the file exists
+//=================== Check if given file exists
+bool fileExists(const char* path, const char *fname){
 	char b[4096];
 	makeFileName(b,path,fname);
 	return fileExists(b);
 }
-bool fileExists(const char* path, const char *fname, const char *ext){ // check if the file exists
+//==================== check if the file exists
+bool fileExists(const char* path, const char *fname, const char *ext){
 	char b[4096];
 	makeFileName(b,path,fname,ext);
 	return fileExists(b);
 }
+//====================
 unsigned long getFileTime(const char *fname){
 	struct stat mystat;
 	stat(fname,&mystat);
 	return mystat.st_mtime;
 }
-
+//================== Convert the interval flag to text
 const char *getIvFlag(){
 				switch(intervFlag0){
 				case GENE:     return "gene"; break;
@@ -1078,12 +1015,6 @@ return qMin;
 }
 
 //=================== extract file name
-char *getFname(char *s){
-	char *ss=strrchr(s,'/');
-	if(ss==0) ss=s; else ss++;
-	return ss;
-}
-
 const char *getExt(const char *fname){
 	const char *s=strrchr(fname,'/');
 	if(s==0) s=fname;
@@ -1091,6 +1022,7 @@ const char *getExt(const char *fname){
 	if(s==0) return 0;
 	return s+1;
 }
+//=================== extract fname wothout extension
 char *getFnameWithoutExt(char *buf, char *fname){
 	char *s;
 	s=strrchr(fname,'/'); if(s==0) s=fname; else s++;
@@ -1100,22 +1032,7 @@ char *getFnameWithoutExt(char *buf, char *fname){
 	return buf;
 }
 
-//========================================================================================
-// search appropriate cfg file
-//void readCfg(int argc, const char *argv[]) {
-//	argv[0]=correctFname(argv[0]);
-//	char *cfg=cfgName((char*)argv[0], (char*)"cfg");
-//	readCfg(cfg);					// deafult cfg
-//	char* cfg1=strrchr(cfg,'/');	// cfg in current directory
-//	if(cfg1 !=0) readCfg(cfg1+1);
-//	for(int i=0; i<argc; i++){
-//		if(strncmp(argv[i],"cfg=",4)==0) {
-//			verb("read cfg <%s>\n",cfg);
-//			readCfg((char*)(argv[i]+4));
-//		}
-//	}
-//}
-
+//===================== convert text flag to a binary
 int getFlag(char*s){
 	int fg=0;
 	if(		keyCmp(s,"1")==0 || keyCmp(s,"YES")==0 || keyCmp(s,"ON" )==0) {fg=1;}
@@ -1123,7 +1040,7 @@ int getFlag(char*s){
 	else fg=-1;
 	return fg;
 }
-
+//===================== check if given string contains given key: 0 -- contains; 1 -- does not
 int keyCmp(const char *str, const char *key){
 	for(;;str++, key++){
 		if(*str==0){
@@ -1136,6 +1053,7 @@ int keyCmp(const char *str, const char *key){
 	return strncmp(str,key,strlen(key));
 }
 
+//========== Convert kernel type to a string
 const char*getKernelType(){
 	const char *type;
 	if(kernelType==KERN_NORM	 ) type="N";
@@ -1152,9 +1070,10 @@ const char*getKernelType(){
 		return strdup(b);
 	}
 	else return type;
-
 }
-
+//=================================================================
+//============================= File list =========================
+//=================================================================
 int   fileId=0;
 
 void addFile(const char* fname, int id){
@@ -1188,7 +1107,7 @@ void addFile(const char* fname){
 	}
 }
 
-
+//========================= trim given string
 char *trim(char *s){
 	if(s==0) return 0;
 	s=skipSpace(s);
@@ -1245,6 +1164,11 @@ void makeId(){
 	id=hashx(id,wStep);
 	id=hashx(id,flankSize);
 	id=hashx(id,kernelType);
+
+	id=hashx(id,intervFlag0);
+	id=hashx(id,strandFg0);
+	id=hashx(id,threshold);
+	id=hashx(id,threshold);
 }
 
 
@@ -1258,49 +1182,3 @@ void makeDirs(){
 	else trackPath=strdup("./");
 }
 
-
-//int main0(int argc, const char *argv[]) {
-////	clearDeb();
-////	debugFg=DEBUG_LOG|DEBUG_PRINT;
-//
-//	char *chrom=getenv("SG_CHROM");
-//	if(chrom!=0) chromFile=strdup(chrom);
-//
-//	unsigned long t=time(0);	id=t&0xffffff;	// define run id
-//	readArgs( argc, argv);
-//	if(wStep==0)   wStep=wSize;
-//	if(RScriptFg) {writeDistCorr|=TOTAL; writeDistr=1;}
-//	if(complFg==0){
-//		if(strandFg0) complFg=COLLINEAR;
-//		else		  complFg=IGNORE_STRAND;
-//	}
-//
-//
-//
-//	FileName fn((char*) argv[0]);
-//	const char *progName=fn.name;
-//
-//	makeDirs();
-//
-//	verb("===== %s version %s =====\n",progName,version);
-//	if(nfiles==0){
-//		printf("\n");
-//		printf("Program %s compares two track and calculates Kernel Correlation\n",progName);
-//		printf("Usage:\n");
-//		printf("$ ./%s [-parameters] trackFile_1 trackFile_2 ... trackFile_n\n",progName);
-//		printf("\n");
-//		exit(0);
-//	}
-//
-//	if(aliaseFil!=0)  alTable.readTable(aliaseFil);		// read aliases
-//	readChromSizes(chromFile);							// read chromosomes
-//
-//	if(cage) {CageMin(files[0].fname,files[1].fname); exit(0);}
-//
-//	if(pcaFg) pcaMain(profile1);
-//
-//	Correlator();
-//
-//	if(logFile) {fclose(logFile); logFile=0;}	// debug log file
-//	return 0;
-//}

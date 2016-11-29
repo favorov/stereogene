@@ -540,7 +540,7 @@ void bTrack::writeByteProfile(){
 
 void bTrack::makeBinTrack(){
 	verb ("******   Make binary track <%s>   ******\n", name);
-	writeLog("    Make binary track <%s> ",name);
+	writeLog("    Make binary track <%s>\n",name);
 	//===================================================== prepare track file name
 	if (pcorProfile!=0)	 verb("===          pcorProfile=  <%s>\n",pcorProfile);
 	trackType=getTrackType(name);
@@ -563,7 +563,7 @@ void bTrack::makeBinTrack(){
 	writeProfilePrm();
 	writeByteProfile();					//============ write binary profiles
 //	if(lAuto) trackAutoCorrelation();
-	writeLog("         ...OK\n");
+	writeLog("    Make binary track -> OK\n");
 
 	return;
 }

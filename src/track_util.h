@@ -83,11 +83,10 @@ const  int WIG_MULT=0x20;
 
 const int MAX_GENES=100000;
 
-#define memSiz(a,n) n*sizeof(*a)
-#define getMem0(a,n,err) if(a==0) a=(typeof a)xmalloc((n+100)*sizeof(*a),err)
-#define getMem(a,n,err) a=(typeof a)xmalloc((n+100)*sizeof(*a),err)
-#define zeroMem(a,n) memset(a,0,n*sizeof(*a))
-#define xfree(a,b) {if(a) free(a); else writeLog("error in free %s\n",b); a=0;}
+#define getMem0(a,n,err) {if(a==0) a=(typeof a)xmalloc((n+100)*sizeof(*a),err);}
+#define getMem(a,n,err)  {a=(typeof a)xmalloc((n+100)*sizeof(*a),err);}
+#define xfree(a,b) 		 {zfree(a,b); a=0;}
+#define zeroMem(a,n) 	 {memset(a,0,n*sizeof(*a));}
 #define max(a,b) a<b ? b : a
 #define min(a,b) a>b ? b : a
 #define abs(a) (a<0 ? -a : a)
@@ -211,11 +210,6 @@ extern double *BkgSet, *FgSet;			// background and foreground sets of the correl
 extern FILE *logFile;
 
 
-void deb(int num);
-void deb(const char *format, ...);
-void deb(int num, const char *format, ...);
-void clearDeb();
-
 
 struct Chromosome{
     char *chrom;		//Chromosome name
@@ -242,17 +236,10 @@ struct ScoredRange{
     float score;	// score
     ScoredRange();
 };
-//              mapSgm=b:-500..e:+200
-struct FileName{
-	const char *path;	// Path
-	const char *name;	// File name
-	const char *ext;	// extension
-	FileName(char *fn);	// constructor parses name
-	char *fname();		// generate full filename
-	char *coreFname();  // fileneme without extension
-};
 //===============================================================
 struct MapRange{
+//============ example              mapSgm=b:-500..e:+200
+
 	int f,t;
 	int cumLength;
 	MapRange();
@@ -304,6 +291,7 @@ struct bTrack{		        // Binary track
 			av0,
 			sd0,
 			nn;
+	double avWindow, sdWindow;// mean and stdDev in current window
 
 	bool strandFg;
 	float scaleFactor;
@@ -373,10 +361,10 @@ struct Model:bTrack{
 	void create();
 	void write();
 };
+long mtime();
 struct Timer{
 	long start;
 	char bb[80];
-	long mtime();
 	Timer();
 	void reset();
 	long getTimer();
@@ -403,20 +391,15 @@ struct DinHistogram{		// Dynamic histogram for two variables
 	void print(FILE* f);
 	void clear();
 };
-//=========================================================================
-#define  maxPrimeFactor        11
-#define  maxPrimeFactor2       maxPrimeFactor*2
-#define  maxPrimeFactorDiv2    (maxPrimeFactor2+1)/2
-#define  maxFactorCount        20
 
 //===============================================================
 class Fourier{		// Fourier transformation
 public:
 	int err;
 	int length;				// array length
-	double *datRe,*datIm, 			// im part of input data (always 0)
+	double *datRe,*datIm, 	// im part of input data (always 0)
 			*re, *im; 		// real and im parts of transformation
-	double re0,im0;
+	double re0,im0;			// Copy of the zero element that reflects mean of the data
 
 	Fourier();				// empty constructor
 	Fourier(int n);			// constructor
@@ -454,17 +437,14 @@ public:
 	Fourier ft;				// Fourier transformation for the kernel
 	Fourier cft;			// Fourier transformation for the complement kernel
 	Fourier fx,fy;			// Fourier transformation for the input data
-//	Fourier fpc;			// Fourier transformation for partial correlation track
 	bool hasCompl;			// for symmetrical Kernel flag=false; otherwise flag=1;
 	virtual ~Kernel(){;}
 	void init(int l);
 	void fft();
 	void fftx(double* , int deriv);		// do transform for given data
 	void ffty(double* , int deriv);		// do transform for given data
-	void fftpc(double*);		// do transform for given data
 	double scalar(Fourier *f1, Fourier *f2, Complex *c, bool complem);
 	double dist  (Fourier *f1, Fourier *f2, bool complem);
-	double dist  (Fourier *f1, Fourier *f2, Fourier *fpc, bool complem);
 	double dist(bool complem);
 	void makeKernel(int l);
 	double NSCorrection(double x, double val);
@@ -502,7 +482,7 @@ struct Histogram{
 			bin,			 // bin size
 			e,  			 // Mean
 			sigma,			 // standard deviation
-			beta;			 // parameter fof Beta-distribution
+			alpha,beta;		 // parameters fof Beta-distribution
 	int 	nBin,			 // Number of bins
 			count;			 // Number of observations
 	double  *dd,			 // Distribution density
@@ -521,8 +501,7 @@ struct Histogram{
 	double pValm(double x);
 	double interpol(double x, double* fun);
 	void print(FILE *f);
-	void fitBeta();
-	double error(double b);
+	void calcCDF(double *d);
 };
 
 struct MapPos{
@@ -550,20 +529,24 @@ struct MapIv{				// description of the map interval
 	char* print(char *b);
 };
 
-struct Aliase{
+//================= Alias classes are used for give shorter file names.
+//================= It uses the alias table and renames the output files
+struct Alias{
 	char *oldName;
 	char *newName;
 	int lnew, lold;
 };
-class AliaseTable{
+
+class AliasTable{
 public:
-	Aliase *als;
+	Alias *als;
 	int nAls;
-	AliaseTable(){nAls=0; als=0;}
+	AliasTable(){nAls=0; als=0;}
 	void readTable(const char* fname);
 	char *convert(char*oldName);
 };
 
+//================= File list Entry
 struct FileListEntry{
 	int id;
 	char *fname;
@@ -575,10 +558,8 @@ struct Correlation{
 	double min,max,av,sd;
 	Correlation();
 	void init();
-	void getLimits(int &left, int &right, double &bottom, double &top);
 	void norm();
 	void calcWindowCorrelation(int pos, bool cmpl1, bool cmpl2,double corr);
-//	void print(char *fname);
 	void printSpect(char *fname);
 };
 
@@ -589,7 +570,7 @@ struct PairEntry{			//==== correlation for pair of windows
 
 
 //=====================================================================
-extern AliaseTable alTable;
+extern AliasTable alTable;
 extern Chromosome *chrom_list;       // list of chromosomes
 extern int n_chrom;
 extern Chromosome *curChrom;
@@ -640,7 +621,6 @@ char *cfgName(char* p, char* ext);			// Make config file name
 char *makePath(char* pt);					// Make path - add '/' to the end of pathname
 FILE *xopen(const char*, const char*);		// open file if exists, exit otherwise
 FILE *gopen(const char*, const char*);		// open file with parsing ~
-char *getFname(char *s);					// get filename without path
 bool fileExists(const char *fname);				// check if the file exists
 bool fileExists(const char* path, const char *fname);				// check if the file exists
 bool fileExists(const char* path, const char *fname, const char *ext); // check if the file exists
@@ -657,11 +637,6 @@ void addFile(const char* fname);
 
 //============================================== read config file
 char *trim(char *s);
-//void readArg(char *b);
-//int readArg(char *s1, char *s2, int check);
-//void readArgs(int argc, const char *argv[]);
-//void readCfg(int argc, const char *argv[]);
-//void readCfg(char *cfg);
 int  keyCmp(const char *str, const char *key);
 int  getFlag(char*s);
 const char*getKernelType();
@@ -709,11 +684,18 @@ int  Preparator(const char *fname);
 //============================================ Arrays
 double arrayMax(double *d, int n);		// find max value
 double norm(double *x, int l);			// normalize to z-score
+void zfree(void *a, const char* b);
 void *xmalloc(size_t n, const char * err);
 void errorExit(const char *format, ...);
+void clearLog();
 void writeLog(const char *format, ...);
 void verb(const char *format, ...);
 void xverb(const char *format, ...);
+void deb(int num);
+void deb(const char *format, ...);
+void deb(int num, const char *format, ...);
+void clearDeb();
+
 void helpPage();
 //======================== Mapping
 void mapIntervals();
@@ -731,7 +713,6 @@ void GenerateData();
 int genmain();
 double *readDistr(const char *fname, int &nn);
 void test();
-void pcaMain(const char *fname);
 void CageMin(const char *fname1, const char *fname2);
 void Active();
 #endif /* TRACK_UTIL_H_ */

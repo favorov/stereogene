@@ -182,6 +182,6 @@ void pcaMain(const char *fname){
 		fclose(f);
 	}
 
-	writeLog("         ...OK\n");
+	writeLog("PCA prepare -> OK\n");
 	exit(0);
 }
