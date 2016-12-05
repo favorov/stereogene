@@ -421,7 +421,7 @@ int Correlator(){
 	verb("========== Parameters ===========\n");
 	verb("==         chrom=<%s>\n", chromFile);
 	if (pcorProfile != 0) verb("==         pcorProfile=<%s>\n", pcorProfile);
-	verb("===        step=%i\n",binSize);
+	verb("===        bin=%i\n",binSize);
 	verb("==         wSize=%i\n",wSize);
 	verb("==         kernelType=%i\n",kernelType);
 	verb("==         kernelSigma=%.0f\n",kernelSigma);

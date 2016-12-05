@@ -97,5 +97,7 @@
 2. parameter 'outWig' is renamed to 'outLC'
 3. Introduced the distributions for the local correlation (file *.LChist)
 ========== Version 1.68 ====================
-1. Fixed a bug with flanks 
-2. Documentation improved 
+1. Fixed a bug with flanks
+2. Fixed conflict in windows enviroment
+3. Documentation improved
+ 
