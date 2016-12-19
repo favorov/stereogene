@@ -88,7 +88,7 @@ void getStat(double *set, int n, double &av, double &sd){
 	av/=n; sd=sqrt((sd-av*av*n)/(n-1));
 }
 
-double avBg,sdBg=0,avFg,sdFg=0;
+double avBg,sdBg=0,avFg=0,sdFg=0;
 void printStat(){
 	verb("Write statistics\n");
 	writeLog("Write statistics\n");
@@ -121,16 +121,18 @@ void printStat(){
 	if(!fg && f){								//================ write the header
 		fprintf(f,"%-6s\t%-20s\t%-20s","id","name1","name2");
 		fprintf(f,"\t%-6s\t%-6s\t%-6s\t%-6s","window","kern","nFgr","nBkg");
-		fprintf(f,"\t%-8s\t%-8s\t%-8s\t\%-8s","Bkg_av","Fg_av","Bkg_sd","Fg_sd");
-		fprintf(f,"\t%-9s\t%-8s\t%-8s\t%-7s","tot_cor","avCorr", "Mann-Z","p-value");
+		fprintf(f,"\t%-8s\t%-8s\t\%-8s","Fg_Corr","Fg_av_Corr","FgCorr_sd");
+		fprintf(f,"\t%-8s\t%-8s\t\%-8s","Bg_Corr","Bg_av_Corr","BgCorr_sd");
+		fprintf(f,"\t%-8s\t%-7s", "Mann-Z","p-value");
 		fprintf(f,"\t%-6s\n", "pc");
 	}
 	//==================================================== write the statistics
 	if(f){
 		fprintf(f,"%08lx\t%-10s\t%-10s",id,alTable.convert(bTrack1.name), alTable.convert(bTrack2.name));
 		fprintf(f,"\t%-6i\t%-6s\t%6i\t%6i",wSize,getKernelType(),nFg, nBkg);
-		fprintf(f,"\t%8.4f\t%8.4f\t%8.4f\t%8.4f",avBg,avFg,sdBg,sdFg);
-		fprintf(f,"\t%8.4f\t%8.4f\t%8.1f\t%-7.2e\t%-6c\n",totCorr,FgAvCorr,MannW->z,MannW->pVal, pc);
+		fprintf(f,"\t%8.4f\t%8.4f\t%8.4f",totCorr, avFg,sdFg);
+		fprintf(f,"\t%8.4f\t%8.4f\t%8.4f",BgTotal, avBg, sdBg);
+		fprintf(f,"\t%8.4f\t%-7.2e\t%-6c\n",MannW->z,MannW->pVal, pc);
 		funlockFile(f);
 		fclose(f);
 	}
@@ -217,8 +219,8 @@ void printStat(){
 		fprintf(xml,"MannZ=\"%.4f\" ",MannW->z);
 		fprintf(xml,"pVal=\"%.2e\" ",MannW->pVal);
 
-		fprintf(xml,"avBg=\"%.4f\" ",avBg);
-		fprintf(xml,"avFg=\"%.4f\" ",avFg);
+//		fprintf(xml,"avBg=\"%.4f\" ",avBg);
+//		fprintf(xml,"avFg=\"%.4f\" ",avFg);
 		fprintf(xml,"sdBg=\"%.4f\" ",sdBg);
 		fprintf(xml,"sdFg=\"%.4f\" ",sdFg);
 		fprintf(xml,"/>\n");
@@ -319,8 +321,8 @@ void printBroadPeak(){
 		fprintf(fBpeak,"%s\t%li\t%li\t.\t%i\t.\t.\t%5.1f\t%5.1f\n",
 				pe->chrom, pe->beg, pe->end, score,pv,qv);
 	}
-	fclose(fBpeak);
 	xfree(pPair,"pPair");
+	fclose(fBpeak);
 }
 void printRmd(){
 	char *dn=makePath(resPath), b[2048];
@@ -487,7 +489,7 @@ void printRreport(){
   	fprintf(f, "Bkg_sd=\"%.4f\", \n", sdBg);
   	fprintf(f, "Fg_sd=\"%.4f\",\n", sdFg);
   	fprintf(f, "tot_cor=\"%.4f\",\n", totCorr);
-  	fprintf(f, "avCorr=\"%.4f\",\n", FgAvCorr);
+//  	fprintf(f, "avCorr=\"%.4f\",\n", FgAvCorr);
   	fprintf(f, "Mann_Z=\"%.4f\",  \n", MannW->z);
   	fprintf(f, "p_value=\"%.2e\" \n", MannW->pVal);	
   	fprintf(f, "), output_file = file.path(getwd(), \"%s.html\"))\n", fname);

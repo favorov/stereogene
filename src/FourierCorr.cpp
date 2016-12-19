@@ -60,7 +60,7 @@ void Correlation::init(){
 
 void Correlation::calcWindowCorrelation(int pos, bool cmpl1, bool cmpl2, double corr){
 //	kern->restore();
-	for(int i=0; i<profWithFlanksLength; i++){
+	for(int i=1; i<profWithFlanksLength; i++){
 		double  ReX=kern->fx.re[i],
 				ReY=kern->fy.re[i],
 				ImX=kern->fx.im[i],
@@ -72,13 +72,15 @@ void Correlation::calcWindowCorrelation(int pos, bool cmpl1, bool cmpl2, double 
 		spectrumY[i]+=(float)(ReY*ReY+ImY*ImY);
 	}
 
+//	reverse transformation
 	wCorrelation.calc(0);
+	wCorrelation.norm();
 
 	double delta=0.;
 	Chromosome* chr=0;
 	if(pos>=0) chr=getChromByPos(pos);
 	for(int i=0; i<profWithFlanksLength; i++){
-		double x=wCorrelation.re[i]/profWithFlanksLength;
+		double x=wCorrelation.re[i];
 		correlation[i]+=x;
 		if(chr) {chr->distDens[i]+=x; chr->densCount++;}
 		if(corr < - 10) continue;
@@ -126,7 +128,6 @@ void addChromStat(int pos, double corr, double lCorr, double av1, double av2){
 //=======  input: to position and complement flags. rnd: if the data comes from shuffling
 
 double calcCorelations(int pos1, int pos2, bool cmpl1, bool cmpl2, bool rnd){
-
 	int na1=bTrack1.countNA(pos1,cmpl1);			// count Na's  in the first profile
 	int na2=bTrack2.countNA(pos2,cmpl2);			// count Na's  in the second profile
 	int nz1=bTrack1.countZero(pos1,cmpl1);			// count zeros in the first profile
@@ -163,10 +164,16 @@ double calcCorelations(int pos1, int pos2, bool cmpl1, bool cmpl2, bool rnd){
 }
 //======================================================= Calculate the total correlation
 double calcCC(){
-	double cc=(prod12-sprod12)/sqrt((prod11-sprod11)*(prod22-sprod22));
+	double c11=prod11-eprod1*eprod1/nprod*profWithFlanksLength;
+	double c22=prod22-eprod2*eprod2/nprod*profWithFlanksLength;
+	double c12=prod12-eprod1*eprod2/nprod*profWithFlanksLength;
+	double cc=c12/sqrt(c11*c22);
 	return cc;
 }
 
+void cleanCummulative(){
+	prod11=0; prod12=0; prod22=0; eprod1=0; eprod2=0; nprod=0;
+}
 //======================================================== Calculate background distributions
 void distrBkg(){
 	errStatus="bkg Distrib.";
@@ -185,7 +192,8 @@ void distrBkg(){
 	if(writeDistr) f=xopen(b,"wt");
 	//================================================== simulations
 	int tst=0;											// count runs with zero/NA frames
-	sprod11=0; sprod12=0; sprod22=0; prod11=0; prod12=0; prod22=0; nProd=0;
+
+	cleanCummulative();
 	int n_corr=0; BgAvCorr=0;
 	for(int i=0; i<nSimul; i++){
 		int p1;
@@ -220,89 +228,15 @@ void distrBkg(){
 
 	double cc=calcCC();
 	BgAvCorr/=n_corr;
+	BgTotal=cc;
 	xverb("\nbg_cc=%f \nbg_average=%f\n",cc,BgAvCorr);
 	if(writeDistr) fclose(f);
 	bgHist.normBeta();								// finalize the histogram
 	errStatus=0;
 }
 
-//============================================= Auto correlations
-int bTrack::readProfileToArray(double *x, int scale, int from, int to, bool cmpl){
-	unsigned char *b=bytes;
-	double sum=0;
 
-	zeroMem(x,lProfAuto);
-	if(cmpl && hasCompl) b=cbytes;
-	for(int i=from; i<to && i< profileLength; i++){
-		double p=getVal(b[i]);
-		int k=(i-from)/scale;
-		if(cmpl) k=lProfAuto-k-1;
-		if(k<0) k=0; if(k>=lProfAuto) k=lProfAuto-1;
-		x[k]+=p;
-		sum+=p;
-	}
-	return 1;
-}
-
-int resultAutoCorrelation(int from, int to, bool cmpl1, bool cmpl2){
-	if(bTrack1.readProfileToArray(xDat,corrScale,from,to,false)==0) return 0;
-	if(bTrack2.readProfileToArray(yDat,corrScale,from,to,false)==0) return 0;
-
-	if(corrFunc(xDat,yDat,xyCorr,lProfAuto)==0) return 0;
-	int fg=0;
-	for(int i=0; i<lProfAuto; i++){
-		autoCorrx[i]+=xDat[i];
-		autoCorry[i]+=yDat[i];
-		Corrxy[i]	+=xyCorr[i];
-		if(xDat[i]!=0 && yDat[i]!=0 && xyCorr[i]!=0) fg=1;
-	}
-	return fg;
-}
-
-int nCorrelation=10000;
-int lAutoScale=1000;
-void resultAutoCorrelation(){
-	char b[1024];
-	FILE *fil;
-	if(lAuto==0) return;
-	errStatus="resultAutoCorrelation";
-	verb("Autocorrelation...\n");
-
-	corrScale=lAuto*lAutoScale/(binSize*nCorrelation);
-	if(corrScale <1) corrScale=1;
-
-	lProfAuto=lAuto*1000/(binSize*corrScale);
-	getMem0(xDat,lProfAuto     , "resultAutoCorrelation #1");
-	getMem0(yDat,lProfAuto     , "resultAutoCorrelation #2");
-	getMem0(xyCorr,lProfAuto   , "resultAutoCorrelation #3");
-	getMem0(autoCorrx,lProfAuto, "resultAutoCorrelation #4"); 	zeroMem(autoCorrx,lProfAuto);
-	getMem0(autoCorry,lProfAuto, "resultAutoCorrelation #5");	zeroMem(autoCorry,lProfAuto);
-	getMem0(Corrxy,lProfAuto   , "resultAutoCorrelation #6");	zeroMem(Corrxy,lProfAuto);
-	int from=0, to=lProfAuto;
-	int nn=0;
-	for(; to< profileLength; from+=lProfAuto, to+=lProfAuto){
-		if(nn%1000==0) verb("Autocorr %i/%i\n",from,profileLength);
-		int fg=resultAutoCorrelation(from,to,false,false);
-		nn+=fg;
-	}
-
-	strcat(strcpy(b,outFile),AC_EXT);
-	fil=xopen(b,"wt");
-	fprintf(fil,"l\tauto1\tauto2\tcorrelation\n");
-	for(int i=0; i<lProfAuto/2; i++){
-		double k=1./1000*binSize*corrScale*i;
-		autoCorrx[i]/=nn; autoCorry[i]/=nn; Corrxy[i]/=nn;
-		if(abs(autoCorrx[i]) < 0.001 &&
-		   abs(autoCorry[i]) < 0.001 &&
-		   abs(Corrxy[i])    < 0.001 ) continue;
-		fprintf(fil,"%.4f\t%.5f\t%.5f\t%.5f\n",k,autoCorrx[i],
-				autoCorry[i],Corrxy[i]);
-	}
-	fclose(fil);
-	errStatus=0;
-}
-//============================================= Calculate real correlations
-
+//============================================ Store foreground distribution
 inline void storePair(int i, double d){
 	PairEntry *pe=pairs+(nPairs++);						//== store pair of positions
 	if(i%fstep == 0) FgSet[nFg++]=d;					//== store distributions (the windows should not overlap)
@@ -310,7 +244,7 @@ inline void storePair(int i, double d){
 	fgHist.add(d);
 }
 
-
+//============================================= Calculate coherent correlations
 void distrCorr(){
 	verb("\nForeground...");
 	int l=bTrack1.lProf-wProfSize;
@@ -325,7 +259,7 @@ void distrCorr(){
 	getMem0(FgSet, siz, "dist Corr #1");			//== array for foreground distribution
 	getMem0(pairs, siz, "dist Corr #2");			//== array for pairs
 
-	sprod11=0; sprod12=0; sprod22=0; prod11=0; prod12=0; prod22=0; nProd=0;
+	cleanCummulative();
 
 	//=================== calculate correlations
 	int n_corr=0; FgAvCorr=0;
@@ -373,12 +307,69 @@ void distrCorr(){
 	finOutWig();
 	fgHist.normF();
 	totCorr=calcCC();
-
-	xverb("\nCorrelation=%f\naverage Corrrelation=%f\n",totCorr, FgAvCorr);
+	if(n_corr==0)	xverb("\nno non-zero windows pairs\n",totCorr, FgAvCorr);
+	else			xverb("\nCorrelation=%f\naverage Corrrelation=%f\n",totCorr, FgAvCorr);
 	errStatus=0;
 }
 
+//=========================  Calculate autocorrelation
+int resultAutoCorrelation(int from, int to, bool cmpl1, bool cmpl2){
+	if(bTrack1.readProfileToArray(xDat,corrScale,from,to,false)==0) return 0;
+	if(bTrack2.readProfileToArray(yDat,corrScale,from,to,false)==0) return 0;
 
+	if(corrFunc(xDat,yDat,xyCorr,lProfAuto)==0) return 0;
+	int fg=0;
+	for(int i=0; i<lProfAuto; i++){
+		autoCorrx[i]+=xDat[i];
+		autoCorry[i]+=yDat[i];
+		Corrxy[i]	+=xyCorr[i];
+		if(xDat[i]!=0 && yDat[i]!=0 && xyCorr[i]!=0) fg=1;
+	}
+	return fg;
+}
+//============================================= Auto correlations
+int nCorrelation=10000;
+int lAutoScale=1000;
+void resultAutoCorrelation(){
+	char b[1024];
+	FILE *fil;
+	if(lAuto==0) return;
+	errStatus="resultAutoCorrelation";
+	verb("Autocorrelation...\n");
+
+	corrScale=lAuto*lAutoScale/(binSize*nCorrelation);
+	if(corrScale <1) corrScale=1;
+
+	lProfAuto=lAuto*1000/(binSize*corrScale);
+	getMem0(xDat,lProfAuto     , "resultAutoCorrelation #1");
+	getMem0(yDat,lProfAuto     , "resultAutoCorrelation #2");
+	getMem0(xyCorr,lProfAuto   , "resultAutoCorrelation #3");
+	getMem0(autoCorrx,lProfAuto, "resultAutoCorrelation #4"); 	zeroMem(autoCorrx,lProfAuto);
+	getMem0(autoCorry,lProfAuto, "resultAutoCorrelation #5");	zeroMem(autoCorry,lProfAuto);
+	getMem0(Corrxy,lProfAuto   , "resultAutoCorrelation #6");	zeroMem(Corrxy,lProfAuto);
+	int from=0, to=lProfAuto;
+	int nn=0;
+	for(; to< profileLength; from+=lProfAuto, to+=lProfAuto){
+		if(nn%1000==0) verb("Autocorr %i/%i\n",from,profileLength);
+		int fg=resultAutoCorrelation(from,to,false,false);
+		nn+=fg;
+	}
+
+	strcat(strcpy(b,outFile),AC_EXT);
+	fil=xopen(b,"wt");
+	fprintf(fil,"l\tauto1\tauto2\tcorrelation\n");
+	for(int i=0; i<lProfAuto/2; i++){
+		double k=1./1000*binSize*corrScale*i;
+		autoCorrx[i]/=nn; autoCorry[i]/=nn; Corrxy[i]/=nn;
+		if(abs(autoCorrx[i]) < 0.001 &&
+		   abs(autoCorry[i]) < 0.001 &&
+		   abs(Corrxy[i])    < 0.001 ) continue;
+		fprintf(fil,"%.4f\t%.5f\t%.5f\t%.5f\n",k,autoCorrx[i],
+				autoCorry[i],Corrxy[i]);
+	}
+	fclose(fil);
+	errStatus=0;
+}
 
 //================================================================================================
 //================================================================================================
@@ -469,6 +460,7 @@ int Correlator(){
 		if(pcorProfile) bTrack1.ortProject();
 		bTrack1.makeIntervals();
 		for(int j=i+1; j<nfiles; j++){
+			Timer thisTimer;
 			if(files[j].id==files[i].id) continue;
 			profile2=files[j].fname;
 			outFile=makeOutFilename(profile1, profile2);
@@ -509,12 +501,11 @@ int Correlator(){
 			n_cmp++;
 			clear();
 			bTrack2.clear();
-			writeLog("<%s> => Done\n",outFile);
+			writeLog("<%s> => Done  time=%s\n",outFile,thisTimer.getTime());
 		}
 	bTrack1.clear();
 	writeLog("====== DONE ======\n");
 	}
-
     verb("***   calculation time for %i comparisons = %s\n",n_cmp, timer.getTime());
 
 	//====================================================================== Read Data

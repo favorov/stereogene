@@ -14,7 +14,7 @@
 #include <sys/file.h>
 //#include <dir.h>
 
-const char* version="1.68";
+const char* version="1.70";
 
 int debugFg=0;
 //int debugFg=DEBUG_LOG|DEBUG_PRINT;
@@ -114,16 +114,16 @@ int genFg=0;			// generate data
 int lAuto=0;
 int corrScale=10;
 bool corrOnly=0;
-double prod11=0,prod12=0,prod22=0,sprod11=0, sprod12=0,sprod22=0;
+double prod11=0,prod12=0,prod22=0, eprod1,eprod2;
+int nprod=0;
 Correlation correlation;		// array for correlation picture
 Correlation bgcorrelation;		// array for correlation picture
 Fourier wCorrelation;
 
-int nProd=0;
 int pcaFg=0;
 int nPca=100000;
 int pcaSegment=100;
-double totCorr=0;
+double totCorr=0, BgTotal=0;
 unsigned long id;
 bool RScriptFg=0;
 int bpType=BP_SIGNAL;
@@ -622,7 +622,7 @@ FILE *gopen(const char*fname, const char* type){		// open file with parsing ~
 
 //===================
 void zfree(void *a, const char* b){
-	if(a) free(a); else writeLog("double free %s",b);
+	if(a) free(a); else writeLog("double free %s\n",b);
 }
 void *xmalloc(size_t n, const char *err){
 	void *a=malloc(n);

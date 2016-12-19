@@ -80,9 +80,6 @@ bool bTrack::check(const char *fname){
 		else if(strcmp(s1,"intervFlag")==0){
 			if(atoi(s2)!=intervFlag0) {failParam("intervFlag");  return false;}
 		}
-		else if(strcmp(s1,"NA")==0){
-			if(atoi(s2)!=NAFlag) {failParam("intervFlag");  return false;}
-		}
 	}
 	fclose(f);
 	if(chkVersion(bver)){
@@ -281,12 +278,12 @@ int  bTrack::countNA(int pos, bool cmpl){
 	for(int i=0; i< wProfSize && i+pos < lProf; i++) {
 		if(complFg==IGNORE_STRAND){		// ignore strand
 			int x=1;
-			if(bytes[pos+i]!=0) x=0;
-			if(hasCompl && cbytes[pos+i]==0) x=0;
+			if(             bytes[pos+i]!=0) x=0;
+			if(hasCompl && cbytes[pos+i]!=0) x=0;
 			c+=x;
 		}
 		else if(!cmpl || !hasCompl) 		// colinear or profile do not know the orient
-			{if(bytes[pos+i]==0) 	c++;}
+			{if( bytes[pos+i]==0) 	c++;}
 		else if(cmpl)						// comlement
 			{if(cbytes[pos+i]==0) 	c++;}
 	}
@@ -298,6 +295,8 @@ int  bTrack::countZero(int pos, bool cmpl){
 	int c=pos+wProfSize >= lProf ? wProfSize+pos-lProf-1 : 0;
 	int thr= threshold;
 	for(int i=0; i< wProfSize && i+pos < lProf; i++) {
+		if(             bytes[pos+i] ==0 && NAFlag) continue;
+		if(hasCompl && cbytes[pos+i] ==0 && NAFlag) continue;
 		if(complFg==IGNORE_STRAND){		// ignore strand
 			int x=1;
 			if(bytes[pos+i] > thr) x=0;
@@ -330,7 +329,11 @@ bTrack::bTrack(){
 }
 //======================================= decode binary value to real value
 double bTrack::getVal(unsigned char b){
-	if(b==0 && NAFlag && trackType==WIG_TRACK) return rGauss()*sd*noiseLevel;
+	if(b==0 && NAFlag && trackType==WIG_TRACK){
+		double x=rGauss();
+		double y=x*sd0*noiseLevel+av0;
+		return y;
+	}
 	if(b < threshold) return 0;
 	if(b==1) return 0;
 	double x=bScale*(b-1)+delta;
@@ -346,6 +349,24 @@ double bTrack::getValue(int pos, int cmpl){
 	}
 	return getVal(bytes[pos]);
 }
+
+int bTrack::readProfileToArray(double *x, int scale, int from, int to, bool cmpl){
+	unsigned char *b=bytes;
+	double sum=0;
+
+	zeroMem(x,lProfAuto);
+	if(cmpl && hasCompl) b=cbytes;
+	for(int i=from; i<to && i< profileLength; i++){
+		double p=getVal(b[i]);
+		int k=(i-from)/scale;
+		if(cmpl) k=lProfAuto-k-1;
+		if(k<0) k=0; if(k>=lProfAuto) k=lProfAuto-1;
+		x[k]+=p;
+		sum+=p;
+	}
+	return 1;
+}
+
 
 //====================================== calculate projection to orthogonal subspace
 void bTrack::ortProject(){

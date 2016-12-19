@@ -100,4 +100,8 @@
 1. Fixed a bug with flanks
 2. Fixed conflict in windows enviroment
 3. Documentation improved
- 
+4. Improved work with -na flag 
+========== Version 1.70 ====================
+1. Improved calculation of the total correlation.
+2. File Statistics changed 
+3. The documentation changed 

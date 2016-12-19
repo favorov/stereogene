@@ -7,7 +7,7 @@
 #include "track_util.h"
 
 Fourier::Fourier(int n){init(n);}
-Fourier::Fourier(){re=im=datRe=datIm=0; length=0; err=0; re0=im0=0;}
+Fourier::Fourier(){re=im=datRe=datIm=0; length=0; err=0;}
 double Complex::Mod(){return sqrt(re*re+im*im);}
 Complex Complex::scalar(Complex otherC){
 	Complex res=Complex();
@@ -54,11 +54,9 @@ void Fourier::calc(double *dRe, int deriv){
 	setDat(dRe);
 	calc(deriv);
 }
-//=========================================== Correlation with
-void Fourier::calc0(double *dRe, int deriv){
-	calc(dRe, deriv);
-	re0=re[0]; im0=im[0];
-	re[0]=0; im[0]=0;
+
+void Fourier::norm(){
+	for(int i=0; i<length; i++) {re[i]/=length; im[i]/=length;}
 }
 
 void Fourier::calc(int deriv){
@@ -75,6 +73,7 @@ void Fourier::derivat(){
 	}
 }
 
+//============================= Cross-correlation function
 int corrFunc(double *x, double *y, double *rc, int l){
 	if(norm(x,l)==0) return 0;
 	if(norm(y,l)==0) return 0;
@@ -89,9 +88,9 @@ int corrFunc(double *x, double *y, double *rc, int l){
 	}
 	frx.calc(x,0);
 	fry.calc(y,0);
-	for(int i=0; i<l; i++) {x[i]=frx.re[i]/l/l; y[i]=fry.re[i]/l/l;}
+	for(int i=0; i<l; i++) {x[i]=frx.re[i]; y[i]=fry.re[i];}
 	frx.calc(rc,ic,0);
-	for(int i=0; i<l; i++) {rc[i]=frx.re[i]/l/l;}
+	for(int i=0; i<l; i++) {rc[i]=frx.re[i];}
 	return 1;
 }
 
@@ -107,58 +106,68 @@ void Kernel::init(int n){
 	fy.init(n);
 }
 
-void Kernel::fftx(double* x, int deriv){
-	fx.calc0(x,deriv);
-}
-void Kernel::ffty(double* y, int deriv){
-	fy.calc0(y,deriv);
-}
+//============================== Calculate FFT
+void Kernel::fftx(double* x, int deriv){fx.calc(x,deriv);}
+void Kernel::ffty(double* y, int deriv){fy.calc(y,deriv);}
 
 
+//============================== Calculate FFT for direct & compl
 void Kernel::fft(){
-	ft.calc0(kern,0);
-	cft.calc0(ckern,0);
+	ft.calc(kern,0);
+	cft.calc(ckern,0);
 }
 
+//============================== Kerneled scalar prod =\int f(x) \rho(x-y) g(y) / Length
 double Kernel::scalar(Fourier *f1, Fourier *f2, Complex *c, bool complem){
 	if(f1->length !=length) return 0;
 	if(f2->length !=length) return 0;
 	double re=0, im=0;
 	Fourier *zft=complem ? &cft : &ft;
-	for(int i=1; i<length/2; i++){
+	for(int i=0; i<length/2; i++){
 		double RaRb_plus_IaIb =f1->re[i]*f2->re[i] + f1->im[i]*f2->im[i]; //==== Re(a)*Re(b)+Im(a)*Im(b)
 		double RaIb_minus_IaRb=f1->re[i]*f2->im[i] - f1->im[i]*f2->re[i]; //==== Re(a)*Im(b)-Im(a)*Re(b)
-		//==  Re=SUM Re(kern)(Re(a)*Re(b)+Im(a)*Im(b)) + Im(kern)*Re(a)*Im(b)-Im(a)*Re(b)
-		re+=zft->re[i]*RaRb_plus_IaIb + zft->im[i]*RaIb_minus_IaRb;
-		//==  Im=SUM Im(kern)(Re(a)*Re(b)+Im(a)*Im(b)) - Re(kern)*Re(a)*Im(b)-Im(a)*Re(b)
-		im+=zft->im[i]*RaRb_plus_IaIb - zft->re[i]*RaIb_minus_IaRb;
+		//==  Re=SUM Re(kern)(Re(a)*Re(b)+Im(a)*Im(b)) + Im(kern)*(Re(a)*Im(b)-Im(a)*Re(b))
+		re+=(zft->re[i]*RaRb_plus_IaIb + zft->im[i]*RaIb_minus_IaRb)/length;
+		//==  Im=SUM Im(kern)(Re(a)*Re(b)+Im(a)*Im(b)) - Re(kern)*(Re(a)*Im(b)-Im(a)*Re(b))
+		im+=(zft->im[i]*RaRb_plus_IaIb - zft->re[i]*RaIb_minus_IaRb)/length;
 	}
 	if(c!=0) {c->re=re; c->im=im;}
 	return re;
 }
 
+//======================================== Calculate distance (correlation)
 double Kernel::dist(bool complem){
 		return dist(&fx,&fy, complem);
 }
 
 
+//======================================== Calculate distance (correlation)
 double Kernel::dist(Fourier *f1, Fourier *f2, bool complem){
 	Complex c0=Complex(), c1=Complex(), c2=Complex();
 
 	double d12=scalar(f1,f2, &c0, complem);
 	double d11=scalar(f1,f1, &c1, complem);
 	double d22=scalar(f2,f2, &c2, complem);
-	d11=c1.Mod(); d22=c2.Mod();
-	if(d11==0 || d22==0) return -400;
 	Fourier *zft=complem ? &cft : &ft;
-	double dd;
 
-	dd=f1->re0*f1->re0*zft->re0; prod11+=d11+dd; sprod11+=dd;
-	dd=f1->re0*f2->re0*zft->re0; prod12+=d12+dd; sprod12+=dd;
-	dd=f2->re0*f2->re0*zft->re0; prod22+=d22+dd; sprod22+=dd;
+	//================================================ we should subtract the means
+	double dd11=f1->re[0]*f1->re[0]*zft->re[0]/length;
+	double dd12=f1->re[0]*f2->re[0]*zft->re[0]/length;
+	double dd22=f2->re[0]*f2->re[0]*zft->re[0]/length;
+	double e1=f1->re[0]/length, e2=f2->re[0]/length;
+	//================================================ cummulative integral
+	prod11+=d11;
+	prod12+=d12;
+	prod22+=d22;
+	eprod1+=e1;
+	eprod2+=e2;
+	nprod++;
 
-	nProd++;
+	//================================================ correlation for the window
+	d11-=dd11; d12-=dd12; d22-=dd22;
+	if(d11==0 || d22==0) return -400;
 	double cc=d12/sqrt(d11*d22);
+
 
 	return cc;
 }

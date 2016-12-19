@@ -24,7 +24,7 @@ void bTrack::initProfile(){
 		if(profilec==0) errorExit("%s",memError);
 	}
 
-	int zero=NA;
+	float zero=NA;
 	for(int i=0; i<profileLength; i++){
 		profile[i]=zero;								//== fill the profile with NA
 		if(profilec) profilec[i]=zero;
@@ -379,12 +379,10 @@ void bTrack::finProfile(){
 	maxP=-5.e+20;      // Maximal profile value
 	//============================ calculate min, max, average, std deviation
 	double x2=0;
-	if(NAFlag==0){
-		if(trackType==BED_TRACK || trackType==BED_GRAPH){
-			for(int i=0; i<profileLength; i++){
-				if(profile [i] == NA) profile [i]=0;
-				if(profilec && profilec[i] == NA) profilec[i]=0;
-			}
+	if(trackType==BED_TRACK || trackType==BED_GRAPH){
+		for(int i=0; i<profileLength; i++){
+			if(profile [i] == NA) profile [i]=0;
+			if(profilec && profilec[i] == NA) profilec[i]=0;
 		}
 	}
 
@@ -485,7 +483,6 @@ void bTrack::writeProfilePrm(){
     fprintf(f,"strand=%i\n",strandFg);
     if(trackType == BROAD_PEAK)  fprintf(f,"bpType=%i\n",bpType);
     if(trackType == BED_TRACK)   fprintf(f, "intervFlag=%i\n", intervFlag);
-    fprintf(f,"NA=%i\n",NAFlag);
     if(cage) fprintf(f, "cage=%i\n", cage);
     fprintf(f,"scaleFactor=%f\n",scaleFactor);
 

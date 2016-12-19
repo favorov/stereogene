@@ -181,13 +181,13 @@ extern int writeDistCorr;		// write BroadPeak
 
 extern int outWIG;
 
-extern double prod11,prod12,prod22,sprod11, sprod12,sprod22;	//cummulative scalar products
+extern double prod11,prod12,prod22, eprod1,eprod2;	//cummulative scalar products
+extern int nprod;
 extern int profWithFlanksLength; // size of profWindow array (including random flanks)
-extern int nProd;
 extern int pcaFg;
 extern int nPca;
 extern int pcaSegment;	//segment length in profile scale
-extern double totCorr;
+extern double totCorr,BgTotal;
 extern bool RScriptFg;
 extern bool outSpectr;
 extern int outRes;
@@ -399,7 +399,6 @@ public:
 	int length;				// array length
 	double *datRe,*datIm, 	// im part of input data (always 0)
 			*re, *im; 		// real and im parts of transformation
-	double re0,im0;			// Copy of the zero element that reflects mean of the data
 
 	Fourier();				// empty constructor
 	Fourier(int n);			// constructor
@@ -410,10 +409,9 @@ public:
 	void setDat(double *reD, double *imD);
 	void calc(double *reD, double *imD, int deriv);	//do transform with real and Im data
 	void calc(double *dat, int deriv);     // Do transformation with given real data
-	void calc0(double *dRe, int deriv);	   // Do transform and set re[0]=im[0]=0
 	void calc(int deriv); 			       // Do transformation
+	void norm();						   // divide transform by length
 	void derivat();						   // get derivative from fft
-	void restore(){re[0]=re0; im[0]=im0;}
 };
 
 struct Complex{
@@ -449,7 +447,6 @@ public:
 	void makeKernel(int l);
 	double NSCorrection(double x, double val);
 	virtual double kernVal(double x)=0;
-	void restore(){fx.restore(); fy.restore();}
 };
 
 struct  LeftExpKernel:Kernel{

@@ -196,9 +196,9 @@ double storeCorrTrack(int pos, bool cmpl1, bool cmpl2){
 	if(outWIG==NONE) return 0;
 	getMem0(smoothProf2,profWithFlanksLength+10, "storeCorrTrack");
 
-	kern->fx.re[0]=kern->fx.re0;		//restore the re[0] to the mean
-	kern->fy.re[0]=kern->fy.re0;
-	kern->ft.re[0]=kern->ft.re0;
+//	kern->fx.re[0]=kern->fx.re0;		//restore the re[0] to the mean
+//	kern->fy.re[0]=kern->fy.re0;
+//	kern->ft.re[0]=kern->ft.re0;
 
 	calcSmoothProfile(1, cmpl2);	// calculate smooth ptrofile c=\int f*\rho for the second profile (y)
 	memcpy(smoothProf2,wCorrelation.re,profWithFlanksLength*sizeof(double));

@@ -470,7 +470,6 @@ double * random_wig(double *w,int num){
 	w=GaussProcess(w,genomeSize, num*lStep_test);
 
 	char b[256]; sprintf(b,"rnd_%02i.wig",num);
-deb(b);
 
 	FILE *f=fopen(b,"wt");
 	fprintf(f,"track type=wiggle_0 description=\"-sin\"\n");
@@ -483,11 +482,13 @@ deb(b);
 	return w;
 }
 
+//int intCmp(void*a1, void*a2){return (int)(*a1)-(int)(*a2);}
+
 void test(){
 	clearDeb();
 	debugFg=DEBUG_LOG|DEBUG_PRINT;
 deb(444);
-int l=1000000, n=100, step=1000;
+int l=100000000, n=100;
 double *xx, *yy, *gauss;
 getMem(xx,l,"");
 getMem(yy,l,"");
@@ -502,30 +503,49 @@ for(int i=0; i<n; i++) {
 	gauss[i]=exp(-x*x);
 }
 deb(2);
-for(int k=0; k<10; k++){
-	for(int p=k*step, j=0; p<l && j<n; p++,j++)
-		xx[p]=gauss[j];
-	for(int p=k*step+5*n, j=0; p<l && j<n; p++,j++)
-		yy[p]=gauss[j];
+//======================== Make random positions
+int nPos=100000;
+int rndposx[nPos], rndposy[nPos];
+for(int i=0; i<nPos; i++){
+	double x=(double)rand()/RAND_MAX;
+	int px=(int)(l*x);
+	rndposx[i]=px;
+	x=((double)rand()/RAND_MAX-0.5);
+	int py=(int)(n*x*0.8)+px;
+	rndposy[i]=py;
+}
+
+//qsort(rndposx,nPos,sizeof(int),intCmp);
+//qsort(rndposy,nPos,sizeof(int),intCmp);
+
+for(int k=0; k<nPos; k++){
+	for(int p=rndposx[k], j=0; p<l && j<n; p++,j++)
+		if(p>=0) xx[p]=gauss[j];
+	for(int p=rndposy[k], j=0; p<l && j<n; p++,j++)
+		if(p>=0) yy[p]=gauss[j];
 }
 deb(3);
 FILE *f=fopen("g0.wig","wt");
 fprintf(f,"track type=wiggle_0 description=\"gauss\"\n");
-for(int i=0; i<1000000; i++){
+int fg=0;
+for(int i=0; i<l/100; i++){
+	if(xx[i]==0) { fg=0; continue;}
 	int k=1000.*xx[i];
-	if(i%100 ==0)
-		fprintf(f,"fixedStep chrom=chr1 start=%i step=100 span=100\n",i*100);
-			fprintf(f,"%i\n",k);
+	if(fg==0) fprintf(f,"fixedStep chrom=chr1 start=%i step=100 span=100\n",i*100);
+	fprintf(f,"%i\n",k);
+	fg=1;
 }
 fclose(f);
 
 f=fopen("g3.wig","wt");
 fprintf(f,"track type=wiggle_0 description=\"gauss\"\n");
-for(int i=0; i<1000000; i++){
+fg=0;
+for(int i=0; i<l/100; i++){
+	if(yy[i]==0) { fg=0; continue;}
 	int k=1000.*yy[i];
-	if(i%100 ==0)
-		fprintf(f,"fixedStep chrom=chr1 start=%i step=100 span=100\n",i*100);
-			fprintf(f,"%i\n",k);
+	if(fg==0) fprintf(f,"fixedStep chrom=chr1 start=%i step=100 span=100\n",i*100);
+	fprintf(f,"%i\n",k);
+	fg=1;
 }
 fclose(f);
 

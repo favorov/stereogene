@@ -496,7 +496,6 @@ int main(int argc, char **argv) {
 //	clearDeb();
 	debugFg=DEBUG_LOG|DEBUG_PRINT;
 //	clearLog(); debugFg=0;
-
 	for(int i=0; i<argc; i++){strtok(argv[i],"\r\n");}
 
 	const char * progName="StereoGene";
