@@ -6,15 +6,18 @@
  */
 #include "track_util.h"
 
-Fourier::Fourier(int n){init(n);}
-Fourier::Fourier(){re=im=datRe=datIm=0; length=0; err=0;}
 double Complex::Mod(){return sqrt(re*re+im*im);}
+
 Complex Complex::scalar(Complex otherC){
 	Complex res=Complex();
 	res.re = re * otherC.re + im * otherC.im;
 	res.im = - re*otherC.im + im*otherC.re;
 	return res;
 }
+
+Fourier::Fourier(int n){init(n);}
+
+Fourier::Fourier(){re=im=datRe=datIm=0; length=0; err=0; spectrum=0; autocorr=0;}
 
 void Fourier::init(int len){
 	length=len; err=0;
@@ -52,7 +55,7 @@ void Fourier::calc(double *reD, double *imD, int deriv){
 }
 void Fourier::calc(double *dRe, int deriv){
 	setDat(dRe);
-	calc(deriv);
+	calc0(deriv);
 }
 
 void Fourier::norm(){
@@ -61,10 +64,26 @@ void Fourier::norm(){
 
 void Fourier::calc(int deriv){
 	if(err) return;
-	zeroMem(datIm,length); 	zeroMem(re,length);	zeroMem(im,length);
-	fftl(length,datRe, datIm,re,im);
+	zeroMem(re,length);	zeroMem(im,length);
+	calc(datRe, datIm,re,im);
+	derivat(deriv);
+}
+void Fourier::calc0(int deriv){
+	if(err) return;
+	zeroMem(datIm,length);
+	calc(deriv);
+}
+
+
+void Fourier::calc(double *dRe,double *dIm,double *rRe,double *rIm){
+	fftl(length,dRe, dIm,rRe,rIm);
+}
+
+void Fourier::derivat(int deriv){
 	for(int i=0; i<deriv; i++) derivat();
 }
+
+
 void Fourier::derivat(){
 	double piL=PI*2/length;
 	for(int i=0; i<length; i++){
@@ -73,27 +92,36 @@ void Fourier::derivat(){
 	}
 }
 
-//============================= Cross-correlation function
-int corrFunc(double *x, double *y, double *rc, int l){
-	if(norm(x,l)==0) return 0;
-	if(norm(y,l)==0) return 0;
-	Fourier frx(l); frx.calc(x,0);
-	Fourier fry(l); fry.calc(y,0);
-	double *ic; getMem(ic,l, "corrFunc #1");
-	for(int i=0; i<l; i++){
-		x[i]=frx.re[i]*frx.re[i]+frx.im[i]*frx.im[i];
-		y[i]=fry.re[i]*fry.re[i]+fry.im[i]*fry.im[i];
-		rc[i]=fry.re[i]*frx.re[i]+fry.im[i]*frx.im[i];
-		ic[i]=frx.re[i]*fry.im[i]-fry.re[i]*frx.im[i];
-	}
-	frx.calc(x,0);
-	fry.calc(y,0);
-	for(int i=0; i<l; i++) {x[i]=frx.re[i]; y[i]=fry.re[i];}
-	frx.calc(rc,ic,0);
-	for(int i=0; i<l; i++) {rc[i]=frx.re[i];}
-	return 1;
+float *Fourier::getSpectrum(){
+	getMem0(spectrum,length,"Spectrum");
+	for(int i=0; i<length; i++)
+		spectrum[i]=(float)(re[i]*re[i]+im[i]*im[i]);
+	return spectrum;
 }
 
+//================== calculate autocorrelations ====================
+double *tmpDRe=0, *tmpDIm=0, *tmpIm=0;
+
+double *Fourier::getAutoCorr(){
+
+	getMem0(autocorr,length,"AutoCorr #1");
+	getMem0(tmpDRe,length,"AutoCorr #2");
+	getMem0(tmpDIm,length,"AutoCorr #3");
+	getMem0(tmpIm,length,"AutoCorr #4");
+
+	tmpDRe[0]=0;
+	for(int i=1; i<length; i++){
+		tmpDRe[i]=re[i]*re[i]+im[i]*im[i];
+	}
+	zeroMem(tmpDIm,length);
+	calc(tmpDRe, tmpDIm, autocorr, tmpIm);
+
+	return autocorr;
+}
+
+//=================================================================
+//============================   Kernel ===========================
+//=================================================================
 
 void Kernel::init(int n){
 	length=n;
@@ -155,7 +183,7 @@ double Kernel::dist(Fourier *f1, Fourier *f2, bool complem){
 	double dd12=f1->re[0]*f2->re[0]*zft->re[0]/length;
 	double dd22=f2->re[0]*f2->re[0]*zft->re[0]/length;
 	double e1=f1->re[0]/length, e2=f2->re[0]/length;
-	//================================================ cummulative integral
+	//================================================ cumulative integral
 	prod11+=d11;
 	prod12+=d12;
 	prod22+=d22;
@@ -172,7 +200,17 @@ double Kernel::dist(Fourier *f1, Fourier *f2, bool complem){
 	return cc;
 }
 
+//=========== inhibit Zero position of the kernel
+double Kernel::NSCorrection(double x, double val){
+	double x0=x*binSize;
+	int zz=100/binSize; if(zz==0) zz=1;
+	if(x0 < zz && x0>-zz){
+		val*=(1-kernelNS);
+	}
+	return val;
+}
 
+//================================ General Kernel initiation
 void Kernel::makeKernel(int n){
 	init(n);
 	double d=0;
@@ -188,20 +226,13 @@ void Kernel::makeKernel(int n){
 	fft();
 }
 
-
+//======================== Normal Kernel ==============================
 NormKernel::NormKernel(){sigma=1; e=0; name= strdup("Normal_Kernel");}
 NormKernel::NormKernel(double ee,double sgm, int l){
 	sigma=sgm; e=ee; hasCompl=(e!=0);
 	makeKernel(l);name= strdup("Normal_Kernel");
 }
 
-double Kernel::NSCorrection(double x, double val){
-	double x0=x*binSize;
-	if(x0 < 100 && x0>-100){
-		val*=(1-kernelNS);
-	}
-	return val;
-}
 
 double NormKernel::kernVal(double x){
 	double x0=x;
@@ -210,6 +241,7 @@ double NormKernel::kernVal(double x){
 	return NSCorrection(x0,val);
 }
 
+//======================== Left exp  Kernel ==============================
 LeftExpKernel::LeftExpKernel(){sigma=1; e=0; name= strdup("Left_Exp_Kernel");}
 LeftExpKernel::LeftExpKernel(double ee,double sgm, int l){
 	sigma=sgm; e=ee;
@@ -222,6 +254,7 @@ double LeftExpKernel::kernVal(double x){
 }
 
 
+//======================== Right exp  Kernel ==============================
 RightExpKernel::RightExpKernel(){sigma=1;e=0;name= strdup("Right_Exp_Kernel");}
 RightExpKernel::RightExpKernel(double ee,double sgm, int l){
 	sigma=sgm; e=ee;
@@ -232,6 +265,110 @@ double RightExpKernel::kernVal(double x){
 	x-=e; x/=sigma; hasCompl=true;
 	return NSCorrection(x0,(x<0)?0:exp(-x));
 }
+//=============================================================================
+//====================          Cross correlation              ================
+//=============================================================================
+//============================== initiation ===================================
+void XYCorrelation::initXY(){
+	length=kern->length;
+	fx=&kern->fx; fy=&kern->fy;
+	nCorr=nPlus=nMinus=0; min=max=av=sd=0;
+	getMem0(correlation,length, "init correlation #1"); zeroMem(correlation,length);
+	getMem0(corrMinus  ,length, "init correlation #2");	zeroMem(corrMinus  ,length);
+	getMem0(corrPlus   ,length, "init correlation #3");	zeroMem(corrPlus   ,length);
+	getMem0(datRe      ,length, "init correlation #4");	zeroMem(datRe      ,length);
+	spectrumX=0; spectrumY=0;
+	init(length);
+}
+
+//============================= Calculate XYCorrelation ======================
+void XYCorrelation::calcXYCorr(int pos, bool cmpl1, bool cmpl2,  double cc){
+	if(cc < -10) return;
+	calcXYCorr(cmpl1, cmpl2);
+	storeByChrom(pos, cc);
+}
+
+void XYCorrelation::calcXYCorr(bool cmpl1, bool cmpl2){
+	for(int i=0; i<length; i++){
+		double  ReX=fx->re[i],
+				ReY=fy->re[i],
+				ImX=fx->im[i],
+				ImY=fy->im[i];
+		ImX=cmpl1  ? -ImX : ImX;
+		ImY=cmpl2  ? -ImY : ImY;
+		datRe[i]=(ReX*ReY+ImX*ImY);
+		datIm[i]=(-ReX*ImY+ImX*ReY);
+	}
+
+	calc(0);		//=========	reverse transformation
+	norm();			//========= divide by length
+	//========= normalize by std dev
+	double e1=bTrack1.avWindow, d1=bTrack1.sdWindow;
+	double e2=bTrack2.avWindow, d2=bTrack2.sdWindow;
+
+	for(int i=0; i<length; i++)
+		re[i]=(re[i]-length*e1*e2)/(d1*d2*length);
+}
+
+//========== Store the cross-correlation by chromosomes
+void XYCorrelation::storeByChrom(int pos, double corr){
+	double delta=0.;
+	Chromosome* chr=0;
+	if(pos>=0) chr=getChromByPos(pos);
+	for(int i=0; i<length; i++){
+		double x=re[i];
+		correlation[i]+=x;
+		if(chr) {
+			chr->distDens[i]+=x;
+			if(corr >  delta) corrPlus [i]+=x;
+			if(corr < -delta) corrMinus[i]+=x;
+		}
+	}
+	if(chr){
+		chr->densCount++;
+		if(corr >  delta) nPlus++ ;
+		if(corr < -delta) nMinus++;
+	}
+	nCorr++;
+}
+
+//================== Normalize the XY cross-correlation ====================
+void XYCorrelation::normilize(){
+	min=1.e+18; max=-1.e+18; av=sd=0;
+	int n=0;
+	for(int i=0; i<length; i++){
+		double x=correlation[i]/nCorr;
+		correlation[i]=x;
+		if(nPlus) corrPlus [i]=corrPlus [i]/nPlus;
+		if(nMinus) corrMinus[i]=corrMinus[i]/nMinus;
+
+		if(min > x) min=x;
+		if(max < x) max=x;
+		av+=x; sd+=x*x; n++;
+	}
+	av/=n; sd=sd-av*av*n; sd/=n-1; sd=sqrt(sd);
+}
+
+void normChromDist(){
+	for(int i=0; i<profWithFlanksLength; i++){
+		for(int ich=0; ich<n_chrom; ich++){
+			chrom_list[ich].distDens[i]/=chrom_list[ich].densCount;
+		}
+	}
+}
+void XYCorrelation::makeSpectrum()	{
+	getMem0(spectrumX, length,"spectX");
+	getMem0(spectrumY, length,"spectY");
+	float *spX=fx->getSpectrum();
+	float *spY=fy->getSpectrum();
+	for(int i=0; i<length; i++){
+		spectrumX[i] += spX[i];
+		spectrumY[i] += spY[i];
+	}
+}
+
+
+
 
 
 

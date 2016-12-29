@@ -15,14 +15,11 @@
 //=====================================================================================
 void bTrack::initProfile(){
 	errStatus="init Profile";
-	const char *memError="not enaugh memory. Try to increase  parameter \"step\"";
-
+	const char *memError="not enaugh memory. Try to increase  parameter \"bin\"";
 	getMem0(profile,profileLength, memError);					//== allocate memory
 	if(profile==0) errorExit("%s",memError);
-	if(strandFg){
-		getMem0(profilec,profileLength, memError);			//== allocate memory for complement
-		if(profilec==0) errorExit("%s",memError);
-	}
+	getMem0(profilec,profileLength, memError);			//== allocate memory for complement
+	if(profilec==0) errorExit("%s",memError);
 
 	float zero=NA;
 	for(int i=0; i<profileLength; i++){
@@ -34,7 +31,6 @@ void bTrack::initProfile(){
 //================================================================= Add segment
 int bTrack::addSgm(ScoredRange *bed, float *prof){
 	if(!checkRange(bed)) return 0;
-	if(intervFlag) bed->score=1;
 	else bed->score+=NA;
 	int p1=pos2filePos(bed->chrom, bed->beg);
 	int p2=pos2filePos(bed->chrom, bed->end);
@@ -54,12 +50,9 @@ int bTrack::addSgm(ScoredRange *bed, float *prof){
 	return 1;
 }
 
-int bTrack::addSgm(char strnd, ScoredRange *bed, float *prof, float *profc, int strndFg){
-	if(strndFg){								            //========== Strand dependent
-		if(strnd=='-') return addSgm(bed, profc);
-		else 		   return addSgm(bed, prof );
-	}
-	else			   return addSgm(bed, prof);
+int bTrack::addSgm(char strnd, ScoredRange *bed, float *prof, float *profc){
+	if(strnd=='-') 	return addSgm(bed, profc);
+	else			return addSgm(bed, prof);
 }
 
 //=====================================================================================
@@ -98,7 +91,7 @@ void bTrack::trackDef(char *s){
 		st=getAttr(s,"type",bb);
 		if(st!=0){
 			strtoupper(st);
-			if(strncmp(st,"WIG",3)==0) 	    {trackType=WIG_TRACK; strandFg=0;}
+			if(strncmp(st,"WIG",3)==0) 	     trackType=WIG_TRACK;
 			if(strncmp(st,"BEDGRAPH" ,8)==0) trackType=BED_GRAPH;
 			if(strncmp(st,"BROADPEAK",8)==0) trackType=BROAD_PEAK;
 		}
@@ -154,10 +147,10 @@ void bTrack::readTrack(const char *fname, int cage){
 	long i=0;
 	char strand=0;
 	int nStrand=0;
-	strandFg=strandFg0;
+	hasCompl=1;
 	trackType=getTrackType(fname);
-	intervFlag=(trackType == BED_TRACK) ? intervFlag0 : 0;
-	lScale=intervFlag ? LIN_SCALE : logScale;
+	int intervFlag=(trackType == BED_TRACK) ? intervFlag0 : 0;
+	lScale=logScale;
 
 	FILE *f=xopen(fname, "rt"); setvbuf ( f , NULL , _IOFBF , 65536 );
 	strcpy(curFname,fname);
@@ -182,6 +175,7 @@ void bTrack::readTrack(const char *fname, int cage){
 
 		switch(trackType){
 			case BED_TRACK:										//======== BED
+				intervFlag=(trackType==BED_TRACK) ? intervFlag0 : 0;
 				score=1;										//======== default score=1
 				strand=0;										//======== default strand=unknown
 				chrom=readChrom(s);								//======== find chrom field
@@ -190,7 +184,6 @@ void bTrack::readTrack(const char *fname, int cage){
 				s=strtok(0," \t\n"); if(s==0) break;			//======== ignore name field
 				s=strtok(0," \t\n"); if(s==0) break;			//======== take score field
 				if(*s!=0 && (isdigit(*s) || *s=='-')) score=atof(s);
-				if(intervFlag!=NONE) score=1;
 				s=strtok(0," \t\n"); if(s==0) break;			//======== take strand field
 				if(*s!=0 && *s!='.') {strand=*s; nStrand++;}
 				if(intervFlag==GENE || intervFlag==NONE) break;
@@ -214,7 +207,7 @@ void bTrack::readTrack(const char *fname, int cage){
 				if(nn<2) break;
 				int lExn[nn];
 				int posExn[nn];
-				bed.chrom=chrom; bed.score=score=1;
+				bed.chrom=chrom; bed.score=score;
 				for(int i=0; i<nn; i++) {
 					sx=strtok(0,",\t");
 					if(sx==0){beg=-1; break;}
@@ -239,7 +232,7 @@ void bTrack::readTrack(const char *fname, int cage){
 							else  			beg=end-1;
 						}
 					bed.beg=genePos+beg; bed.end=genePos+end;
-						addSgm(strand, &bed, profile, profilec, strandFg);
+						addSgm(strand, &bed, profile, profilec);
 					}
 					break;
 				}
@@ -256,7 +249,7 @@ void bTrack::readTrack(const char *fname, int cage){
 							else  			beg=end-1;
 						}
 						bed.beg=genePos+beg; bed.end=genePos+end;
-						addSgm(strand, &bed, profile, profilec, strandFg);
+						addSgm(strand, &bed, profile, profilec);
 					}
 					break;
 				}
@@ -330,11 +323,11 @@ void bTrack::readTrack(const char *fname, int cage){
 		bed.chrom=chrom; bed.beg=beg; bed.end=end; bed.score=score;
 		if(cage > 0) bed.end=bed.beg+cage;
 		if(cage < 0) bed.beg=bed.end+cage;
-		if(dataFg && intervFlag!=IVS && intervFlag!=EXON) {
-			addSgm(strand, &bed, profile, profilec, strandFg);
+		if(dataFg) {
+			addSgm(strand, &bed, profile, profilec);
 		}
 	}
-	if(nStrand==0) strandFg=0;
+	if(nStrand==0) hasCompl=0;
 	fclose(f);
 }
 //=====================================================================================
@@ -353,9 +346,6 @@ void testDistrib(){
 		else{
 			float x=log(1+profile[i]);
 			int k=(int)(x/10*1000)+1;
-//			if(k>=1000){
-//				deb("overflow profile value  %f",x); k=999;
-//			}
 			dd[k]++;
 		}
 	}
@@ -368,8 +358,6 @@ void testDistrib(){
 }
 
 void bTrack::finProfile(){
-//	testDistrib();
-	lScale=LOG_SCALE;
 	scaleFactor=scaleFactor0;
 	errStatus="finProfile";
 	double lprof=0.;
@@ -407,17 +395,17 @@ void bTrack::finProfile(){
 	}
 	av/=nn;
 	if(maxP < minP){errorExit("=== !!!!  The profile contains no data:  min=%.2e max=%.2e !!!===\n",minP,maxP);}
-	if(maxP==minP){	errorExit("=== !!!!  The profile contains only zero: min=%.2e max=%.2e  !!!===\n",minP,maxP);}
+	if(maxP==minP){	errorExit("=== !!!!  The profile contains only zeros: min=%.2e max=%.2e  !!!===\n",minP,maxP);}
 	x2-=av*av*nn;
 	sd=sqrt(x2/(nn-1));
 
-	if(lScale==AUTO_SCALE  && maxP/sd > 10){
-		lScale=LOG_SCALE;
-		finProfile();
-		return;
-	}
-	else{
-		lScale=LIN_SCALE;
+	if(lScale==AUTO_SCALE){
+		if(maxP/sd > 10){
+			lScale=LOG_SCALE;
+			finProfile();
+			return;
+		}
+		else lScale=LIN_SCALE;
 	}
 
 	for(int i=0; i<profileLength; i++){
@@ -430,7 +418,7 @@ void bTrack::finProfile(){
 	}
 
 	float bScale=250./(maxP-minP);           		 //======================== scale coefficient
-	getMem0(byteprofile,profileLength, "bTrack::finProfile #1");
+	getMem0(byteprofile ,profileLength, "bTrack::finProfile #1");
 	getMem0(byteprofilec,profileLength, "bTrack::finProfile #2");
 
 	for(int i=0; i<profileLength; i++){
@@ -445,7 +433,7 @@ void bTrack::finProfile(){
 	};
 	errStatus=0;
 };
-//===============================================================================================
+//=================================================================================
 //=================================================================================
 //#        Write the byte profile in two files.
 //#            *.prm - file with average min and max values
@@ -479,10 +467,9 @@ void bTrack::writeProfilePrm(){
 		fprintf(f,"input=%s\n",name);
 
     fprintf(f,"#=== Parameters ===\n");
-    fprintf(f,"step=%i\n",binSize);
-    fprintf(f,"strand=%i\n",strandFg);
+    fprintf(f,"bin=%i\n",binSize);
+    fprintf(f,"strand=%i\n",hasCompl);
     if(trackType == BROAD_PEAK)  fprintf(f,"bpType=%i\n",bpType);
-    if(trackType == BED_TRACK)   fprintf(f, "intervFlag=%i\n", intervFlag);
     if(cage) fprintf(f, "cage=%i\n", cage);
     fprintf(f,"scaleFactor=%f\n",scaleFactor);
 
@@ -492,7 +479,7 @@ void bTrack::writeProfilePrm(){
     fprintf(f,"average=%g\n",av);
     fprintf(f,"stdDev=%g\n",sd);
     unsigned int chk=getChkSum(byteprofile, profileLength);
-    if(byteprofilec && strandFg) chk+=getChkSum(byteprofilec, profileLength);
+    if(byteprofilec && hasCompl) chk+=getChkSum(byteprofilec, profileLength);
     fprintf(f,"chksum=%08x\n",chk);
 
     fprintf(f,"#=== Scale ===\n");
@@ -503,7 +490,7 @@ void bTrack::writeProfilePrm(){
     memset(dstr,0,sizeof(dstr));
     for(int i=0; i<profileLength; i++){
     	dstr[byteprofile[i]]++;
-    	if(byteprofilec && strandFg) dstr[byteprofilec[i]]++;
+    	if(byteprofilec && hasCompl) dstr[byteprofilec[i]]++;
     }
 
     cdstr[0]=0; nn=0;
@@ -527,7 +514,7 @@ void bTrack::writeByteProfile(){
 	verb("write bprof %s\n",binFname);
 	FILE* f=xopen(binFname, "wb"); if(f==0)return;
 	fwrite(byteprofile,profileLength,1,f);
-	if(byteprofilec && strandFg)
+	if(byteprofilec && hasCompl)
 		fwrite(byteprofilec,profileLength,1,f);
 	fclose(f);
 	return;
@@ -542,8 +529,6 @@ void bTrack::makeBinTrack(){
 	if (pcorProfile!=0)	 verb("===          pcorProfile=  <%s>\n",pcorProfile);
 	trackType=getTrackType(name);
 	//=====================================================================================
-	intervFlag=(trackType==BED_TRACK) ? intervFlag0 : 0;
-
 	if(trackType==MODEL_TRACK) {
 		model.readMap(name);
 		model.create();
@@ -633,8 +618,7 @@ void Term::add(){
 }
 //=====================================================================================
 void Model::create(){
-	int scale=logScale; logScale=LIN_SCALE;
-	strandFg=0;
+	hasCompl=0;
 
 	for(int i=0; i<nTerm; i++)	trm[i].make();
 
@@ -644,7 +628,6 @@ void Model::create(){
 	finProfile();
 	writeProfilePrm();
 	writeByteProfile();
-	logScale=scale;
 }
 
 //=======================================================================================

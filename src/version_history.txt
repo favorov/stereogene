@@ -104,4 +104,10 @@
 ========== Version 1.70 ====================
 1. Improved calculation of the total correlation.
 2. File Statistics changed 
-3. The documentation changed 
+3. The cross-correlation function renormalized
+4. A new parameter crossWidth introduced. This parameter defines width of plot for cross-correlation function The deafault is 10000
+5. The documentation changed 
+========== Version 1.71 ====================
+1. Autocorrelation now is written to the file *.dist.
+2. Numerical parameter 'lAuto' replaced by boolean parameter 'AutoCorr'.
+3. Fixed bug with logarithmic data scaling

@@ -1,50 +1,50 @@
-chrom	size	fileName
-chr1	247249719	~/chipseq/hg18/chr1.fa
-chr2	242951149	~/chipseq/hg18/chr2.fa
-chr3	199501827	~/chipseq/hg18/chr3.fa
-chr4	191273063	~/chipseq/hg18/chr4.fa
-chr5	180857866	~/chipseq/hg18/chr5.fa
-chr6	170899992	~/chipseq/hg18/chr6.fa
-chr7	158821424	~/chipseq/hg18/chr7.fa
-chrX	154913754	~/chipseq/hg18/chrX.fa
-chr8	146274826	~/chipseq/hg18/chr8.fa
-chr9	140273252	~/chipseq/hg18/chr9.fa
-chr10	135374737	~/chipseq/hg18/chr10.fa
-chr11	134452384	~/chipseq/hg18/chr11.fa
-chr12	132349534	~/chipseq/hg18/chr12.fa
-chr13	114142980	~/chipseq/hg18/chr13.fa
-chr14	106368585	~/chipseq/hg18/chr14.fa
-chr15	100338915	~/chipseq/hg18/chr15.fa
-chr16	88827254	~/chipseq/hg18/chr16.fa
-chr17	78774742	~/chipseq/hg18/chr17.fa
-chr18	76117153	~/chipseq/hg18/chr18.fa
-chr19	63811651	~/chipseq/hg18/chr19.fa
-chr20	62435964	~/chipseq/hg18/chr20.fa
-chrY	57772954	~/chipseq/hg18/chrY.fa
-chr22	49691432	~/chipseq/hg18/chr22.fa
-chr21	46944323	~/chipseq/hg18/chr21.fa
-chr6_cox_hap1	4731698	~/chipseq/hg18/chr6_cox_hap1.fa
-chr6_qbl_hap2	4565931	~/chipseq/hg18/chr6_qbl_hap2.fa
-chr17_random	2617613	~/chipseq/hg18/chr17_random.fa
-chr6_random	1875562	~/chipseq/hg18/chr6_random.fa
-chr5_h2_hap1	1794870	~/chipseq/hg18/chr5_h2_hap1.fa
-chrX_random	1719168	~/chipseq/hg18/chrX_random.fa
-chr21_random	1679693	~/chipseq/hg18/chr21_random.fa
-chr1_random	1663265	~/chipseq/hg18/chr1_random.fa
-chr9_random	1146434	~/chipseq/hg18/chr9_random.fa
-chr8_random	943810	~/chipseq/hg18/chr8_random.fa
-chr4_random	842648	~/chipseq/hg18/chr4_random.fa
-chr15_random	784346	~/chipseq/hg18/chr15_random.fa
-chr3_random	749256	~/chipseq/hg18/chr3_random.fa
-chr7_random	549659	~/chipseq/hg18/chr7_random.fa
-chr19_random	301858	~/chipseq/hg18/chr19_random.fa
-chr22_random	257318	~/chipseq/hg18/chr22_random.fa
-chr11_random	215294	~/chipseq/hg18/chr11_random.fa
-chr13_random	186858	~/chipseq/hg18/chr13_random.fa
-chr2_random	185571	~/chipseq/hg18/chr2_random.fa
-chr5_random	143687	~/chipseq/hg18/chr5_random.fa
-chr10_random	113275	~/chipseq/hg18/chr10_random.fa
-chr16_random	105485	~/chipseq/hg18/chr16_random.fa
-chr22_h2_hap1	63661	~/chipseq/hg18/chr22_h2_hap1.fa
-chrM	16571	~/chipseq/hg18/chrM.fa
-chr18_random	4262	~/chipseq/hg18/chr18_random.fa
+#chrom	size
+chr1	247249719
+chr2	242951149
+chr3	199501827
+chr4	191273063
+chr5	180857866
+chr6	170899992
+chr7	158821424
+chrX	154913754
+chr8	146274826
+chr9	140273252
+chr10	135374737
+chr11	134452384
+chr12	132349534
+chr13	114142980
+chr14	106368585
+chr15	100338915
+chr16	88827254
+chr17	78774742
+chr18	76117153
+chr19	63811651
+chr20	62435964
+chrY	57772954
+chr22	49691432
+chr21	46944323
+chr6_cox_hap1	4731698
+chr6_qbl_hap2	4565931
+chr17_random	2617613
+chr6_random	1875562
+chr5_h2_hap1	1794870
+chrX_random	1719168
+chr21_random	1679693
+chr1_random	1663265
+chr9_random	1146434
+chr8_random	943810
+chr4_random	842648
+chr15_random	784346
+chr3_random	749256
+chr7_random	549659
+chr19_random	301858
+chr22_random	257318
+chr11_random	215294
+chr13_random	186858
+chr2_random	185571
+chr5_random	143687
+chr10_random	113275
+chr16_random	105485
+chr22_h2_hap1	63661
+chrM	16571
+chr18_random	4262

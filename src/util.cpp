@@ -14,7 +14,7 @@
 #include <sys/file.h>
 //#include <dir.h>
 
-const char* version="1.70";
+const char* version="1.71";
 
 int debugFg=0;
 //int debugFg=DEBUG_LOG|DEBUG_PRINT;
@@ -51,16 +51,16 @@ bool  verbose=0;
 bool  silent=0;				// inhibit stdout
 bool  syntax=1;				// Strong syntax control
 
-bool  strandFg0=1;
 bool  writeDistr=1;
 bool  writeBPeak=0;
-int  writeDistCorr=TOTAL;		    // write BroadPeak
+int   writeDistCorr=TOTAL;		    // write BroadPeak
+int   crossWidth=10000;
 bool  outSpectr=0;
 bool  outChrom=0;
 int  outRes=XML|TAB;
 int  inpThreshold=0;		// Testing of binarized input data, % of max
-
-int   complFg=0;
+bool writePDF=true;
+int   complFg=IGNORE_STRAND;
 int   profileLength;			// size of the profile array
 float *profile =0;				// uncompressed profile array
 float *profilec=0;				// uncompressed profile array
@@ -110,15 +110,15 @@ Model model;
 int threshold=0;
 
 FILE *logFile=0;
-int genFg=0;			// generate data
-int lAuto=0;
+bool doAutoCorr=0;
+
 int corrScale=10;
 bool corrOnly=0;
 double prod11=0,prod12=0,prod22=0, eprod1,eprod2;
 int nprod=0;
-Correlation correlation;		// array for correlation picture
-Correlation bgcorrelation;		// array for correlation picture
-Fourier wCorrelation;
+XYCorrelation XYfgCorrelation;		    // array for correlation picture
+XYCorrelation XYbgcorrelation;		// array for correlation picture
+Fourier LCorrelation;
 
 int pcaFg=0;
 int nPca=100000;
@@ -151,7 +151,6 @@ ScoredRange::ScoredRange(){
 }
 //====================================================================================
 char *AliasTable::convert(char*oldName){
-
 	char b0[1024],b1[1024];
 	strcpy(b0,oldName);
 
@@ -159,14 +158,12 @@ char *AliasTable::convert(char*oldName){
 		while(1){
 			char* sx=strstr(b0,als[i].oldName);
 			if(sx!=0){
-
 				int k=sx-b0;
 				char *s0=b0,*s1=b1;
 				memcpy(s1,s0,k); s0+=k; s1+=k;
 				memcpy(s1,als[i].newName,als[i].lnew);
 				s0+=als[i].lold; s1+=als[i].lnew;
 				strcpy(s1,s0);
-
 				strcpy(b0,b1);
 			}
 			else break;
@@ -233,7 +230,7 @@ void clearChromosomes(){
 }
 
 
-int CHROM_BUFF=30;
+int CHROM_BUFF=300;
 
 int readChromSizes(char *fname){
 
@@ -295,10 +292,10 @@ Chromosome *getChromByPos(int pos){
 	}
 	return ch0;
 }
+
+//========================================================================================
 void filePos2Pos(int pos, ScoredRange *gr, int length){
-
 	Chromosome *ch0=getChromByPos(pos);
-
 
 	if(ch0==0) return;
 	pos-=ch0->base;
@@ -308,11 +305,13 @@ void filePos2Pos(int pos, ScoredRange *gr, int length){
 	gr->end=(gr->beg=p1)+length;
 	return;
 }
+
 //========================================================================================
 int inputErr;		// flag: if input track has errors
 int inputErrLine;	// Error line in the input
 char curFname[4048];	// current input file
 
+//========================================================================================
 Chromosome *checkRange(ScoredRange *gr){
 	Chromosome* chr=findChrom(gr->chrom);
 	if(chr==0) return 0;
@@ -338,7 +337,10 @@ Chromosome *checkRange(ScoredRange *gr){
 	if(gr->end < gr->beg) return 0;
 	return chr;
 }
-//========================================================================================
+
+//======================================================================================
+//============================    String  Parsing ======================================
+//======================================================================================
 char *skipSpace(char *s)  {while(*s!=0 &&  isspace(*s)) s++; return s;}
 char *skipNoSpace(char *s){while(*s!=0 && !isspace(*s)) s++; return s;}
 int EmptyString(const char*buff){
@@ -354,11 +356,13 @@ bool isUInt(const char *s){
 	}
 	return true;
 }
+//==============================================================================
 bool isInt(const char *s){
 	char *ss=skipSpace((char*)s);
 	if(*ss=='-' || *ss=='+') ss++;
 	return isUInt(ss);
 }
+//==============================================================================
 bool isDouble(const char *s){
 	char b[256]; strcpy(b,s);
 	char *s0=strtok(b,"eE");
@@ -370,7 +374,7 @@ bool isDouble(const char *s){
 	return true;
 }
 
-// extract attribute value by attr name
+//=================================== extract attribute value by attr name
 char * getAttr(char *s0, const char *name, char *buf){
 	char *s=s0;
 	while(*s!=0){
@@ -387,7 +391,7 @@ char * getAttr(char *s0, const char *name, char *buf){
 	return 0;
 }
 
-// convert string to upper case
+//=================================== convert string to upper case
 char *strtoupper(char*s){
 	for(char *ss=s;*ss;ss++) *ss=toupper(*ss);
 	return s;
@@ -402,10 +406,55 @@ char * getMajorVer(const char *ver, char *buf){
 	strcat(buf,strtok(0,"."));
 	return buf;
 }
+//===================== check if given string contains given key: 0 -- contains; 1 -- does not
+int keyCmp(const char *str, const char *key){
+	for(;;str++, key++){
+		if(*str==0){
+			if(*key==0) return 0;
+			else return 1;
+		}
+		if(*key==0) return -1;
+		if(toupper(*str) != toupper(*key)) return 1;
+	}
+	return strncmp(str,key,strlen(key));
+}
+//========================= trim given string
+char *trim(char *s){
+	if(s==0) return 0;
+	s=skipSpace(s);
+	for(int i=strlen(s)-1; i>=0; i--){
+		if(isspace(s[i])) s[i]=0;
+		else break;
+	}
+	if(*s=='\"') s++;
+	char *ss=strchr(s,'\"'); if(ss) *ss=0;
+	return s;
+}
 
 
-// Errors
-//================
+//========== Convert kernel type to a string
+const char*getKernelType(){
+	const char *type;
+	if(kernelType==KERN_NORM	 ) type="N";
+	else if(kernelType==KERN_LEFT_EXP ) type="L";
+	else if(kernelType==KERN_RIGHT_EXP) type="R";
+	else return "X";
+	char b[80];
+	if(kernelShift >0){
+		sprintf(b,"%s_%.1fR",type,kernelShift/1000);
+		return strdup(b);
+	}
+	else if(kernelShift <0){
+		sprintf(b,"%s_%.1fL",type,-kernelShift/1000);
+		return strdup(b);
+	}
+	else return type;
+}
+
+
+//============================================================
+//=======================    Logging    ======================
+//============================================================
 const char *errStatus=0;
 void clearLog(){
 	if(logFileName) fclose(gopen(logFileName,"wt"));
@@ -421,6 +470,55 @@ FILE *openLog(){
 	return 0;
 }
 
+void writeLog(const char *format, va_list args){
+	FILE *f=openLog();
+	if(f) {
+		flockFile(f);
+		if(!debugFg) fprintf(f,"#%08lx-> ",id);
+		vfprintf(f,format,args);
+		funlockFile(f);
+		fclose(f);
+	}
+}
+
+void writeLog(const char *format, ...){
+	va_list args;
+	va_start(args, format);
+	writeLog(format, args);
+	va_end(args);
+}
+
+//============================================================
+//=======================    Verbose    ======================
+//============================================================
+void verb_(const char *format, va_list args){	//======== write if verbose =1
+	if(verbose){
+		vprintf(format,args);
+	}
+}
+void verb(const char *format, ...){
+	va_list args;
+	va_start(args, format);
+	verb_(format, args);
+	va_end(args);
+	fflush(stdout);
+}
+void xverb_(const char *format, va_list args){   //======== write if silent =0
+	if(!silent){
+		vprintf(format,args);
+	}
+}
+void xverb(const char *format, ...){
+	va_list args;
+	va_start(args, format);
+	xverb_(format, args);
+	va_end(args);
+	fflush(stdout);
+}
+
+//============================================================
+//=======================    Errors    =======================
+//============================================================
 void errorExit(const char *format, va_list args){
     fflush(stdout);
 	if (format != NULL) {
@@ -448,51 +546,11 @@ void errorExit(const char *format, ...){
 	va_end(args);
 }
 
-void writeLog(const char *format, va_list args){
-	FILE *f=openLog();
-	if(f) {
-		flockFile(f);
-		if(!debugFg) fprintf(f,"#%08lx-> ",id);
-		vfprintf(f,format,args);
-		funlockFile(f);
-		fclose(f);
-	}
-}
 
-void writeLog(const char *format, ...){
-	va_list args;
-	va_start(args, format);
-	writeLog(format, args);
-	va_end(args);
-}
+//============================================================
+//=======================    Debug     =======================
+//============================================================
 
-void verb_(const char *format, va_list args){
-	if(verbose){
-		vprintf(format,args);
-	}
-}
-void verb(const char *format, ...){
-	va_list args;
-	va_start(args, format);
-	verb_(format, args);
-	va_end(args);
-	fflush(stdout);
-}
-void xverb_(const char *format, va_list args){
-	if(!silent){
-		vprintf(format,args);
-	}
-}
-void xverb(const char *format, ...){
-	va_list args;
-	va_start(args, format);
-	xverb_(format, args);
-	va_end(args);
-	fflush(stdout);
-}
-
-//============================================ Debugging
-//======================================================
 FILE *debLogFile=0;
 void clearDeb(){
 	if((debugFg&DEBUG_LOG)!=0){
@@ -557,7 +615,9 @@ void deb(int num, const char *format, ...){
 	_deb_(format, args);
 	va_end(args);
 }
-//====================================================================================
+//============================================================
+//=======================      Timer   =======================
+//============================================================
 char *Timer::getTime(){
 	long dt=getTimer();
 	int ms=(int)(dt%1000);
@@ -588,10 +648,9 @@ long mtime()
 }
 
 
-//======================================================
-
-// open file with control
-//================
+//============================================================
+//====================   Files and Paths    ==================
+//============================================================
 char* parseTilda(char *b, const char*fname){
 	if(*fname=='~'){
 		char *z=getenv("HOME");
@@ -605,6 +664,7 @@ char* parseTilda(char *b, const char*fname){
 	return strcat(b,fname);
 }
 
+//================ open file with control
 FILE *xopen(const char* fname, const char *t){
 	if(fname==0) errorExit("can\'t open file <null>");
 	FILE* f=gopen(fname,t);
@@ -619,258 +679,12 @@ FILE *gopen(const char*fname, const char* type){		// open file with parsing ~
 	char b[2048];
 	return fopen(parseTilda(b,fname),type);
 }
-
-//===================
-void zfree(void *a, const char* b){
-	if(a) free(a); else writeLog("double free %s\n",b);
-}
-void *xmalloc(size_t n, const char *err){
-	void *a=malloc(n);
-	if(a==0){
-		if(err==0)
-			errorExit("can't allocate memory: %li",n);
-		else
-			errorExit("can't allocate memory in %s: %li",err,n);
-	}
-	return a;
-}
-//===================
-// standard random gaussian variable
-double rGauss(){
-	double phi=(double)rand()/RAND_MAX * 2 * M_PI, r=0;
-	while(r==0) r=(double)rand()/RAND_MAX;
-//	if(r==0) r=0.e-200;
-	double rr=sqrt(-2.*log(r))*sin(phi);
-//	double rr=log(r)*sin(phi);
-	return rr;
-}
-
-// random gaussian variable with given mean anf std deviation
-double rGauss(double e, double sigma){
-	return rGauss()*sigma+e;
-}
-
-// random integer in given interval
-unsigned long randInt(unsigned long n){
-	unsigned long rn=(unsigned long)((double)(rand())/(double(RAND_MAX))*n);
-	return rn;
-}
-
 // remove fucked backslash
 char *correctFname(const char* s){
 	char *b=strdup(s),*ss;
 	for(ss=b;*ss;ss++) if(*ss=='\\') *ss='/';
 	return b;
 }
-
-Histogram::Histogram(int n){
-	minVal=-1; maxVal=1; e=0; sigma=0; alpha=beta=1; iq=iqq=im=0;
-	nBin=n; count=0;
-	dd=0; db=0; Fp=0; Fm=0;
-	errStatus="init Histogram";
-	getMem(dd, nBin, "Histogram #1");
-	getMem(db, nBin, "Histogram #1");
-	getMem(Fp, (nBin+1), "Histogram #1");
-	getMem(Fm, (nBin+1), "Histogram #1");
-	zeroMem(dd,nBin);
-	bin=(maxVal-minVal)/nBin;
-	ready=false;
-	errStatus=0;
-}
-
-//=================== Add value to the histogram ===========
-void Histogram::add(double x){
-	if(ready) return;
-	int i=int((x-minVal)/bin);
-	if(i<0) i=0; if(i>=nBin) i=nBin-1;
-	dd[i]++; e+=x; sigma+=x*x;
-	count++;
-}
-//============= Calculate cummulative Beta distribution for the background distribution
-void Histogram::normBeta(){
-	if(ready) return; ready=true;
-	norm();
-	double eb=0;
-	for(int i=0; i<nBin; i++){	// calculate the integral of the beta distrib.
-		double x=minVal+bin*i;
-		eb+=(db[i]=xBetaD(alpha,beta,x));
-	}
-	for(int i=0; i<nBin; i++)	{	// normalyze beta distribution
-		db[i]/=eb*bin;
-	}
-	calcCDF(db);
-}
-//======================= calculate cumulative distributions
-void Histogram::calcCDF(double *d){
-	Fp[0]=Fm[nBin]=0; Fm[0]=1;
-	for(int i=1, j=nBin-1; i<nBin; i++,j--){
-		Fp[i]=Fp[i-1]+d[i]*bin;
-		Fm[j]=Fm[j+1]+d[j]*bin;
-	}
-
-}
-//======================== normalize the foreground distributions
-void Histogram::normF(){
-	if(ready) return; ready=true;
-	norm();
-	calcCDF(dd);
-}
-//===================== normalize the histogram and calculate the statistical parameters
-void Histogram::norm(){
-	e/=count; sigma=(sigma-count*e*e)/(count-1);
-	double eBeta=2e-1,  d=sigma/4, gg=(1-eBeta)/eBeta, gg1=gg+1;
-	alpha=(gg/(d*gg1*gg1) - 1)/(gg1);
-	beta=gg*alpha;
-
-	sigma=sqrt(sigma);
-	for(int i=0; i<nBin; i++){
-		dd[i]=dd[i]/count/bin;
-	}
-}
-
-//============================================ Interpolation
-double Histogram::interpol(double x, double *fun){
-	int i=int((x-minVal)/bin);
-	if(i<0) {i=0;}
-	if(i>=nBin) {i=nBin-1;}
-	double dx0=x-(minVal+bin*i), dx1=bin-dx0;
-	double f0=log(fun[i]), f1=log(fun[i+1]);
-	return exp((f0*dx1+f1*dx0)/bin);
-}
-//=======================================================
-
-double Histogram::pValp(double x){return interpol(x,Fp);}
-double Histogram::pValm(double x){return interpol(x,Fm);}
-
-double xBetaD(double a, double b, double x){
-	return pow(1-x,a)*pow(1+x,b);
-}
-
-void Histogram::print(FILE *f){
-	for(int i=0; i<nBin; i++){
-		double x=minVal+bin*i;
-		fprintf(f,"%f\t%f\t%.2e\t%.2e\t%.2e\n",x,dd[i], db[i],Fp[i],Fm[i]);
-	}
-}
-//========================================================================
-DinHistogram::DinHistogram(int ll){
-	l=ll;
-	getMem(hist[0],l,"Dinamic histogram 0");
-	getMem(hist[1],l,"Dinamic histogram 1");
-	clear();
-}
-
-void DinHistogram::clear(){
-	n[0]=n[1]=0;					//number of observations
-	min=1.e+200; max=-min;			//min max values
-	bin=hMin=hMax=0;				//bin width, max-min value in the histogram
-	e[0]=e[1]=sd[0]=sd[1]=0;		//mean and std deviation
-	zeroMem(hist[0],l);
-	zeroMem(hist[1],l);
-}
-
-
-int DinHistogram::getIdx(double value){ //get index by value
-	if(bin==0) return 0;
-	if(value==hMax) return l-1;
-	return (int)((value-hMin)/bin);
-}
-double DinHistogram::getValue(int idx){	//get value by index
-	return hMin+idx*bin+bin/2;
-}
-
-int DinHistogram::compress2Left(double value){  //Compress the histogram to the Left
-	for(int i=0, j=0; i<l; i+=2, j++){			// Compress the values
-		hist[0][j]=hist[0][i]+hist[0][i+1];
-		hist[1][j]=hist[1][i]+hist[1][i+1];
-	}
-	for(int i=l/2; i<l; i++) hist[0][i]=hist[1][i]=0;	// Clear new space
-	bin*=2;												// redefine bin size
-	hMax=hMin+bin*l;									// redefine boundaries
-	return getIdx(value);
-}
-
-int DinHistogram::compress2Right(double value){	//Compress the histogram to the Right
-	for(int i=l-1,j=l-1; i > 0; i-=2,j--){		// Compress the values
-		hist[0][j]=hist[0][i]+hist[0][i-1];
-		hist[1][j]=hist[1][i]+hist[1][i-1];
-	}
-	for(int i=0; i<l/2; i++) hist[0][i]=hist[1][i]=0;	// Clear new space
-	bin*=2;												// redefine bin size
-	hMin=hMax-bin*l;									// redefine boundaries
-	return getIdx(value);
-}
-
-void DinHistogram::addStat(double value, int type){		//add the value to the statistics
-	n[type]++; e[type]+=value; sd[type]+=value*value;	//count, mean, std dev.
-	if(value > max) max=value;
-	if(value < min) min=value;
-}
-
-void DinHistogram::add(double value, int type){			// add the value to the histogram
-	if(n[0]==0 && n[1]==0){								// the histogram is empty
-		hist[type][0]=1; addStat(value,type);			// set the value
-		hMin=hMax=value;								// define boundaries
-		return;
-	}
-	if(hMin==hMax){										// the histogram contains only single bin
-		if(value==hMin){								// new value equal to the single bin
-			hist[type][0]++; addStat(value,type);		//
-			return;
-		}
-		else if(value > hMin){							// the new value is right to single bin
-			hist[type][l-1]++; addStat(value,type);		// the new value defines the right bin
-			max=hMax=value;								// redefine the boundaries
-		}
-		else{											// the new value is less than single bin
-			hist[0][l-1]=hist[0][0];					// Put the old value to the right end of the histogram
-			hist[1][l-1]=hist[1][0];					//
-			hist[type][0]=1; addStat(value,type);		// Put the new value to the left bin
-			min=hMin=value;								// redefine the boundaries
-		}
-		bin=(hMax-hMin)/l;								// Define the bin
-		return;
-	}
-	int i=getIdx(value);								// The histogram contains some values
-	while(i < 0){i=compress2Right(value);}				// The new value is less than the first bin
-	while(i >=l){i=compress2Left(value);}				// The new value is grater than the last bin
-	hist[type][i]++; addStat(value,type);				// Put the new value
-}
-
-void DinHistogram::fin(){								// Normalize and calculate the statistics
-	for(int t=0; t<2; t++){
-		for(int i=0; i<l; i++) hist[t][i]=hist[t][i]/n[t]/bin;
-		e[t]/=n[t];
-		sd[t]=(sd[t]-e[t]*e[t]*n[t])/(n[t]-1);
-	}
-}
-
-void DinHistogram::print(FILE* f){						// print the histogram
-	fprintf(f,"#  min=%.3f max=%.3f \n",min,max);
-	fprintf(f,"#  hMin=%.3f  hMax=%.3f bin=%.3f\n",hMin,hMax,bin);
-	fprintf(f,"#  e0=%.3f sd0=%.3f n0=%i\n",e[0],sd[0],n[0]);
-	fprintf(f,"#  e1=%.3f sd1=%.3f n1=%i\n",e[1],sd[1],n[1]);
-	for(int i=getIdx(min); i<getIdx(max); i++){
-		double h0=hist[0][i];
-		double h1=hist[1][i];
-		fprintf(f,"%.3f\t%.6f\t%.6f\n",getValue(i),h0,h1);
-	}
-}
-
-
-//===================== Normalize the function to mean and sigma
-double norm(double *x, int l){
-	double d=0,e=0,dd,ee;
-	for(int i=0; i<l; i++){d+=x[i]*x[i]; e+=x[i];}
-	ee=e/l; d=d*l-e*e; dd=d/((l-1)*l);
-	if(dd<0) dd=0; dd=sqrt(dd);
-	if(dd <= ee*ee*1.e-5) {
-		return 0;}
-
-	for(int i=0; i<l; i++) x[i]=(x[i]-ee)/dd;
-	return dd;
-}
-
 //================= create filename using path and name
 char* makeFileName(char *b, const char *path, const char*fname){
 	if(path==0) return strcpy(b,fname);
@@ -969,6 +783,294 @@ unsigned long getFileTime(const char *fname){
 	stat(fname,&mystat);
 	return mystat.st_mtime;
 }
+//=================== extract file name
+const char *getExt(const char *fname){
+	const char *s=strrchr(fname,'/');
+	if(s==0) s=fname;
+	s=strrchr(s,'.');
+	if(s==0) return 0;
+	return s+1;
+}
+//=================== extract fname wothout extension
+char *getFnameWithoutExt(char *buf, char *fname){
+	char *s;
+	s=strrchr(fname,'/'); if(s==0) s=fname; else s++;
+	strcpy(buf,s);
+
+	s=strrchr(buf,'.'); if(s) *s=0;
+	return buf;
+}
+
+//================= Create directories
+void makeDirs(){
+	if(profPath!=0) makeDir(profPath);
+	else profPath=strdup("./");
+	if(resPath!=0) makeDir(resPath);
+	else resPath=strdup("./");
+	if(trackPath!=0) makeDir(trackPath);
+	else trackPath=strdup("./");
+}
+
+
+
+//============================================================
+//========================    Memory    ======================
+//============================================================
+void zfree(void *a, const char* b){
+	if(a) free(a); else writeLog("double free %s\n",b);
+}
+void *xmalloc(size_t n, const char *err){
+	void *a=malloc(n);
+	if(a==0){
+		if(err==0)
+			errorExit("can't allocate memory: %li",n);
+		else
+			errorExit("can't allocate memory in %s: %li",err,n);
+	}
+	return a;
+}
+//============================================================
+//========================    Random    ======================
+//============================================================
+double rGauss(){
+	double phi=(double)rand()/RAND_MAX * 2 * M_PI, r=0;
+	while(r==0) r=(double)rand()/RAND_MAX;
+//	if(r==0) r=0.e-200;
+	double rr=sqrt(-2.*log(r))*sin(phi);
+//	double rr=log(r)*sin(phi);
+	return rr;
+}
+
+// random gaussian variable with given mean anf std deviation
+double rGauss(double e, double sigma){
+	return rGauss()*sigma+e;
+}
+
+// random integer in given interval
+unsigned long randInt(unsigned long n){
+	unsigned long rn=(unsigned long)((double)(rand())/(double(RAND_MAX))*n);
+	return rn;
+}
+
+//============================================================
+//===================    Standard Histogram    ===============
+//============================================================
+
+Histogram::Histogram(int n){
+	minVal=-1; maxVal=1; e=0; sigma=0; alpha=beta=1; iq=iqq=im=0;
+	nBin=n; count=0;
+	dd=0; db=0; Fp=0; Fm=0;
+	errStatus="init Histogram";
+	getMem(dd, nBin, "Histogram #1");
+	getMem(db, nBin, "Histogram #1");
+	getMem(Fp, (nBin+1), "Histogram #1");
+	getMem(Fm, (nBin+1), "Histogram #1");
+	zeroMem(dd,nBin);
+	bin=(maxVal-minVal)/nBin;
+	ready=false;
+	errStatus=0;
+}
+
+//=================== Add value to the histogram ===========
+void Histogram::add(double x){
+	if(ready) return;
+	int i=int((x-minVal)/bin);
+	if(i<0) i=0; if(i>=nBin) i=nBin-1;
+	dd[i]++; e+=x; sigma+=x*x;
+	count++;
+}
+//============= Calculate cummulative Beta distribution for the background distribution
+void Histogram::normBeta(){
+	if(ready) return; ready=true;
+	norm();
+	double eb=0;
+	for(int i=0; i<nBin; i++){	// calculate the integral of the beta distrib.
+		double x=minVal+bin*i;
+		eb+=(db[i]=xBetaD(alpha,beta,x));
+	}
+	for(int i=0; i<nBin; i++)	{	// normalyze beta distribution
+		db[i]/=eb*bin;
+	}
+	calcCDF(db);
+}
+//======================= calculate cumulative distributions
+void Histogram::calcCDF(double *d){
+	Fp[0]=Fm[nBin]=0; Fm[0]=1;
+	for(int i=1, j=nBin-1; i<nBin; i++,j--){
+		Fp[i]=Fp[i-1]+d[i]*bin;
+		Fm[j]=Fm[j+1]+d[j]*bin;
+	}
+
+}
+//======================== normalize the foreground distributions
+void Histogram::normF(){
+	if(ready) return; ready=true;
+	norm();
+	calcCDF(dd);
+}
+//===================== normalize the histogram and calculate the statistical parameters
+void Histogram::norm(){
+	e/=count; sigma=(sigma-count*e*e)/(count-1);
+	double eBeta=2e-1,  d=sigma/4, gg=(1-eBeta)/eBeta, gg1=gg+1;
+	alpha=(gg/(d*gg1*gg1) - 1)/(gg1);
+	beta=gg*alpha;
+
+	sigma=sqrt(sigma);
+	for(int i=0; i<nBin; i++){
+		dd[i]=dd[i]/count/bin;
+	}
+}
+
+//============================================ Interpolation
+double Histogram::interpol(double x, double *fun){
+	int i=int((x-minVal)/bin);
+	if(i<0) {i=0;}
+	if(i>=nBin) {i=nBin-1;}
+	double dx0=x-(minVal+bin*i), dx1=bin-dx0;
+	double f0=log(fun[i]), f1=log(fun[i+1]);
+	return exp((f0*dx1+f1*dx0)/bin);
+}
+//=======================================================
+
+double Histogram::pValp(double x){return interpol(x,Fp);}
+double Histogram::pValm(double x){return interpol(x,Fm);}
+
+double xBetaD(double a, double b, double x){
+	return pow(1-x,a)*pow(1+x,b);
+}
+
+void Histogram::print(FILE *f){
+	for(int i=0; i<nBin; i++){
+		double x=minVal+bin*i;
+		fprintf(f,"%f\t%f\t%.2e\t%.2e\t%.2e\n",x,dd[i], db[i],Fp[i],Fm[i]);
+	}
+}
+//============================================================
+//===================    Dynamic  Histogram    ===============
+//============================================================
+DinHistogram::DinHistogram(int ll){
+	l=ll;
+	getMem(hist[0],l,"Dinamic histogram 0");
+	getMem(hist[1],l,"Dinamic histogram 1");
+	getMem(cnts[0],l,"Dinamic histogram 3");
+	getMem(cnts[1],l,"Dinamic histogram 4");
+	clear();
+}
+
+void DinHistogram::clear(){
+	n[0]=n[1]=0;					//number of observations
+	min=1.e+200; max=-min;			//min max values
+	bin=hMin=hMax=0;				//bin width, max-min value in the histogram
+	e[0]=e[1]=sd[0]=sd[1]=0;		//mean and std deviation
+	zeroMem(hist[0],l);
+	zeroMem(hist[1],l);
+	zeroMem(cnts[0],l);
+	zeroMem(cnts[1],l);
+}
+
+
+int DinHistogram::getIdx(double value){ //get index by value
+	if(bin==0) return 0;
+	if(value==hMax) return l-1;
+	return (int)((value-hMin)/bin);
+}
+double DinHistogram::getValue(int idx){	//get value by index
+	return hMin+idx*bin+bin/2;
+}
+
+int DinHistogram::compress2Left(double value){  //Compress the histogram to the Left
+	for(int i=0, j=0; i<l; i+=2, j++){			// Compress the values
+		cnts[0][j]=cnts[0][i]+cnts[0][i+1];
+		cnts[1][j]=cnts[1][i]+cnts[1][i+1];
+	}
+	for(int i=l/2; i<l; i++) cnts[0][i]=cnts[1][i]=0;	// Clear new space
+	bin*=2;												// redefine bin size
+	hMax=hMin+bin*l;									// redefine boundaries
+	return getIdx(value);
+}
+
+int DinHistogram::compress2Right(double value){	//Compress the histogram to the Right
+	for(int i=l-1,j=l-1; i > 0; i-=2,j--){		// Compress the values
+		cnts[0][j]=cnts[0][i]+cnts[0][i-1];
+		cnts[1][j]=cnts[1][i]+cnts[1][i-1];
+	}
+	for(int i=0; i<l/2; i++) cnts[0][i]=cnts[1][i]=0;	// Clear new space
+	bin*=2;												// redefine bin size
+	hMin=hMax-bin*l;									// redefine boundaries
+	return getIdx(value);
+}
+
+void DinHistogram::addStat(double value, int type){		//add the value to the statistics
+	n[type]++; e[type]+=value; sd[type]+=value*value;	//count, mean, std dev.
+	if(value > max) max=value;
+	if(value < min) min=value;
+}
+
+void DinHistogram::add(double value, int type){			// add the value to the histogram
+	if(n[0]==0 && n[1]==0){								// the histogram is empty
+		cnts[type][0]=1; addStat(value,type);			// set the value
+		hMin=hMax=value;								// define boundaries
+		return;
+	}
+	if(hMin==hMax){										// the histogram contains only single bin
+		if(value==hMin){								// new value equal to the single bin
+			cnts[type][0]++; addStat(value,type);		//
+			return;
+		}
+		else if(value > hMin){							// the new value is right to single bin
+			cnts[type][l-1]++; addStat(value,type);		// the new value defines the right bin
+			max=hMax=value;								// redefine the boundaries
+		}
+		else{											// the new value is less than single bin
+			cnts[0][l-1]=cnts[0][0];					// Put the old value to the right end of the histogram
+			cnts[1][l-1]=cnts[1][0];					//
+			cnts[type][0]=1; addStat(value,type);		// Put the new value to the left bin
+			min=hMin=value;								// redefine the boundaries
+		}
+		bin=(hMax-hMin)/l;								// Define the bin
+		return;
+	}
+	int i=getIdx(value);								// The histogram contains some values
+	while(i < 0){i=compress2Right(value);}				// The new value is less than the first bin
+	while(i >=l){i=compress2Left(value);}				// The new value is grater than the last bin
+	cnts[type][i]++; addStat(value,type);				// Put the new value
+}
+
+void DinHistogram::fin(){								// Normalize and calculate the statistics
+	for(int t=0; t<2; t++){
+		for(int i=0; i<l; i++) hist[t][i]=(double) cnts[t][i]/n[t]/bin;
+		e[t]/=n[t];
+		sd[t]=(sd[t]-e[t]*e[t]*n[t])/(n[t]-1);
+		sd[t]=sqrt(sd[t]);
+	}
+}
+
+void DinHistogram::print(FILE* f){						// print the histogram
+	fprintf(f,"#  min=%.3f max=%.3f \n",min,max);
+	fprintf(f,"#  hMin=%.3f  hMax=%.3f bin=%.3f\n",hMin,hMax,bin);
+	fprintf(f,"#  e0=%.3f sd0=%.3f n0=%i\n",e[0],sd[0],n[0]);
+	fprintf(f,"#  e1=%.3f sd1=%.3f n1=%i\n",e[1],sd[1],n[1]);
+	for(int i=getIdx(min); i<getIdx(max); i++){
+		double h0=hist[0][i];
+		double h1=hist[1][i];
+		fprintf(f,"%.3f\t\%6i\t%.6f\t\%6i\t%.6f\n",getValue(i),cnts[0][i],h0,cnts[1][i],h1);
+	}
+}
+
+
+//===================== Normalize the function to mean and sigma
+double norm(double *x, int l){
+	double d=0,e=0,dd,ee;
+	for(int i=0; i<l; i++){d+=x[i]*x[i]; e+=x[i];}
+	ee=e/l; d=d*l-e*e; dd=d/((l-1)*l);
+	if(dd<0) dd=0; dd=sqrt(dd);
+	if(dd <= ee*ee*1.e-5) {
+		return 0;}
+
+	for(int i=0; i<l; i++) x[i]=(x[i]-ee)/dd;
+	return dd;
+}
+
 //================== Convert the interval flag to text
 const char *getIvFlag(){
 				switch(intervFlag0){
@@ -1014,24 +1116,6 @@ int nearFactor(int n){
 return qMin;
 }
 
-//=================== extract file name
-const char *getExt(const char *fname){
-	const char *s=strrchr(fname,'/');
-	if(s==0) s=fname;
-	s=strrchr(s,'.');
-	if(s==0) return 0;
-	return s+1;
-}
-//=================== extract fname wothout extension
-char *getFnameWithoutExt(char *buf, char *fname){
-	char *s;
-	s=strrchr(fname,'/'); if(s==0) s=fname; else s++;
-	strcpy(buf,s);
-
-	s=strrchr(buf,'.'); if(s) *s=0;
-	return buf;
-}
-
 //===================== convert text flag to a binary
 int getFlag(char*s){
 	int fg=0;
@@ -1039,37 +1123,6 @@ int getFlag(char*s){
 	else if(keyCmp(s,"0")==0 || keyCmp(s,"NO")==0  || keyCmp(s,"OFF")==0) {fg=0;}
 	else fg=-1;
 	return fg;
-}
-//===================== check if given string contains given key: 0 -- contains; 1 -- does not
-int keyCmp(const char *str, const char *key){
-	for(;;str++, key++){
-		if(*str==0){
-			if(*key==0) return 0;
-			else return 1;
-		}
-		if(*key==0) return -1;
-		if(toupper(*str) != toupper(*key)) return 1;
-	}
-	return strncmp(str,key,strlen(key));
-}
-
-//========== Convert kernel type to a string
-const char*getKernelType(){
-	const char *type;
-	if(kernelType==KERN_NORM	 ) type="N";
-	else if(kernelType==KERN_LEFT_EXP ) type="L";
-	else if(kernelType==KERN_RIGHT_EXP) type="R";
-	else return "X";
-	char b[80];
-	if(kernelShift >0){
-		sprintf(b,"%s_%.1fR",type,kernelShift/1000);
-		return strdup(b);
-	}
-	else if(kernelShift <0){
-		sprintf(b,"%s_%.1fL",type,-kernelShift/1000);
-		return strdup(b);
-	}
-	else return type;
 }
 //=================================================================
 //============================= File list =========================
@@ -1105,19 +1158,6 @@ void addFile(const char* fname){
 	else{
 		addFile(fname, fileId++);
 	}
-}
-
-//========================= trim given string
-char *trim(char *s){
-	if(s==0) return 0;
-	s=skipSpace(s);
-	for(int i=strlen(s)-1; i>=0; i--){
-		if(isspace(s[i])) s[i]=0;
-		else break;
-	}
-	if(*s=='\"') s++;
-	char *ss=strchr(s,'\"'); if(ss) *ss=0;
-	return s;
 }
 
 
@@ -1166,19 +1206,8 @@ void makeId(){
 	id=hashx(id,kernelType);
 
 	id=hashx(id,intervFlag0);
-	id=hashx(id,strandFg0);
 	id=hashx(id,threshold);
 	id=hashx(id,threshold);
 }
 
-
-//================= Create directories
-void makeDirs(){
-	if(profPath!=0) makeDir(profPath);
-	else profPath=strdup("./");
-	if(resPath!=0) makeDir(resPath);
-	else resPath=strdup("./");
-	if(trackPath!=0) makeDir(trackPath);
-	else trackPath=strdup("./");
-}
 

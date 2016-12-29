@@ -61,14 +61,15 @@ void factor(int n){
 }
 
 //============================================================== print profile (testing)
-void printProfile(float *profile, int from, int to){
+void printProfile(float *profile, int from, int to){printProfile(stdout,profile,from,to);}
+void printProfile(FILE *fil, float *profile, int from, int to){
 	for(int i=from; i< to; i+=20){
-		printf("%i\t",i);
+		fprintf(fil,"%i\t",i);
 		for(int j=0; j<20 && i+j< to; j++){
-			if(profile[i+j]==NA) printf("    NA");
-			else printf(" %5.1f",profile[i+j]*100);
+			if(profile[i+j]==NA) fprintf(fil,"    NA");
+			else fprintf(fil," %5.1f",profile[i+j]*100);
 		}
-		printf("\n");
+		fprintf(fil,"\n");
 	}
 }
 //============================================================== print profile (testing)
@@ -487,90 +488,39 @@ double * random_wig(double *w,int num){
 void test(){
 	clearDeb();
 	debugFg=DEBUG_LOG|DEBUG_PRINT;
-deb(444);
-int l=100000000, n=100;
-double *xx, *yy, *gauss;
-getMem(xx,l,"");
-getMem(yy,l,"");
-getMem(gauss,n,"");
+	int lpr=10000;
+	float *ccor;
+	getMem(ccor,lpr*2+10,""); zeroMem(ccor,lpr*2+10);
+	int nn=0;
 
-double sigma=20;
-deb(0);
-zeroMem(xx,l); zeroMem(yy,l);
-deb(1);
-for(int i=0; i<n; i++) {
-	double x=(i-n/2)/sigma;
-	gauss[i]=exp(-x*x);
-}
-deb(2);
-//======================== Make random positions
-int nPos=100000;
-int rndposx[nPos], rndposy[nPos];
-for(int i=0; i<nPos; i++){
-	double x=(double)rand()/RAND_MAX;
-	int px=(int)(l*x);
-	rndposx[i]=px;
-	x=((double)rand()/RAND_MAX-0.5);
-	int py=(int)(n*x*0.8)+px;
-	rndposy[i]=py;
-}
+	double y=0;
+	for(int i=0; i<bTrack1.lProf; i++){
+		int x=bTrack1.bytes[i];
+		if(x>1){
+			nn++;
+			for(int k=0, j=i-lpr; k<lpr*2; k++,j++){
+				if(j<0 || j>=bTrack1.lProf) continue;
+				y=bTrack2.bytes[j];
+				if(y>threshold) ccor[k]+=0.01*y;
+			}
+		}
+		x=bTrack1.cbytes[i];
+		if(x>1){
+			nn++;
+			for(int k=lpr*2-1, j=i-lpr; k >=0; k--,j++){
+				if(j<0 || j>=bTrack1.lProf) continue;
+				y=bTrack2.bytes[j];
+				if(y>threshold) ccor[k]+=0.01*y;
+			}
+		}
+	}
 
-//qsort(rndposx,nPos,sizeof(int),intCmp);
-//qsort(rndposy,nPos,sizeof(int),intCmp);
+	FILE * f=fopen("ccor","wt");
+	deb(nn);
+	for(int k=0; k<2*lpr; k++)
+		fprintf(f,"%i\t%f\n",k-lpr,ccor[k]/nn);
+	fclose(f);
 
-for(int k=0; k<nPos; k++){
-	for(int p=rndposx[k], j=0; p<l && j<n; p++,j++)
-		if(p>=0) xx[p]=gauss[j];
-	for(int p=rndposy[k], j=0; p<l && j<n; p++,j++)
-		if(p>=0) yy[p]=gauss[j];
-}
-deb(3);
-FILE *f=fopen("g0.wig","wt");
-fprintf(f,"track type=wiggle_0 description=\"gauss\"\n");
-int fg=0;
-for(int i=0; i<l/100; i++){
-	if(xx[i]==0) { fg=0; continue;}
-	int k=1000.*xx[i];
-	if(fg==0) fprintf(f,"fixedStep chrom=chr1 start=%i step=100 span=100\n",i*100);
-	fprintf(f,"%i\n",k);
-	fg=1;
-}
-fclose(f);
-
-f=fopen("g3.wig","wt");
-fprintf(f,"track type=wiggle_0 description=\"gauss\"\n");
-fg=0;
-for(int i=0; i<l/100; i++){
-	if(yy[i]==0) { fg=0; continue;}
-	int k=1000.*yy[i];
-	if(fg==0) fprintf(f,"fixedStep chrom=chr1 start=%i step=100 span=100\n",i*100);
-	fprintf(f,"%i\n",k);
-	fg=1;
-}
-fclose(f);
-
-//FILE *f=fopen("cos.wig","wt");
-//
-//fprintf(f,"track type=wiggle_0 description=\"cos\"\n");
-//	for(int i=0; i<1000000; i++){
-//		double x=cos(i/100.)+1;
-//		int k=500.*x;
-//if(i%100 ==0)
-//	fprintf(f,"fixedStep chrom=chr1 start=%i step=100 span=100\n",i*100);
-//		fprintf(f,"%i\n",k);
-//	}
-//fclose(f);
-//f=fopen("sin.wig","wt");
-//
-//fprintf(f,"track type=wiggle_0 description=\"cos\"\n");
-//	for(int i=0; i<1000000; i++){
-//		double x=sin(i/100.)+1;
-//		int k=500.*x;
-//if(i%100 ==0)
-//	fprintf(f,"fixedStep chrom=chr1 start=%i step=100 span=100\n",i*100);
-//		fprintf(f,"%i\n",k);
-//	}
-//fclose(f);
 	exit(0);
 }
 

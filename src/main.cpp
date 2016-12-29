@@ -70,8 +70,6 @@ struct Param{
 
 //===================================================================================================
 Param *findParam(const char * name);
-Param * readParam(char *name, char *value);
-Param *findParam(const char * name);
 void parseArgs(int argc, char **argv);
 void readPrm(char *s);
 void readPrm(char *key, char *val);
@@ -174,7 +172,7 @@ Param *pparams[]={
 //=============================================================================================================
 		new Param("input parameters"),
 		new Param("chrom"		, &chromFile	,"chromosome file"),
-		new Param("strand" 	 	, &strandFg0  	,"account for strand information"),
+//		new Param("strand" 	 	, &strandFg0  	,"account for strand information"),
 		new Param("intervals"	, &intervFlag0	,intervalTypes,"interval type in BED file"),
 		new Param("gene"		, &intervFlag0	,GENE		,"consider entire gene"),
 		new Param("exon"		, &intervFlag0	,EXON		,"consider exons"),
@@ -214,13 +212,14 @@ Param *pparams[]={
 		new Param("writeDistr" 	, &writeDistr   ,"write foreground and background distributions"),
 		new Param("Rscrpit" 	, &RScriptFg   	,0),
 		new Param("r" 			, &RScriptFg   	,1,"write R script for the result presentation"),
+		new Param("crossWidth" 	, &crossWidth   ,0, "Width of cross-correlation plot"),
 		new Param("Distances" 	, &writeDistCorr,distTypes	,"Write distance correlations"),
 		new Param("outLC"		, &outWIG		,outWigTypes,"parameters for local correlation file"),
 		new Param("outThreshold", &outThreshold	,"threshold for output to correlation profile scaled to 0..1000"),
 		new Param("corrOnly" 	, &corrOnly   	,0),
 		new Param("corr" 		, &corrOnly   	,1, 0),
 		new Param("outRes" 		, &outRes 		,outResTypes,"format for results in statistics file"),
-		new Param("lAuto"	  	, &lAuto  		,0),
+		new Param("AutoCorr"  	, &doAutoCorr  	,0),
 //=========================================== Additional parameters (see Undocumented) ===============================
 		new Param("outBPeak" 	, &writeBPeak   ,"write BradPeak file"),
 		new Param("pVal"		, &pVal  		,"threshold for BroadPeak output"),
@@ -228,8 +227,9 @@ Param *pparams[]={
 		new Param("pcaSegment" 	, &pcaSegment	,0),
 		new Param("nPca" 		, &nPca			,0),
 		new Param("cage" 		, &cage			,0),
-		new Param("inpThreshold", &inpThreshold  		,0),	//input binarization testing, %of max
+		new Param("inpThreshold", &inpThreshold ,0),	//input binarization testing, %of max
 		new Param("d", &debugFg  	,1, 0),							//debug mode
+		new Param("pdf", &writePDF  ,1, 0),							//write R plots to pdf
 
 		new Param("Happy correlations!"),
 		0,
@@ -320,14 +320,6 @@ void Param::setVal(){
 }
 
 //===========================================================================================================
-Param * readParam(char *name, char *value){
-	Param *prm=findParam(name);
-	if(prm==0) return 0;
-	prm->readVal(value);
-	return prm;
-}
-
-//===========================================================================================================
 void Param::printDescr(){
 	if(description==0) return;
 	if(name ==0 || strlen(name)==0) {printf("\n====================== %s ====================== \n",description); return;}
@@ -392,7 +384,6 @@ void readConfig(char * cfg){
 		readPrm(s);
 	}
 	fclose(f);
-
 }
 //============================================ Read Param =========================================
 void readPrm(char *b){
@@ -403,6 +394,7 @@ void readPrm(char *b){
 }
 
 void readPrm(char *key, char *val){
+	if(stricmp(key,"in")==0) {addFile(val); return;}
 	Param* prm=findParam(key);
 	if(prm!=0){
 		if(prm->readVal(val)) errorExit("unknown value %s=%s",key,val);
@@ -447,10 +439,7 @@ void parseArgs(int argc, char **argv){
 	}
 	if(wStep==0)   wStep=wSize;
 	if(RScriptFg) {writeDistCorr|=TOTAL; writeDistr=1;}
-	if(complFg==0){
-		if(strandFg0) complFg=COLLINEAR;
-		else		  complFg=IGNORE_STRAND;
-	}
+	if(complFg==0){complFg=IGNORE_STRAND;}
 	if(threshold < 1) threshold=1;
 	profPath =makePath(profPath);
 	trackPath=makePath(trackPath);
@@ -494,8 +483,7 @@ void parseArgs(int argc, char **argv){
 int main(int argc, char **argv) {
 //	test();
 //	clearDeb();
-	debugFg=DEBUG_LOG|DEBUG_PRINT;
-//	clearLog(); debugFg=0;
+//	debugFg=DEBUG_LOG|DEBUG_PRINT;
 	for(int i=0; i<argc; i++){strtok(argv[i],"\r\n");}
 
 	const char * progName="StereoGene";
@@ -528,6 +516,5 @@ int main(int argc, char **argv) {
 
 	Correlator();
 
-	if(logFile) {fclose(logFile); logFile=0;}	// debug log file
 	return 0;
 }

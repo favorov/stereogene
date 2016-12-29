@@ -8,6 +8,7 @@
 #include <sys/file.h>
 
 statTest *MannW;
+int XYCorrScale=100;
 //================================================================= write results in ENCODE Broad Peak format
 void printCorrelations(){
 	verb("\nWrite correlations...\n");
@@ -19,17 +20,25 @@ void printCorrelations(){
 	if(writeBPeak) printBroadPeak();
 	if(writeDistCorr)
 		printChrDistances(strcat(strcpy(b,outFile),".dist"));
-	if(outSpectr) correlation.printSpect(strcat(strcpy(b,outFile),".spect"));
+	if(outSpectr) XYfgCorrelation.printSpect(strcat(strcpy(b,outFile),".spect"));
 	if(outChrom ) printChomosomes(strcat(strcpy(b,outFile),".chrom"));
 	errStatus=0;
 }
 
 void printChrDistances(char *fname){
 	FILE *f=xopen(fname,"wt");
-	bgcorrelation.norm();
-	correlation.norm();
-	fprintf(f,"x\tBkg\tFg\tFgPlus\tFgMinus");
+	XYbgcorrelation.normilize();
+	XYfgCorrelation.normilize();
+	normChromDist();
+	fprintf(f,"# %s vs %s\n",bTrack1.name, bTrack2.name);
 
+	//========================================
+	double *autoCorrX=bTrack1.autoCorr, *autoCorrY=bTrack2.autoCorr;
+	fprintf(f,"x");
+	if(doAutoCorr) fprintf(f,"\tAutoCorr1\tAutoCorr2");
+	fprintf(f,"\tBkg\tFg\tFgPlus\tFgMinus");
+
+	//========================================
 	if(writeDistCorr==CHR_DETAIL){
 		for(int i=0; i<n_chrom; i++){
 			Chromosome *chr=chrom_list+i;
@@ -40,18 +49,16 @@ void printChrDistances(char *fname){
 	for(int j=0; j<profWithFlanksLength; j++){
 		int k=(j+profWithFlanksLength/2)%profWithFlanksLength;
 		fprintf(f,"%i",(j-profWithFlanksLength/2)*binSize);
-		fprintf(f,"\t%9.5f\t%9.5f\t%9.5f\t%9.5f", bgcorrelation.correlation[k]*100,
-				correlation.correlation[k]*100, correlation.corrPlus[k]*100, correlation.corrMinus[k]*100);
+		if(doAutoCorr) fprintf(f,"\t%9.5f\t%9.5f",autoCorrX[k],autoCorrY[k]);
+		fprintf(f,"\t%9.5f\t%9.5f\t%9.5f\t%9.5f", XYbgcorrelation.correlation[k]*XYCorrScale,
+				XYfgCorrelation.correlation[k]*XYCorrScale, XYfgCorrelation.corrPlus[k]*XYCorrScale, XYfgCorrelation.corrMinus[k]*XYCorrScale);
 		if(writeDistCorr==CHR_DETAIL){
 			for(int i=0; i<n_chrom; i++){
 				Chromosome *chr=chrom_list+i;
 				if(chr->densCount){
 					if(chr->count > 1){
-						double e=bTrack1.av*bTrack2.av;
-						double d=(bTrack1.sd*bTrack2.sd*profWithFlanksLength*(chr->count));    //*chr->count
-						double x=(chr->distDens[k]-e*chr->count)/d;
-
-						fprintf(f,"\t%7.3f",x*100);
+						double x=chr->distDens[k];
+						fprintf(f,"\t%7.3f",x*XYCorrScale);
 					}
 					else{
 						fprintf(f, "\tNA");
@@ -138,7 +145,6 @@ void printStat(){
 	}
 
 	//================================================== write parameters
-//	writeLog("Write params\n");
 	fg=fileExists(paramsFileName);
 	if((outRes&TAB)!=0){
 		f=gopen(paramsFileName,"a+t");
@@ -152,7 +158,7 @@ void printStat(){
 		fprintf(f,"%-6s\t%-20s\t%-20s","id","trackPath","resPath");
 		fprintf(f,"\t%-20s\t%-12s\t%-20s","map","mapIv","pcorProfile");
 		fprintf(f,"\t%-2s\t%-6s\t%-6s","NA", "maxNA","maxZer");
-		fprintf(f,"\t%-6s\t%-6s\t%-6s","interv", "strand","compl");
+		fprintf(f,"\t%-6s\t%-6s","interv", "compl");
 		fprintf(f,"\t%-4s\t%-6s","bin", "bpType");
 		fprintf(f,"\t%-6s\t%-6s\t%-6s\t%-6s","wSize", "wStep","flank","noise");
 		fprintf(f,"\t%-6s\t%-8s\t%-8s","kernel", "Kern-Sgm","kern-Sh");
@@ -164,7 +170,7 @@ void printStat(){
 		const char *mf=mapFil ? mapFil : "-";
 		fprintf(f,"\t%-20s\t%-12s\t%-20s",mf,miv.print(b),pcname);
 		fprintf(f,"\t%-2i\t-%6.1f\t%-6.1f",NAFlag, maxNA0,maxZero0);
-		fprintf(f,"\t%-6i\t%-6i\t%-6i",intervFlag0, strandFg0,complFg);
+		fprintf(f,"\t%-6i\t%-6i",intervFlag0, complFg);
 		fprintf(f,"\t%-4i\t%-6i",binSize, bpType);
 		fprintf(f,"\t%-6i\t%-6i\t%-6i\t%-6.2f",wSize, wStep,flankSize,noiseLevel);
 		fprintf(f,"\t%-6s\t%-8.0f\t%-8.0f",getKernelType(), kernelSigma,kernelShift);
@@ -172,7 +178,6 @@ void printStat(){
 		funlockFile(f);
 		fclose(f);
 	}
-//	writeLog("Write XML\n");
 	if((outRes & XML)!=0) {
 		sprintf(b,"%s.xml",statFileName);
 		fg=fileExists(b);
@@ -204,7 +209,6 @@ void printStat(){
 		fprintf(xml,"maxNA=\"%.1f\" ", maxNA0);
 		fprintf(xml,"maxZero=\"%.1f\" ",maxZero0);
 		fprintf(xml,"intervFlag=\"%x\" ",intervFlag0);
-		fprintf(xml,"strandFg=\"%i\" ", strandFg0);
 		fprintf(xml,"complFg=\"%i\" ",complFg);
 		if(mapFil) fprintf(xml,"mapFile=\"%s\" miv=\"%s\"",mapFil,b);
 		if (pcorProfile!=0) fprintf(xml,"pcname=\"%s\" ",pcname);
@@ -219,8 +223,6 @@ void printStat(){
 		fprintf(xml,"MannZ=\"%.4f\" ",MannW->z);
 		fprintf(xml,"pVal=\"%.2e\" ",MannW->pVal);
 
-//		fprintf(xml,"avBg=\"%.4f\" ",avBg);
-//		fprintf(xml,"avFg=\"%.4f\" ",avFg);
 		fprintf(xml,"sdBg=\"%.4f\" ",sdBg);
 		fprintf(xml,"sdFg=\"%.4f\" ",sdFg);
 		fprintf(xml,"/>\n");
@@ -232,8 +234,10 @@ void printStat(){
 	writeLog("Write Statistics -> Done\n");
 }
 
-void Correlation::printSpect(char *fname){
+void XYCorrelation::printSpect(char *fname){
 	FILE *f=xopen(fname,"wt");
+	fprintf(f,"#\t%s\t%s\n",bTrack1.name, bTrack2.name);
+	fprintf(f,"Wave_Length\tSpectrum1\tSpectrum2\n");
 	double dx=0,dy=0;
 	for(int i=0; i<profWithFlanksLength; i++){
 		dx+=spectrumX[i]; dy+=spectrumY[i];
@@ -243,9 +247,9 @@ void Correlation::printSpect(char *fname){
 		spectrumY[i]=sqrt(spectrumY[i]/dy*profWithFlanksLength);
 	}
 
-	for(int i=5; i<profWithFlanksLength/2; i++){
+	for(int i=0; i<profWithFlanksLength/2; i++){
 		double l=(double)(profWithFlanksLength)*binSize/(i+1);
-		fprintf(f,"%.2f\t%g\t%g\n",l,spectrumX[i],spectrumY[i]);
+		fprintf(f,"%9.2f\t%9.4f\t%9.4f\n",l,spectrumX[i],spectrumY[i]);
 	}
 
 	fclose(f);
@@ -328,7 +332,8 @@ void printRmd(){
 	char *dn=makePath(resPath), b[2048];
 	strcat(strcpy(b,dn),"report_r_template.Rmd");
 	
-	if(!fileExists(b)){
+	if(!fileExists(b))
+	{
 		FILE *f=xopen(b,"wt");
 		fprintf(f, "---	\n");
 		fprintf(f, "title: \"Report\"	\n");
@@ -418,7 +423,9 @@ void printRmd(){
 		fprintf(f, "par( mfrow = c( 2, 1 ), oma = c( 0, 0, 0, 0 ),mar=c(3,3,2,1),mgp=c(1.6,0.45,0))	\n");
 		fprintf(f, "\n");
 		fprintf(f, "\n");
-		fprintf(f, "plot(density(bkg[[1]]), xlim=c(-1,1), ylim=c(0, y_lim1), xlab=\'correlation coefficient\',ylab=\'density\',	\n");
+		const char*dens="density";
+		if(XYCorrScale!=1) sprintf(b,"%s*%i",dens,XYCorrScale); else strcpy(b,dens);
+		fprintf(f, "plot(density(bkg[[1]]), xlim=c(-1,1), ylim=c(0, y_lim1), xlab=\'correlation coefficient\',ylab=\'%s\',	\n",b);
 		fprintf(f, "col=\'red\', main=\'Distribution of correlations\',	\n");
 		fprintf(f, "cex.axis = 0.8,  cex.lab = 1,  cex.main = 1,lwd=2)	\n");
 		fprintf(f, "lines(density(fg[,4]), col=\'blue\', lwd=2)	\n");
@@ -519,7 +526,7 @@ void printR(){
 	fprintf(f," dist <- read.table(paste(name, '.dist', sep = ''), header=TRUE) \n\n");
 	fprintf(f," #  Define plot limits \n\n");
 	fprintf(f," y_lim1 <- max(max(density(bkg[,1])$y),max(density(fg[,4])$y)) \n");
-	fprintf(f," x_lim2 <- c(-10000,10000) \n\n");
+	fprintf(f," x_lim2 <- c(-%i,%i) \n\n",crossWidth,crossWidth);
 	fprintf(f," # set x scale to kilobases \n");
 	fprintf(f," x_lim2 <- x_lim2/1000 \n\n");
 	fprintf(f," #get chromosome data for plots, example for chr1.  \n");
@@ -527,7 +534,7 @@ void printR(){
 	fprintf(f," #fg_chrom <- fg[fg[,1]==\"chr1\",] \n");
 	fprintf(f," #dist_chrom <- dist$chr1 \n\n\n");
 	fprintf(f," # save plot to pdf \n");
-	fprintf(f," pdf(paste(name,'.pdf', sep=''), height = 6, width = 5) \n\n");
+	if(writePDF) fprintf(f," pdf(paste(name,'.pdf', sep=''), height = 6, width = 5) \n\n");
 	fprintf(f," #  create the plot \n");
 	fprintf(f," old.par <- par( no.readonly = TRUE ) \n");
 	fprintf(f," par( mfrow = c( 2, 1 ), oma = c( 0, 0, 0, 0 ),mar=c(3,3,3,1),mgp=c(1.6,0.45,0)) \n\n");
@@ -538,12 +545,14 @@ void printR(){
 	fprintf(f," #plot line for chomosome \n");
 	fprintf(f," #lines(density(fg[,4]), col='green', lwd=2) \n\n\n");
 	fprintf(f," plot(dist$x/1000, dist$Fg, type='l',col='blue', xlim=x_lim2, \n");
-	fprintf(f," main='Cross-correlation function',xlab='Distance (kb)',ylab='density*100',cex.axis = 0.8,  cex.lab = 1,  cex.main = 1,lwd=2) \n");
+	const char*dens="density";
+	if(XYCorrScale!=1) sprintf(b,"%s*%i",dens,XYCorrScale); else strcpy(b,dens);
+	fprintf(f," main='Cross-correlation function',xlab='Distance (kb)',ylab='%s',cex.axis = 0.8,  cex.lab = 1,  cex.main = 1,lwd=2) \n",b);
 	fprintf(f," lines(dist$x/1000,dist$Bkg , col='red',lwd=2) \n");
 	fprintf(f," #plot line for chomosome \n");
 	fprintf(f," #lines(dist$x/1000, dist_chrom , col='green',lwd=2) \n\n");
 	fprintf(f," par( old.par ) \n\n");
-	fprintf(f," dev.off() \n");
+	if(writePDF) fprintf(f," dev.off() \n");
 
 //===========================   OLD Version ==============================
 //	fprintf(f,"#  Read the data \n\n");
