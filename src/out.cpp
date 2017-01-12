@@ -39,7 +39,7 @@ void printChrDistances(char *fname){
 	fprintf(f,"\tBkg\tFg\tFgPlus\tFgMinus");
 
 	//========================================
-	if(writeDistCorr==CHR_DETAIL){
+	if(outChrom){
 		for(int i=0; i<n_chrom; i++){
 			Chromosome *chr=chrom_list+i;
 			if(chr->densCount)	fprintf(f,"\t%s",chr->chrom);
@@ -52,7 +52,7 @@ void printChrDistances(char *fname){
 		if(doAutoCorr) fprintf(f,"\t%9.5f\t%9.5f",autoCorrX[k],autoCorrY[k]);
 		fprintf(f,"\t%9.5f\t%9.5f\t%9.5f\t%9.5f", XYbgcorrelation.correlation[k]*XYCorrScale,
 				XYfgCorrelation.correlation[k]*XYCorrScale, XYfgCorrelation.corrPlus[k]*XYCorrScale, XYfgCorrelation.corrMinus[k]*XYCorrScale);
-		if(writeDistCorr==CHR_DETAIL){
+		if(outChrom){
 			for(int i=0; i<n_chrom; i++){
 				Chromosome *chr=chrom_list+i;
 				if(chr->densCount){
@@ -95,7 +95,7 @@ void getStat(double *set, int n, double &av, double &sd){
 	av/=n; sd=sqrt((sd-av*av*n)/(n-1));
 }
 
-double avBg,sdBg=0,avFg=0,sdFg=0;
+double avBg=0,sdBg=0,avFg=0,sdFg=0;
 void printStat(){
 	verb("Write statistics\n");
 	writeLog("Write statistics\n");
@@ -105,8 +105,8 @@ void printStat(){
 	xverb("p-val=%e\nnWindows=%i\n=================================\n",
 		MannW->pVal, nFg);
 
-	if(sdFg==0) getStat(FgSet,nFg,avFg,sdFg);
-	if(sdBg==0) getStat(BkgSet,nBkg,avBg,sdBg);
+	getStat(FgSet, nFg, avFg,sdFg);
+	getStat(BkgSet,nBkg,avBg,sdBg);
 
 	FILE *f=0;
 	const char *pcname = "-";
@@ -135,7 +135,10 @@ void printStat(){
 	}
 	//==================================================== write the statistics
 	if(f){
-		fprintf(f,"%08lx\t%-10s\t%-10s",id,alTable.convert(bTrack1.name), alTable.convert(bTrack2.name));
+		char nm1[1024], nm2[1024];
+		alTable.convert(bTrack1.name, nm1);
+		alTable.convert(bTrack2.name, nm2);
+		fprintf(f,"%08lx\t%-10s\t%-10s",id,nm1, nm2);
 		fprintf(f,"\t%-6i\t%-6s\t%6i\t%6i",wSize,getKernelType(),nFg, nBkg);
 		fprintf(f,"\t%8.4f\t%8.4f\t%8.4f",totCorr, avFg,sdFg);
 		fprintf(f,"\t%8.4f\t%8.4f\t%8.4f",BgTotal, avBg, sdBg);
@@ -329,8 +332,8 @@ void printBroadPeak(){
 	fclose(fBpeak);
 }
 void printRmd(){
-	char *dn=makePath(resPath), b[2048];
-	strcat(strcpy(b,dn),"report_r_template.Rmd");
+	char b[2048];
+	sprintf(b,"%sreport_r_template.Rmd",resPath);
 	
 	if(!fileExists(b))
 	{
@@ -448,7 +451,8 @@ void printRmd(){
 	
 }
 void printRreport(){
-	char *fn=alTable.convert(outFile), *s,b[2048], fname[1024];
+	char *s,b[2048], fname[1024], fn[1024];
+	alTable.convert(outFile,fn);
 
 	if(sdFg==0) getStat(FgSet,nFg,avFg,sdFg);
 	if(sdBg==0) getStat(BkgSet,nBkg,avBg,sdBg);
@@ -505,7 +509,8 @@ void printRreport(){
 }
 
 void printR(){
-	char *fn=alTable.convert(outFile), *s,b[2048], fname[1024];
+	char fn[1024], *s, b[2048], fname[1024];
+	alTable.convert(outFile, fn);
 //	const char *cex="cex.axis = 0.8,  cex.lab = 0.8,  cex.main = 0.8", *lwd="lwd=2",
 //			*lab="xlab=\'correlation coefficient\',ylab=\'density\'";
 //
@@ -538,8 +543,9 @@ void printR(){
 	fprintf(f," #  create the plot \n");
 	fprintf(f," old.par <- par( no.readonly = TRUE ) \n");
 	fprintf(f," par( mfrow = c( 2, 1 ), oma = c( 0, 0, 0, 0 ),mar=c(3,3,3,1),mgp=c(1.6,0.45,0)) \n\n");
+	char sub[1024]; if(writePDF) sub[0]=0; else sprintf(sub,"\\n%s",fname);
 	fprintf(f," plot(density(bkg[[1]]), xlim=c(-1,1), ylim=c(0, y_lim1), xlab='correlation coefficient',ylab='density', \n");
-	fprintf(f," col='red', main='Distribution of correlations', \n");
+	fprintf(f," col='red', main='Distribution of correlations%s', \n",sub);
 	fprintf(f," cex.axis = 0.8,  cex.lab = 1,  cex.main = 1,lwd=2) \n");
 	fprintf(f," lines(density(fg[,4]), col='blue', lwd=2) \n");
 	fprintf(f," #plot line for chomosome \n");
@@ -553,6 +559,21 @@ void printR(){
 	fprintf(f," #lines(dist$x/1000, dist_chrom , col='green',lwd=2) \n\n");
 	fprintf(f," par( old.par ) \n\n");
 	if(writePDF) fprintf(f," dev.off() \n");
+	if((!writePDF) && outWIG){
+		fprintf(f,"lc=read.table(paste(name, \'.LChist\', sep = \'\'),, header=TRUE)\n");
+		fprintf(f,"xmax=300; x0=xmax*0.3; x1=x0+20; y0=90;\n");
+		fprintf(f,"plot(lc$val, lc$cdf_obs*100000, col='blue', lwd=2, \n");
+		fprintf(f,"type=\'l\',ylim=c(0,100), xlim=c(0,xmax), ylab=\'FDR\',xlab=\'wig-values\',\n");
+		fprintf(f,"main=\'Local correlation distributions\');\n");
+		fprintf(f,"lines(lc$val, lc$cdf_exp*100000, col=\'red\', lwd=2);\n");
+		fprintf(f,"lines(lc$val, lc$FDR, col='black', lwd=3);\n");
+		fprintf(f," text(x0, y0+8,name,pos=4);\n");
+		fprintf(f,"segments(x0,y0,x1,y0,col='red',lwd=2); text(x1+5,y0,'expected cdf *100000',pos=4)\n");
+		fprintf(f,"y0=y0-5;\n");
+		fprintf(f,"segments(x0,y0,x1,y0,col='blue',lwd=2); text(x1+5,y0,'observed cdf *100000',pos=4)\n");
+		fprintf(f,"y0=y0-5;\n");
+		fprintf(f,"segments(x0,y0,x1,y0,col='black',lwd=3); text(x1+5,y0,'FDR',pos=4)\n");
+	}
 
 //===========================   OLD Version ==============================
 //	fprintf(f,"#  Read the data \n\n");

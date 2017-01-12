@@ -12,7 +12,7 @@
 class TrackFile{
 public:
 	FILE* file;
-	char *name,*fname;
+	char *name;
 	unsigned char *buff;
 	int buffsize;
 	long curpos;
@@ -22,6 +22,7 @@ public:
 	int pPcaSgm;
 	float* prof;
 	TrackFile();
+	~TrackFile(){if(name) xfree(name,""); }
 	TrackFile(char *fname);
 	float getProfile(int pos);
 	void printH();
@@ -31,16 +32,15 @@ int nFiles=0;
 TrackFile **tracks;
 
 unsigned long *positions;
-
-long profLength=0;
 FILE *outPCA;
 
 
 TrackFile::TrackFile(){
-	file=0; buff=0; buffsize=TRACK_BUFF_SIZE; curpos=0; pLength=0; fname=name=0;step=0;hasCompl=0;prof=0;pPcaSgm=100;
+	file=0; buff=0; buffsize=TRACK_BUFF_SIZE; curpos=0; pLength=0; name=0;step=0;hasCompl=0;prof=0;pPcaSgm=100;
 }
 void TrackFile::printH(){
-	fprintf(outPCA,"\t%s",alTable.convert(name));
+	char nm[1024]; alTable.convert(name,nm);
+	fprintf(outPCA,"\t%s",nm);
 }
 int TrackFile::getFilePos(unsigned long pos){ return (int)((double)pos*binSize/step);}
 
@@ -58,24 +58,24 @@ TrackFile::TrackFile(char *fname){
 	s1=strrchr(s0,'.'); if(s1) *s1=0;
 	strcat(bp,".prm");
 	file=xopen(bp,"rt");
+	char nm[1024];
 	name=0;
 	for(;fgets(b,sizeof(b),file)!=0;){
 		char *s1=strtok(b,"=");
 		char *s2=strtok(0,"=\r\n");
-		if(strcmp(s1,"trackName")==0 && s2!=0 && strlen(s2)!=0) name=strdup(skipSpace(s2));
+		if(strcmp(s1,"trackName")==0 && s2!=0 && strlen(s2)!=0) strcpy(nm,skipSpace(s2));
 		else if(strcmp(s1,"step"   )==0) step=atoi(s2);
 		else if(strcmp(s1,"strand" )==0) hasCompl=atoi(s2);
 	}
 	fclose(file);
-	if(name==0 || strlen(name)==0)
-	{
+	if(strlen(nm)==0){
 		char b[1024];
 		getFnameWithoutExt(b,fname);
-		name=strdup(b);
+		strcpy(nm,b);
 	}
-	else 	name=strtok(name," \t");
+	else 	strtok(nm," \t");
 
-	name=alTable.convert(name);
+	alTable.convert(nm,nm); name=strdup(nm);
 	pPcaSgm=pcaSegment/step;
 	file=xopen(bx,"rt"); curpos=0;
 	fseek(file, 0L, SEEK_END); pLength = (int) ftell(file);
@@ -120,7 +120,7 @@ void pcaMain(const char *fname){
 	strcpy(b,fname); s=strrchr(b,'/'); if(s==0) s=b;
 	s=strrchr(s,'.'); if(s!=0) *s=0;
 	strcat(b,".pca");
-	char *outFname=strdup(b);
+	char outFname[4096]; strcpy(outFname,b);
 	outPCA=xopen(b,"wt");
 
 	for(;fgets(b,sizeof(b),in);){

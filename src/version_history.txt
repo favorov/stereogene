@@ -111,3 +111,5 @@
 1. Autocorrelation now is written to the file *.dist.
 2. Numerical parameter 'lAuto' replaced by boolean parameter 'AutoCorr'.
 3. Fixed bug with logarithmic data scaling
+========== Version 1.72 ====================
+1. Parameter Distances changed. Now value DETAIL'Write by chromosomes' depends on 'outChrom' parameter. 

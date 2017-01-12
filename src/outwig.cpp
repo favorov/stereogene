@@ -30,6 +30,9 @@ double minLC,maxLC;		// min and max values of the local correlation
 
 struct WigHist:DinHistogram{
 	double *FDR;
+	double *cdf_obs;
+	double *cdf_exp;
+
 	WigHist(int l);
 	void print(FILE*f);
 	void fin();
@@ -39,9 +42,11 @@ double normWig(double v){
 	return 1000.*(v-minLC)/(maxLC-minLC);
 }
 
-WigHist dHist=WigHist(500);
+WigHist dHist=WigHist(1000);
 WigHist::WigHist(int l):DinHistogram(l){
 	getMem(FDR,l,"WigHist:getFDR");
+	getMem(cdf_obs,l,"WigHist:getFDR");
+	getMem(cdf_exp,l,"WigHist:getFDR");
 }
 
 void WigHist::fin(){
@@ -51,8 +56,8 @@ void WigHist::fin(){
 	DinHistogram::fin();					// normalize results
 	double obs=0, exp=0;
 	for(int i=l-1; i>=0; i--){
-		obs+=hist[0][i]*bin;   				// observed
-		exp+=hist[1][i]*bin;				// expected
+		cdf_obs[i]=(obs+=hist[0][i]*bin);   				// observed
+		cdf_exp[i]=(exp+=hist[1][i]*bin);				// expected
 		double psi=1/n[0]*bin;				// psudocounts
 		double x=(exp+psi)/(obs+psi);
 		FDR[i]=x;
@@ -65,7 +70,7 @@ void WigHist::print(FILE* f){						// print the histogram
 	fprintf(f,"#  hMin=%.2ef  hMax=%.2ef bin=%.3f\n",hMin,hMax,bin);
 	fprintf(f,"#  Observed: e0=%.3f sd0=%.3f n0=%i\n",e[0],sd[0],n[0]);
 	fprintf(f,"#  Expected: e1=%.3f sd1=%.3f n1=%i\n",e[1],sd[1],n[1]);
-	fprintf(f,"value\tobs\tnObs\texp\tnExp\tFDR(%%)\n");
+	fprintf(f,"value\tobs\tnObs\texp\tnExp\tcdf_obs\tcdf_exp\tFDR(%%)\n");
 	int i0=0, i1=l;
 	for(int i=0; i<l; i++){
 		if(i1==l && (hist[0][i]!=0 || hist[1][i]!=0)) i0=i;
@@ -76,7 +81,8 @@ void WigHist::print(FILE* f){						// print the histogram
 		double h0=hist[0][i];
 		double h1=hist[1][i];
 		double fdr=FDR[i]*100;
-		fprintf(f,"%.1f\t%.2e\t%6i\t%.2e\t%6i\t%.2f\n", getValue(i),h0,cnts[0][i],h1,cnts[1][i],fdr);
+		fprintf(f,"%.1f\t%.2e\t%6i\t%.2e\t%6i\t%.2e\t%.2e\t%.2f\n", getValue(i),h0,cnts[0][i],h1,cnts[1][i],
+				cdf_obs[i], cdf_exp[i],fdr);
 	}
 }
 
@@ -141,7 +147,7 @@ void ScaledAray::write(){
 			filePos2Pos(i,&pos,binSize);
 			if(pos.chrom != pos0.chrom  || pos.beg-pos0.beg > binSize){
 				fprintf(outWigFile,"fixedStep chrom=%s start=%li step=%i span=%i\n",
-						pos.chrom,pos.beg,binSize,binSize);
+						pos.chrom,pos.beg+1,binSize,binSize);
 			}
 			pos0.chrom=pos.chrom; pos0.beg=pos.beg;
 			fprintf(outWigFile,"%i\n",k);

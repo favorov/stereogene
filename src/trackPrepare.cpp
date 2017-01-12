@@ -97,7 +97,7 @@ void bTrack::trackDef(char *s){
 		}
 	}
 	st=getAttr(s,"name", bb);
-	if(st!=0) trackName=strdup(st);
+	if(st!=0) strcpy(trackName,st);
 }
 
 //=====================================================================================
@@ -184,6 +184,7 @@ void bTrack::readTrack(const char *fname, int cage){
 				s=strtok(0," \t\n"); if(s==0) break;			//======== ignore name field
 				s=strtok(0," \t\n"); if(s==0) break;			//======== take score field
 				if(*s!=0 && (isdigit(*s) || *s=='-')) score=atof(s);
+				if(intervFlag) score=100;
 				s=strtok(0," \t\n"); if(s==0) break;			//======== take strand field
 				if(*s!=0 && *s!='.') {strand=*s; nStrand++;}
 				if(intervFlag==GENE || intervFlag==NONE) break;
@@ -478,6 +479,7 @@ void bTrack::writeProfilePrm(){
     fprintf(f,"max=%g\n",maxP);
     fprintf(f,"average=%g\n",av);
     fprintf(f,"stdDev=%g\n",sd);
+    fprintf(f,"ivFlag=%i\n",intervFlag0);
     unsigned int chk=getChkSum(byteprofile, profileLength);
     if(byteprofilec && hasCompl) chk+=getChkSum(byteprofilec, profileLength);
     fprintf(f,"chksum=%08x\n",chk);
@@ -647,7 +649,8 @@ void CageMin(const char* fname1, const char * fname2){	//read Cage files
 	pr1=profile; profile=0;;
 	bTrack2.initProfile();
 	fname2=makeFileName(b,trackPath,fname2);
-	bTrack2.readTrack(fname2,-cage);bTrack2.name=strdup(fname2);
+	bTrack2.readTrack(fname2,-cage);
+	bTrack2.name=strdup(fname2);
 
 	verb("read OK\n");
 	for(int i=0; i<profileLength; i++){

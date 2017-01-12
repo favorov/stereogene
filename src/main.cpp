@@ -125,12 +125,6 @@ Name_Value* outWigTypes[]={
 		new Name_Value("CENTER_MULT",WIG_CENTER|WIG_MULT),
 		0
 };
-Name_Value* distTypes[]={
-		new Name_Value("TOTAL",TOTAL),
-		new Name_Value("DETAIL",CHR_DETAIL),
-		new Name_Value("NONE",NONE),
-		0
-};
 Name_Value* outResTypes[]={
 		new Name_Value("NONE",NONE),
 		new Name_Value("XML",XML),
@@ -172,7 +166,6 @@ Param *pparams[]={
 //=============================================================================================================
 		new Param("input parameters"),
 		new Param("chrom"		, &chromFile	,"chromosome file"),
-//		new Param("strand" 	 	, &strandFg0  	,"account for strand information"),
 		new Param("intervals"	, &intervFlag0	,intervalTypes,"interval type in BED file"),
 		new Param("gene"		, &intervFlag0	,GENE		,"consider entire gene"),
 		new Param("exon"		, &intervFlag0	,EXON		,"consider exons"),
@@ -212,8 +205,8 @@ Param *pparams[]={
 		new Param("writeDistr" 	, &writeDistr   ,"write foreground and background distributions"),
 		new Param("Rscrpit" 	, &RScriptFg   	,0),
 		new Param("r" 			, &RScriptFg   	,1,"write R script for the result presentation"),
-		new Param("crossWidth" 	, &crossWidth   ,0, "Width of cross-correlation plot"),
-		new Param("Distances" 	, &writeDistCorr,distTypes	,"Write distance correlations"),
+		new Param("crossWidth" 	, &crossWidth   ,0,"Width of cross-correlation plot"),
+		new Param("Distances" 	, &writeDistCorr,1,"Write distance correlations"),
 		new Param("outLC"		, &outWIG		,outWigTypes,"parameters for local correlation file"),
 		new Param("outThreshold", &outThreshold	,"threshold for output to correlation profile scaled to 0..1000"),
 		new Param("corrOnly" 	, &corrOnly   	,0),
@@ -394,7 +387,7 @@ void readPrm(char *b){
 }
 
 void readPrm(char *key, char *val){
-	if(stricmp(key,"in")==0) {addFile(val); return;}
+	if(keyCmp(key,"in")==0) {addFile(val); return;}
 	Param* prm=findParam(key);
 	if(prm!=0){
 		if(prm->readVal(val)) errorExit("unknown value %s=%s",key,val);
@@ -438,7 +431,7 @@ void parseArgs(int argc, char **argv){
 		}
 	}
 	if(wStep==0)   wStep=wSize;
-	if(RScriptFg) {writeDistCorr|=TOTAL; writeDistr=1;}
+	if(RScriptFg) {writeDistCorr=1; writeDistr=1;}
 	if(complFg==0){complFg=IGNORE_STRAND;}
 	if(threshold < 1) threshold=1;
 	profPath =makePath(profPath);
@@ -483,20 +476,19 @@ void parseArgs(int argc, char **argv){
 int main(int argc, char **argv) {
 //	test();
 //	clearDeb();
-//	debugFg=DEBUG_LOG|DEBUG_PRINT;
+	debugFg=DEBUG_LOG|DEBUG_PRINT;
 	for(int i=0; i<argc; i++){strtok(argv[i],"\r\n");}
 
 	const char * progName="StereoGene";
 	char *chrom=getenv("SG_CHROM");
 	if(chrom!=0) chromFile=strdup(chrom);
-
 	unsigned long t=time(0);	id=(unsigned int)t;	// define run id
 	parseArgs(argc, argv);
 	if(debugFg){
 		clearDeb();
 		debugFg=DEBUG_LOG|DEBUG_PRINT;
 	}
-	verb("===== %s version %s =====\n",progName,version);
+
 	makeDirs();
 	if(strcmp(logFileName,"null")==0 || strcmp(logFileName,"NULL")==0) logFileName=0;
 	if(nfiles==0){
@@ -515,6 +507,7 @@ int main(int argc, char **argv) {
 //	if(cage) {CageMin(files[0].fname,files[1].fname); exit(0);}
 
 	Correlator();
-
+	fflush(stdout);
+	fclose(stdout);
 	return 0;
 }

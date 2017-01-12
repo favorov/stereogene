@@ -173,7 +173,7 @@ void distrBkg(){
 //============================================ Store foreground distribution
 inline void storePair(int i, double d){
 	PairEntry *pe=pairs+(nPairs++);						//== store pair of positions
-	if(i%fstep == 0) FgSet[nFg++]=d;					//== store distributions (the windows should not overlap)
+	FgSet[nFg++]=d;
 	pe->profPos=i; pe->d=(float)d;// pe->rank=0;		//== define the pair
 	fgHist.add(d);
 }
@@ -181,7 +181,7 @@ inline void storePair(int i, double d){
 //============================================= Calculate coherent correlations
 void distrCorr(){
 	verb("\nForeground...");
-	int l=bTrack1.lProf-wProfSize;
+	int l=bTrack1.lProf;
 	errStatus="distrCorr";
 	maxPairs=l/wProfStep; fstep=wProfSize/wProfStep;
 	if(fstep==0) fstep=1;
@@ -190,8 +190,8 @@ void distrCorr(){
 	maxPairs*=nTrkPair;
 
 	int siz=(maxPairs+100);
-	getMem0(FgSet, siz, "Corr #1");			//== array for foreground distribution
-	getMem0(pairs, siz, "Corr #2");			//== array for pairs
+	getMem0(FgSet, siz, "Corr #1");	zeroMem(FgSet, siz);		//== array for foreground distribution
+	getMem0(pairs, siz, "Corr #2");	zeroMem(pairs, siz);		//== array for pairs
 
 	cleanCummulative();
 
@@ -317,7 +317,10 @@ int Correlator(){
 	}
 
 	//============ Read Map File
-	if(pcorProfile) projTrack.read(pcorProfile);
+	if(pcorProfile) {
+		verb("read confounder...\n");
+		projTrack.read(pcorProfile);
+	}
 	if(mapFil     ) {
 		mapTrack.read(mapFil);
 		mapTrack.makeMapIntervals();
@@ -334,12 +337,15 @@ int Correlator(){
 		profile1=files[i].fname;
 		verb("read profile1...\n");
 		bTrack1.read(profile1);					// read byte profiles
+//bTrack1.writeWig();
 		if(pcorProfile) bTrack1.ortProject();
 		bTrack1.makeIntervals();
 		for(int j=i+1; j<nfiles; j++){
 			Timer thisTimer;
 			if(files[j].id==files[i].id) continue;
+			if(strcmp(files[j].fname,files[i].fname)==0) continue;
 			profile2=files[j].fname;
+			if(outFile) free(outFile);
 			outFile=makeOutFilename(profile1, profile2);
 			makeId();
 			writeLog("  in1=<%s> in2=<%s> out=<%s>\n", profile1, profile2, outFile);
@@ -350,6 +356,8 @@ int Correlator(){
 
 			verb("read profile2...\n");
 			bTrack2.read(profile2);
+//bTrack2.writeWig();
+//if(true) continue;
 			if(pcorProfile) bTrack2.ortProject();
 			bTrack2.makeIntervals();
 			if(bTrack2.lProf != bTrack1.lProf) errorExit("Incompatible length of the profiles");
@@ -363,6 +371,7 @@ int Correlator(){
 				writeLog("Background\n");
 				distrBkg();						// Make background distribution
 			}
+
 			writeLog("Foreground\n");
 			distrCorr();					// Calculate correlations
 			writeLog("Correlations -> Done\n");

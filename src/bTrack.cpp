@@ -37,10 +37,10 @@ bool bTrack::check(const char *fname){
 	makeFileName(binFile,profPath, name, BPROF_EXT);
 //======================================================= check existing files
 	if(! fileExists(binFile)) {
-		verb("file < %s > does not exist\n",binFile); return false;
+		verb("file < %s > does not exist. Preparing binary track\n",binFile); return false;
 	}
 	if(! fileExists(prmFile)) {
-		verb("file < %s > does not exist\n",prmFile); return false;
+		verb("file < %s > does not exist. Preparing binary track\n",prmFile); return false;
 	}
 	//================= Check modification time
 	makeFileName(b,trackPath, name);
@@ -76,6 +76,9 @@ bool bTrack::check(const char *fname){
 		}
 		else if(strcmp(s1,"bpType")==0){
 			if(atoi(s2)!=bpType) {failParam("bpType");  fg=false; break;}
+		}
+		else if(trackType==BED_TRACK &&  strcmp(s1,"ivFlag")==0){
+			if(atoi(s2)!=intervFlag0) {failParam("intervals");  return false;}
 		}
 		else if(strcmp(s1,"lscale")==0){
 			if(atoi(s2)!=logScale && logScale!=AUTO_SCALE) {failParam("scale");  return false;}
@@ -276,6 +279,7 @@ int bTrack::getRnd(bool cmpl){
 //========================================================================
 void bTrack::clear(){
 	ivs.clear();
+	xfree(name,"clear btrack");
 }
 
 //========================================================================
@@ -340,7 +344,6 @@ double bTrack::getVal(unsigned char b){
 		double y=x*sd0*noiseLevel+av0;
 		return y;
 	}
-	if(b>1 && intervFlag0 && trackType==BED_TRACK) return 1000;
 	if(b < threshold) return 0;
 	if(b==1) return 0;
 	double x=bScale*(b-1)+delta;
@@ -387,6 +390,7 @@ double bTrack::getProjValue(int pos, bool cmpl){
 //================================================= decode the values to an array
 double * bTrack::getProfile(int pos, bool cmpl){ //====== pos - profile position; cmpl=true <=> +strand
 	double *a=profWindow;
+	avWindow=sdWindow=0;
 	//======================================================= fill window
 	for(int i=0; i < wProfSize; i++, a++){
 		double x=0;
@@ -416,4 +420,31 @@ double * bTrack::getProfile(int pos, bool cmpl){ //====== pos - profile position
 	return profWindow;
 }
 //======================================================
+//======================================================
+void bTrack::writeWig(){
+	FILE *f=xopen(name,"wt");
+	verb("write track <%s>\n",name);
+	fprintf(f,"track type=wiggle_0 description=\"%s\"\n",name);
+	for(int i=0; i<n_chrom; i++){
+		writeWig(f,chrom_list+i);
+	}
+	fclose(f);
+}
+//======================================================
+void bTrack::writeWig(FILE* f, Chromosome *ch){
+	int pos1=ch->base;
+	int pos2=pos1+ch->length/binSize;
+//	verb("%s\n",ch->chrom);
+	int fg=0;
+	int tr=10;
+	for(int i=0,j=pos1; j<pos2; j++,i++){
+		double x=getValue(j,0)*4;
+		if(x<tr) {fg=0; continue;}
+		if(fg==0){
+			fprintf(f,"fixedStep chrom=%s start=%i step=%i span=%i\n",ch->chrom,
+					i*binSize,binSize,binSize);
+		}
+		fprintf(f,"%.0f\n",x); fg=1;
+	}
+}
 

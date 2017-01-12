@@ -72,9 +72,6 @@ const  int LOG_SCALE =1;
 const  int LIN_SCALE =0;
 const  int AUTO_SCALE=2;
 
-const  int TOTAL=1;
-const  int CHR_DETAIL=3;
-
 const  int WIG_BASE=1;
 const  int WIG_CENTER=2;
 const  int WIG_SUM=0x10;
@@ -83,6 +80,10 @@ const  int WIG_MULT=0x20;
 
 const int MAX_GENES=100000;
 
+//============================================ Memory operations
+void *xmalloc(size_t n, const char * err);
+void zfree(void *a, const char* b);
+//============================================ MACROS
 #define getMem0(a,n,err) {if(a==0) a=(typeof a)xmalloc((n+100)*sizeof(*a),err);}
 #define getMem(a,n,err)  {a=(typeof a)xmalloc((n+100)*sizeof(*a),err);}
 #define xfree(a,b) 		 {zfree(a,b); a=0;}
@@ -106,7 +107,7 @@ extern int 	bpType;			   // type of the input data in BroadPeak file
 
 extern bool  writeDistr;		// flag: write distributions
 
-extern char *trackName;   	// current track name
+extern char trackName[4096];   	// current track name
 extern char *profPath;		// path to binary profiles
 extern char *trackPath;		// path to GBrowse track files
 extern char *resPath;		// path to results files (tracks and distributions)
@@ -176,7 +177,7 @@ extern bool writeBPeak;			// write BroadPeak
 extern bool silent;				// inhibit stdout
 extern bool syntax;				// Strong syntax control
 
-extern int writeDistCorr;		// write BroadPeak
+extern bool writeDistCorr;		// write BroadPeak
 extern int outWIG;
 extern int crossWidth;
 extern int pcaFg;
@@ -333,6 +334,8 @@ struct bTrack{		        // Binary track
 	float normProf(float x);
 	void writeByteProfile();
 	void writeProfilePrm();
+	void writeWig();
+	void writeWig(FILE* f, Chromosome *ch);
 	int addSgm(ScoredRange *bed, float *prof);
 	int addSgm(char strnd, ScoredRange *bed, float *prof, float *profc);
 };
@@ -340,6 +343,8 @@ struct bTrack{		        // Binary track
 struct Term{
 	char * fname;
 	float mult;
+	Term(){fname=0; mult=0;}
+	~Term(){if(fname) zfree(fname,"term");}
 	int read(char *b);
 	void add();
 	void make();
@@ -351,6 +356,7 @@ struct Model:bTrack{
 	int nTerm;
 
 	Model();
+	~Model(){if(definition) zfree(definition,"model");}
 	void readMap(char *fnam);
 	void create();
 	void write();
@@ -572,7 +578,7 @@ public:
 	int nAls;
 	AliasTable(){nAls=0; als=0;}
 	void readTable(const char* fname);
-	char *convert(char*oldName);
+	char *convert(char*oldName, char *newName);
 };
 
 //======================== File list Entry ==========================
@@ -641,7 +647,7 @@ int  getFlag(char*s);
 void makeDir(const char *path);
 char *makeFileName(char *b, const char *path, const char*fname);	// make filename using path and name
 char *makeFileName(char *b, const char *path, const char*fname, const char*ext);	// make filename using path, name and extension
-char *correctFname(const char* s);			// remove fucking MS Widows backslash
+char *correctFname(char* s);			// remove fucking MS Widows backslash
 char *cfgName(char* p, char* ext);			// Make config file name
 char *makePath(char* pt);					// Make path - add '/' to the end of pathname
 FILE *xopen(const char*, const char*);		// open file if exists, exit otherwise
@@ -703,9 +709,6 @@ int  Preparator(const char *fname);
 //============================================ Arrays
 double norm(double *x, int l);			// normalize to z-score
 
-//============================================ Memory operations
-void *xmalloc(size_t n, const char * err);
-void zfree(void *a, const char* b);
 
 //============================================ Debugging and logging
 void errorExit(const char *format, ...);

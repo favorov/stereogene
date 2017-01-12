@@ -14,7 +14,7 @@
 #include <sys/file.h>
 //#include <dir.h>
 
-const char* version="1.71";
+const char* version="1.72";
 
 int debugFg=0;
 //int debugFg=DEBUG_LOG|DEBUG_PRINT;
@@ -29,7 +29,7 @@ bool  NAFlag=0;
 
 long long GenomeLength=0;      // TOTAL LENGTH OF THE GENOME
 int n_chrom;
-char *trackName;       // current track name
+char trackName[4096];       // current track name
 char *chromFile=0;
 char *profPath=0;
 char *trackPath=0;
@@ -53,7 +53,7 @@ bool  syntax=1;				// Strong syntax control
 
 bool  writeDistr=1;
 bool  writeBPeak=0;
-int   writeDistCorr=TOTAL;		    // write BroadPeak
+bool  writeDistCorr=1;		    // write BroadPeak
 int   crossWidth=10000;
 bool  outSpectr=0;
 bool  outChrom=0;
@@ -150,7 +150,7 @@ ScoredRange::ScoredRange(){
 	chr=0; chrom=0;	beg=end=0;	score=0;
 }
 //====================================================================================
-char *AliasTable::convert(char*oldName){
+char *AliasTable::convert(char*oldName, char *newName){
 	char b0[1024],b1[1024];
 	strcpy(b0,oldName);
 
@@ -169,7 +169,7 @@ char *AliasTable::convert(char*oldName){
 			else break;
 		}
 	}
-	return strdup(b0);
+	return strcpy(newName, b0);
 }
 
 void AliasTable::readTable(const char* fname){
@@ -244,7 +244,9 @@ int readChromSizes(char *fname){
 	char *s1,*s2;
 
 	for(char *s; (s=fgets(buff,2048,f))!=0;){
-		if (strcmp(s, "") == 0) continue;
+		s=trim(buff);
+		if(*s==0 || *s=='#') 	continue;
+
 		if(n_chrom>=max_chrom) {
 			max_chrom+=CHROM_BUFF;
 			chrom_list=(Chromosome *)realloc(chrom_list,max_chrom*sizeof(Chromosome));
@@ -433,6 +435,7 @@ char *trim(char *s){
 
 
 //========== Convert kernel type to a string
+char kernType[1024];
 const char*getKernelType(){
 	const char *type;
 	if(kernelType==KERN_NORM	 ) type="N";
@@ -442,11 +445,11 @@ const char*getKernelType(){
 	char b[80];
 	if(kernelShift >0){
 		sprintf(b,"%s_%.1fR",type,kernelShift/1000);
-		return strdup(b);
+		return strcpy(kernType,b);
 	}
 	else if(kernelShift <0){
 		sprintf(b,"%s_%.1fL",type,-kernelShift/1000);
-		return strdup(b);
+		return strcpy(kernType,b);
 	}
 	else return type;
 }
@@ -680,10 +683,10 @@ FILE *gopen(const char*fname, const char* type){		// open file with parsing ~
 	return fopen(parseTilda(b,fname),type);
 }
 // remove fucked backslash
-char *correctFname(const char* s){
-	char *b=strdup(s),*ss;
-	for(ss=b;*ss;ss++) if(*ss=='\\') *ss='/';
-	return b;
+char *correctFname(char* s){
+	char *ss;
+	for(ss=s;*ss;ss++) if(*ss=='\\') *ss='/';
+	return s;
 }
 //================= create filename using path and name
 char* makeFileName(char *b, const char *path, const char*fname){
