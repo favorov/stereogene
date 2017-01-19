@@ -35,6 +35,7 @@ const int PRM_PATH=7;
 
 const int PRM_UNKNOWN=-0XFFFFFFF;
 
+//bool doLC=false;
 char * cfgFile=0;
 
 struct Name_Value{			// symbolic name for a value
@@ -125,6 +126,13 @@ Name_Value* outWigTypes[]={
 		new Name_Value("CENTER_MULT",WIG_CENTER|WIG_MULT),
 		0
 };
+Name_Value* LCScaleTypes[]={
+		new Name_Value("LOG",LOG_SCALE),
+		new Name_Value("LOG_LOG",LOG_LOG_SCALE),
+		new Name_Value("LIN" ,LIN_SCALE),
+		0
+};
+
 Name_Value* outResTypes[]={
 		new Name_Value("NONE",NONE),
 		new Name_Value("XML",XML),
@@ -208,6 +216,9 @@ Param *pparams[]={
 		new Param("crossWidth" 	, &crossWidth   ,0,"Width of cross-correlation plot"),
 		new Param("Distances" 	, &writeDistCorr,1,"Write distance correlations"),
 		new Param("outLC"		, &outWIG		,outWigTypes,"parameters for local correlation file"),
+		new Param("lc"			, &outWIG		,WIG_BASE|WIG_SUM,"produce profile correlation with parameter BASE"),
+		new Param("LCScale"		, &LCScale		,LCScaleTypes,"Local correlation scale: LOG_LOG | LOG | LIN"),
+
 		new Param("outThreshold", &outThreshold	,"threshold for output to correlation profile scaled to 0..1000"),
 		new Param("corrOnly" 	, &corrOnly   	,0),
 		new Param("corr" 		, &corrOnly   	,1, 0),
@@ -476,7 +487,7 @@ void parseArgs(int argc, char **argv){
 int main(int argc, char **argv) {
 //	test();
 //	clearDeb();
-	debugFg=DEBUG_LOG|DEBUG_PRINT;
+//	debugFg=DEBUG_LOG|DEBUG_PRINT;
 	for(int i=0; i<argc; i++){strtok(argv[i],"\r\n");}
 
 	const char * progName="StereoGene";
@@ -488,7 +499,6 @@ int main(int argc, char **argv) {
 		clearDeb();
 		debugFg=DEBUG_LOG|DEBUG_PRINT;
 	}
-
 	makeDirs();
 	if(strcmp(logFileName,"null")==0 || strcmp(logFileName,"NULL")==0) logFileName=0;
 	if(nfiles==0){

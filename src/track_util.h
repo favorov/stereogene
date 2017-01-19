@@ -69,6 +69,7 @@ const  int MAX_SCORE=1;
 const  int AV_SCORE=2;
 
 const  int LOG_SCALE =1;
+const  int LOG_LOG_SCALE =2;
 const  int LIN_SCALE =0;
 const  int AUTO_SCALE=2;
 
@@ -179,6 +180,7 @@ extern bool syntax;				// Strong syntax control
 
 extern bool writeDistCorr;		// write BroadPeak
 extern int outWIG;
+extern int LCScale;
 extern int crossWidth;
 extern int pcaFg;
 extern int nPca;
@@ -500,14 +502,17 @@ struct DinHistogram{		// Dynamic histogram for two variables
 	DinHistogram(int ll);				//constructor
 	int getIdx(double value);			// Get index for the value
 	double getValue(int idx);			// Get value by index
+	double getNormValue(int idx);		// Get normalized value (0..1)
 	int compress2Left(double value);	// Compress the histogram to left
 	int compress2Right(double value);	// Compress the histogram to left
-	void addStat(double value, int type);			// Add to statistics
+	void addStat(double value, int count, int type);
 	void add(double value, int type);				// Add the value
+	void add(double value, int count, int type);				// Add the value
 	void fin();
 	void print(FILE* f);
 	void clear();
 };
+extern double fiveFDR;	// the rightmost position on FDR > 5%
 //=================================================================================
 struct Histogram{
 	double  minVal, maxVal,  // Min & Max values. Min=-1; Max=1;

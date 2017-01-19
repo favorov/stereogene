@@ -7,10 +7,6 @@
  */
 #include "track_util.h"
 
-//TODO linear instead  log transform;
-//TODO Normalize histogram;
-//TODO CAlulate and print FDR
-
 
 struct ScaledAray{
 	float *array;		// values
@@ -25,7 +21,7 @@ struct ScaledAray{
 
 ScaledAray wigCorr;
 double *smoothProf2, *smoothProf1;
-double minLC,maxLC;		// min and max values of the local correlation
+//double minLC,maxLC;		// min and max values of the local correlation
 
 
 struct WigHist:DinHistogram{
@@ -38,11 +34,45 @@ struct WigHist:DinHistogram{
 	void fin();
 };
 
+WigHist dHist=WigHist(1000000);
+WigHist NormWHist=WigHist(500);
+
+double fiveFDR=0;
+
+double LClogScale=1000;
+
+double wigScale(double v){
+	v*=LClogScale;
+	if(LCScale==LOG_SCALE) 		v=log(v+1);
+	if(LCScale==LOG_LOG_SCALE) 	v=log(log(v+1)+1);
+	return v;
+}
 double normWig(double v){
-	return 1000.*(v-minLC)/(maxLC-minLC);
+	double vx=(v-dHist.min)/(dHist.max-dHist.min);	//renorm to 0..1
+	double vy=wigScale(vx);
+	double minX=wigScale(0), maxX=wigScale(1);
+	double w=1000.*(vy-minX)/(maxX-minX);
+	return w;				//renorm to 0..1000
 }
 
-WigHist dHist=WigHist(1000);
+void renormDistrib(){
+	for(int i=0; i<dHist.l; i++){
+		int counts[2]={dHist.cnts[0][i],dHist.cnts[1][i]};
+		double v0=dHist.getValue(i);
+		double v=normWig(v0);
+		for(int tt=0; tt<2; tt++){
+			if(counts[tt]){
+				NormWHist.add(v,counts[tt],tt);
+			}
+		}
+	}
+	NormWHist.fin();
+	for(int i=NormWHist.l-1; i>=0; i--){
+		if(NormWHist.FDR[i] <0.05)   fiveFDR=NormWHist.getValue(i);
+	}
+}
+
+
 WigHist::WigHist(int l):DinHistogram(l){
 	getMem(FDR,l,"WigHist:getFDR");
 	getMem(cdf_obs,l,"WigHist:getFDR");
@@ -50,9 +80,6 @@ WigHist::WigHist(int l):DinHistogram(l){
 }
 
 void WigHist::fin(){
-	min =normWig( min); max= normWig( max);
-	hMin=normWig(hMin); hMax=normWig(hMax);
-	bin=(hMax-hMin)/l;
 	DinHistogram::fin();					// normalize results
 	double obs=0, exp=0;
 	for(int i=l-1; i>=0; i--){
@@ -60,7 +87,7 @@ void WigHist::fin(){
 		cdf_exp[i]=(exp+=hist[1][i]*bin);				// expected
 		double psi=1/n[0]*bin;				// psudocounts
 		double x=(exp+psi)/(obs+psi);
-		FDR[i]=x;
+		FDR[i]=x>1 ? 1:x;
 	}
 }
 
@@ -88,7 +115,7 @@ void WigHist::print(FILE* f){						// print the histogram
 
 //==========================================================================
 ScaledAray::ScaledAray(){
-	minLC=1.e+128; maxLC=-1.e+128; curPos=0; array=0; counts=0;
+	curPos=0; array=0; counts=0;
 }
 
 void ScaledAray::init(){
@@ -96,8 +123,7 @@ void ScaledAray::init(){
 	getMem0(counts,profileLength+10, "ScaledAray::init #2");
 	zeroMem(array,profileLength+10);
 	zeroMem(counts,profileLength+10);
-	minLC=1.e+128; maxLC=-1.e+128; curPos=0;
-
+	curPos=0;
 }
 
 
@@ -113,21 +139,13 @@ void ScaledAray::addArray(double *f, int pos){
 	curPos=pos+wProfSize;
 }
 
-
-
 void ScaledAray::write(){
 	char bf[1024];
 	sprintf(bf,"%s.wig",outFile);
 	FILE *outWigFile=xopen(bf,"wt");
 	verb("\nwrite Local Correlations\n");
 	ScoredRange pos, pos0;
-
-	minLC=1.e+128; maxLC=-1.e+128;
-	for(int i=0; i<profileLength; i++){
-		if(minLC > array[i]) minLC = array[i];
-		if(maxLC < array[i]) maxLC = array[i];
-	}
-
+	renormDistrib();
 	fprintf(outWigFile,"track type=wiggle_0 ");
 	char *s=strrchr(outFile,'/'); if(s==0) s=outFile; else s++;
 	fprintf(outWigFile,"description=\"correlation: %s\" \n",s);
@@ -136,13 +154,27 @@ void ScaledAray::write(){
 	if((outWIG & WIG_CENTER)== WIG_CENTER) fprintf(outWigFile,"CENTER ");
 	if((outWIG & WIG_SUM)   == WIG_SUM   ) fprintf(outWigFile,"SUM "   );
 	if((outWIG & WIG_MULT)  == WIG_MULT  ) fprintf(outWigFile,"MULT "  );
+	if(LCScale==LOG_SCALE) fprintf(outWigFile,"scale=LOG" );
 	fprintf(outWigFile,"\n");
-	fprintf(outWigFile,"#Scale data: min=%.4f;  max=%.4f;   scale: x=1000*(LC-min)/(max-min)\n", minLC,maxLC);
-	fprintf(outWigFile,"#Source statstics: av1=%.4f;  av2=%.4f; sd1=%.4f; sd2=%.4f\n", bTrack1.av0,bTrack2.av0, bTrack1.sd0,bTrack2.sd0);
+	fprintf(outWigFile,"#Scale data: min=%.4f;  max=%.4f; ", dHist.min,dHist.max);
+	if(LCScale!=LIN_SCALE)
+		fprintf(outWigFile," v(LC)=(LC-min)/(max-min)*%.0f;\n", LClogScale);
+	if(LCScale==LOG_SCALE) {
+		fprintf(outWigFile,"#scale: z(LC)=log(v(LC)+1); out=1000*(z(LC)-z(min))/(z(max)-z(min))\n");
+	}
+	else if(LCScale==LOG_LOG_SCALE) {
+		fprintf(outWigFile,"#scale: z(LC)=log(log(v(LC)+1)+1); out=1000*(z(LC)-z(min))/(z(max)-z(min))\n");
+	}
+	else{
+		fprintf(outWigFile,"\n#scale: out=1000*(LC-min)/(max-min)\n");
+	}
+
+  fprintf(outWigFile,"#Source statstics: av1=%.4f;  av2=%.4f; sd1=%.4f; sd2=%.4f\n", bTrack1.av0,bTrack2.av0, bTrack1.sd0,bTrack2.sd0);
 
 	for(int i=0; i<profileLength; i++){
 		if(i%1000000 ==0) verb("%5.1f%%\r",1.*i/profileLength*100);
 		int k=(int)normWig(array[i]);
+
 		if(k>=outThreshold){
 			filePos2Pos(i,&pos,binSize);
 			if(pos.chrom != pos0.chrom  || pos.beg-pos0.beg > binSize){
@@ -158,10 +190,10 @@ void ScaledAray::write(){
 	//========================================== Write histograms ===============
 	sprintf(bf,"%s.LChist",outFile);
 	outWigFile=fopen(bf,"wt");
-	dHist.fin();
-	dHist.print(outWigFile);
+	NormWHist.print(outWigFile);
 	fclose(outWigFile);
 	dHist.clear();
+	NormWHist.clear();
 }
 //==================================================================
 void initOutWig(){
@@ -203,6 +235,7 @@ double LocalCorrTrack(int pos, bool cmpl1, bool cmpl2){
 
 	double av=0;
 	double sd=bTrack1.sd0*bTrack2.sd0;
+	int qc=0;
 	for(int i=LFlankProfSize; i<profWithFlanksLength-RFlankProfSize; i++){
 		double x=smoothProf1[i]	/profWithFlanksLength;					//the smoothed profile for x
 		double y=smoothProf2[i]	/profWithFlanksLength;					//the smoothed profile for y
@@ -216,8 +249,9 @@ double LocalCorrTrack(int pos, bool cmpl1, bool cmpl2){
 			if((outWIG & WIG_CENTER) == WIG_CENTER) {xx-=bTrack1.av0; yy-=bTrack2.av0; }
 			lc=0.5*(xx*y+yy*x)/sd;
 		}
-		LCorrelation.im[i]=lc; av+=lc;	// We use wCorrelation.re as a tmp buffer
+		LCorrelation.im[i]=lc; av+=lc;	// We use wCorrelation.im as a tmp buffer
 		dHist.add(lc,pos < 0 ? 1:0);
+		if(pos >= 0) qc++;
 	}
 	av/=profileLength;
 	if(pos>=0) wigCorr.addArray(LCorrelation.im+LFlankProfSize,pos);

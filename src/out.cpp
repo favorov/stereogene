@@ -539,10 +539,11 @@ void printR(){
 	fprintf(f," #fg_chrom <- fg[fg[,1]==\"chr1\",] \n");
 	fprintf(f," #dist_chrom <- dist$chr1 \n\n\n");
 	fprintf(f," # save plot to pdf \n");
-	if(writePDF) fprintf(f," pdf(paste(name,'.pdf', sep=''), height = 6, width = 5) \n\n");
+	if(writePDF) fprintf(f," pdf(paste(name,'.pdf', sep=''), height = 9, width = 5) \n\n");
 	fprintf(f," #  create the plot \n");
 	fprintf(f," old.par <- par( no.readonly = TRUE ) \n");
-	fprintf(f," par( mfrow = c( 2, 1 ), oma = c( 0, 0, 0, 0 ),mar=c(3,3,3,1),mgp=c(1.6,0.45,0)) \n\n");
+	fprintf(f," par( mfrow = c( %i, 1 ), oma = c( 0, 0, 0, 0 ),mar=c(3,3,3,1),mgp=c(1.6,0.45,0)) \n\n",
+			outWIG?3:2);
 	char sub[1024]; if(writePDF) sub[0]=0; else sprintf(sub,"\\n%s",fname);
 	fprintf(f," plot(density(bkg[[1]]), xlim=c(-1,1), ylim=c(0, y_lim1), xlab='correlation coefficient',ylab='density', \n");
 	fprintf(f," col='red', main='Distribution of correlations%s', \n",sub);
@@ -557,23 +558,32 @@ void printR(){
 	fprintf(f," lines(dist$x/1000,dist$Bkg , col='red',lwd=2) \n");
 	fprintf(f," #plot line for chomosome \n");
 	fprintf(f," #lines(dist$x/1000, dist_chrom , col='green',lwd=2) \n\n");
-	fprintf(f," par( old.par ) \n\n");
-	if(writePDF) fprintf(f," dev.off() \n");
-	if((!writePDF) && outWIG){
+	if(outWIG){
+		const char *ss="";
+		if(LCScale==LOG_SCALE) ss="(log)";
+		if(LCScale==LOG_LOG_SCALE) ss="(log log)";
+		double nn=fiveFDR*2; if(nn > 1000) nn=1000;
 		fprintf(f,"lc=read.table(paste(name, \'.LChist\', sep = \'\'),, header=TRUE)\n");
-		fprintf(f,"xmax=300; x0=xmax*0.3; x1=x0+20; y0=90;\n");
+		fprintf(f,"xmax=%.0f; x0=xmax-150; x1=x0+20; y0=90; dy=7;\n",nn);
 		fprintf(f,"plot(lc$val, lc$cdf_obs*100000, col='blue', lwd=2, \n");
-		fprintf(f,"type=\'l\',ylim=c(0,100), xlim=c(0,xmax), ylab=\'FDR\',xlab=\'wig-values\',\n");
+		fprintf(f,"type=\'l\',ylim=c(0,100), xlim=c(0,xmax), ylab=\'FDR\',");
+		fprintf(f,"xlab=\'normalized LC-values %s\',\n",ss);
 		fprintf(f,"main=\'Local correlation distributions\');\n");
 		fprintf(f,"lines(lc$val, lc$cdf_exp*100000, col=\'red\', lwd=2);\n");
 		fprintf(f,"lines(lc$val, lc$FDR, col='black', lwd=3);\n");
-		fprintf(f," text(x0, y0+8,name,pos=4);\n");
-		fprintf(f,"segments(x0,y0,x1,y0,col='red',lwd=2); text(x1+5,y0,'expected cdf *100000',pos=4)\n");
-		fprintf(f,"y0=y0-5;\n");
-		fprintf(f,"segments(x0,y0,x1,y0,col='blue',lwd=2); text(x1+5,y0,'observed cdf *100000',pos=4)\n");
-		fprintf(f,"y0=y0-5;\n");
+		fprintf(f," text(x0, y0+7,name,pos=4); y0=y0-5\n");
+		fprintf(f,"segments(x0,y0,x1,y0,col='red',lwd=2); text(x1+5,y0,'expected (1 - cdf) * 100000',pos=4)\n");
+		fprintf(f,"y0=y0-dy;\n");
+		fprintf(f,"segments(x0,y0,x1,y0,col='blue',lwd=2); text(x1+5,y0,'observed (1 - cdf) * 100000',pos=4)\n");
+		fprintf(f,"y0=y0-dy;\n");
 		fprintf(f,"segments(x0,y0,x1,y0,col='black',lwd=3); text(x1+5,y0,'FDR',pos=4)\n");
+		fprintf(f,"y0=y0-dy;\n");
+		fprintf(f,"segments(x0,y0,x1,y0,col='gray',lwd=3); text(x1+5,y0,'FDR=5%%',pos=4)\n");
+
+		fprintf(f,"segments(0,5,xmax,5,col='gray',lwd=1); text(x1+5,y0,'FDR',pos=4)\n");
 	}
+	fprintf(f," par( old.par ) \n\n");
+	if(writePDF) fprintf(f," dev.off() \n");
 
 //===========================   OLD Version ==============================
 //	fprintf(f,"#  Read the data \n\n");

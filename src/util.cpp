@@ -82,6 +82,8 @@ double kernelShift=0;      	    // Kernel mean (for Gauss) or Kernel start for e
 int intervFg0;
 double scaleFactor0=0.2;
 int outWIG=NONE;
+//int LCScale=LIN_SCALE;
+int LCScale=LOG_SCALE;
 int outThreshold=1;
 
 
@@ -981,6 +983,13 @@ double DinHistogram::getValue(int idx){	//get value by index
 	return hMin+idx*bin+bin/2;
 }
 
+double DinHistogram::getNormValue(int idx){
+	double v=getValue(idx);
+	v=(v-min)/(max-min);
+	return v;
+}
+
+
 int DinHistogram::compress2Left(double value){  //Compress the histogram to the Left
 	for(int i=0, j=0; i<l; i+=2, j++){			// Compress the values
 		cnts[0][j]=cnts[0][i]+cnts[0][i+1];
@@ -1003,32 +1012,37 @@ int DinHistogram::compress2Right(double value){	//Compress the histogram to the 
 	return getIdx(value);
 }
 
-void DinHistogram::addStat(double value, int type){		//add the value to the statistics
-	n[type]++; e[type]+=value; sd[type]+=value*value;	//count, mean, std dev.
+void DinHistogram::addStat(double value, int count, int type){		//add the value to the statistics
+	n[type]+=count; e[type]+=value; sd[type]+=value*value;	//count, mean, std dev.
 	if(value > max) max=value;
 	if(value < min) min=value;
 }
 
 void DinHistogram::add(double value, int type){			// add the value to the histogram
+	add(value,1,type);
+}
+
+void DinHistogram::add(double value, int count, int type){			// add the value to the histogram
+	if(count==0) return;
 	if(n[0]==0 && n[1]==0){								// the histogram is empty
-		cnts[type][0]=1; addStat(value,type);			// set the value
+		cnts[type][0]=count; addStat(value,count,type);			// set the value
 		hMin=hMax=value;								// define boundaries
 		return;
 	}
 	if(hMin==hMax){										// the histogram contains only single bin
 		if(value==hMin){								// new value equal to the single bin
-			cnts[type][0]++; addStat(value,type);		//
+			cnts[type][0]+=count; addStat(value,count,type);		//
 			return;
 		}
 		else if(value > hMin){							// the new value is right to single bin
-			cnts[type][l-1]++; addStat(value,type);		// the new value defines the right bin
-			max=hMax=value;								// redefine the boundaries
+			cnts[type][l-1]+=count; addStat(value,count,type);		// the new value defines the right bin
+			hMax=value;								// redefine the boundaries
 		}
 		else{											// the new value is less than single bin
 			cnts[0][l-1]=cnts[0][0];					// Put the old value to the right end of the histogram
 			cnts[1][l-1]=cnts[1][0];					//
-			cnts[type][0]=1; addStat(value,type);		// Put the new value to the left bin
-			min=hMin=value;								// redefine the boundaries
+			cnts[type][0]+=count; addStat(value,count,type);		// Put the new value to the left bin
+			hMin=value;								// redefine the boundaries
 		}
 		bin=(hMax-hMin)/l;								// Define the bin
 		return;
@@ -1036,7 +1050,7 @@ void DinHistogram::add(double value, int type){			// add the value to the histog
 	int i=getIdx(value);								// The histogram contains some values
 	while(i < 0){i=compress2Right(value);}				// The new value is less than the first bin
 	while(i >=l){i=compress2Left(value);}				// The new value is grater than the last bin
-	cnts[type][i]++; addStat(value,type);				// Put the new value
+	cnts[type][i]+=count; addStat(value,count,type);				// Put the new value
 }
 
 void DinHistogram::fin(){								// Normalize and calculate the statistics
