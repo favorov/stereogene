@@ -69,17 +69,17 @@ double calcCorelations(int pos1, int pos2, bool cmpl1, bool cmpl2, bool rnd){
 	if(nz1 > maxZero || nz2 > maxZero) {
 		return -300; // too many zeros in the profiles
 	}
+
 	double *pr1=bTrack1.getProfile(pos1,cmpl1);		// decode the first profile. Decoder uses hasCompl and complFg flags and combines profiles
 	double *pr2=bTrack2.getProfile(pos2,cmpl2);		// decode the second profile
-
 	kern->fftx(pr1,bTrack1.deriv);					// do fft for the profiles
+//if(rnd){kern->fx.random();}
 	kern->ffty(pr2,bTrack2.deriv);
-
 	double corr=kern->dist(cmpl1);					// Kernel strand is selected by the first profile
 	double lCorr=0, av1, av2;
 	if(corr > -10){									// Error in the correlation => skip the pair of the windows
 		if(outWIG){				                 // Make local correlation track
-			lCorr=LocalCorrTrack(rnd? -1 : pos1, cmpl1, cmpl2);
+			lCorr=LocalCorrTrack(pos1, cmpl1, cmpl2,rnd);
 		}
 		if(!rnd) {									// foreground distribution
 			//======= Calc the correlation
@@ -91,8 +91,9 @@ double calcCorelations(int pos1, int pos2, bool cmpl1, bool cmpl2, bool rnd){
 			addChromStat(pos1,corr,lCorr, av1,av2);	// Add data to chromosome statistics
 			if(doAutoCorr){calcAutoCorr();}
 		}
-		else
+		else{
 			if(writeDistCorr) XYbgcorrelation.calcXYCorr(-1,cmpl1, cmpl2,corr); //Do background correlation function
+		}
 	}
 	return corr;
 }
@@ -364,7 +365,7 @@ int Correlator(){
 			if(mapFil!=0 && mapTrack.lProf != bTrack1.lProf) errorExit("Incompatible length of the profiles and map");
 			//===================================================================== Calculate
 			verb("=== OutFile = <%s>\n",outFile);
-			XYfgCorrelation  .initXY();
+			XYfgCorrelation.initXY();
 			XYbgcorrelation.initXY();
 			clearChromosomes();
 			if(corrOnly==0){

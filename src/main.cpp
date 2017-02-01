@@ -49,25 +49,34 @@ struct Param{
 	int type;					// parameter type
 	Name_Value **enums;			// array of aviable values
 	void *prm;					// pointer to the argument value
-	int value;					//a value that should be set if -prm is used in a command line
+	int value;					// a value that should be set if -prm is used in a command line
+	int printFg;				// the param should be printed to PRM file
 	const char *description;
 	Param(const char* descr);
-	Param(const char* _name, int    *prm, const char* descr);
-	Param(const char* _name, int    *prm, int val, const char* descr);
-	Param(const char* _name, int    *prm, Name_Value **fg, const char* descr);
-	Param(const char* _name, bool   *prm, const char* descr);
-	Param(const char* _name, bool   *prm, bool val, const char* descr);
-	Param(const char* _name, double *prm, const char* descr);
-	Param(const char* _name, char * *prm, const char* descr);
-	Param(const char* _name, MapIv  *prm, const char* descr);
-	Param(const char* _name,  char*  *_prm, const char* descr, bool path);
+	Param(const char* _name, int print, int    *prm, const char* descr);
+	Param(const char* _name, int print, int    *prm, int val, const char* descr);
+	Param(const char* _name, int print, int    *prm, Name_Value **fg, const char* descr);
+	Param(const char* _name, int print, bool   *prm, const char* descr);
+	Param(const char* _name, int print, bool   *prm, bool val, const char* descr);
+	Param(const char* _name, int print, double *prm, const char* descr);
+	Param(const char* _name, int print, char * *prm, const char* descr);
+	Param(const char* _name, int print, MapIv  *prm, const char* descr);
+	Param(const char* _name, int print, char*  *_prm, const char* descr, bool path);
 
 	void setVal();
-	void init(const char* _name, void* _prm, int type, Name_Value **fg, const char* descr);
+	void init(const char* _name,int print, void* _prm, int type, Name_Value **fg, const char* descr);
 	void printDescr();
 	int readVal(char *s);
 	int readEnum(char *s);
+	char* printParamValue(char *buf);
 };
+
+const char* getNamebyVal(Name_Value **nval, int val){
+	for(; nval!=0; nval++){
+		if((*nval)->value == val) return (*nval)->name;
+	}
+	return "NA";
+}
 
 //===================================================================================================
 Param *findParam(const char * name);
@@ -145,95 +154,95 @@ Name_Value* outResTypes[]={
 Param *pparams[]={
 //================================================== Common parameters
 		new Param("common parameters"),
-		new Param("v"		    , &verbose		,1, "verbose"),
-		new Param("syntax"		, &syntax		,1, "strong syntax control in input files"),
-		new Param("verbose"	    , &verbose		,"verbose"),
-		new Param("s"		    , &silent		,1, "no output to stdout"),
-		new Param("silent"	    , &silent		,"no output to stdout"),
+		new Param("v"		    ,0, &verbose		,1, "verbose"),
+		new Param("syntax"		,0, &syntax		,1, "strong syntax control in input files"),
+		new Param("verbose"	    ,0, &verbose		,"verbose"),
+		new Param("s"		    ,0, &silent		,1, "no output to stdout"),
+		new Param("silent"	    ,0, &silent		,"no output to stdout"),
 
 
 //=============================================================================================================
 		new Param("preparation parameters"),
-		new Param("bin" 	 	, &binSize  	,"bin size for input averaging"),
-		new Param("scale" 	 	, &logScale  	,scaleTypes,"use Logarithmic or linear scale"),
-		new Param("scaleFactor"	, &scaleFactor0 ,0),
-		new Param("clear" 	  	, &clearProfile ,"force binary profile preparation"),
-		new Param("c" 	  	    , &clearProfile , 1,"force  binary profile preparation"),
+		new Param("bin" 	 	,1, &binSize  	,"bin size for input averaging"),
+		new Param("scale" 	 	,0, &logScale  	,scaleTypes,"use Logarithmic or linear scale"),
+		new Param("scaleFactor"	,0, &scaleFactor0 ,0),
+		new Param("clear" 	  	,0, &clearProfile ,"force binary profile preparation"),
+		new Param("c" 	  	    ,0, &clearProfile , 1,"force  binary profile preparation"),
 
 //=============================================================================================================
 		new Param("paths and files"),
-		new Param("cfg" 		, &cfgFile 		,"config file"),
-		new Param("profPath" 	, &profPath 	,"path for binary profiles", true),
-		new Param("trackPath" 	, &trackPath 	,"path for tracks", true),
-		new Param("resPath" 	, &resPath 		,"path for results", true),
+		new Param("cfg" 		,0, &cfgFile 		,"config file"),
+		new Param("profPath" 	,0, &profPath 	,"path for binary profiles", true),
+		new Param("trackPath" 	,0, &trackPath 	,"path for tracks", true),
+		new Param("resPath" 	,0, &resPath 		,"path for results", true),
 
-		new Param("statistics" 	, &statFileName	 ,"cumulative file with statistics"),
-		new Param("params" 		, &paramsFileName,"cumulative file with parameters"),
-		new Param("log" 		, &logFileName	 ,"cumulative log-file"),
-		new Param("aliases" 	, &aliaseFil	,0),
+		new Param("statistics" 	,0, &statFileName	 ,"cumulative file with statistics"),
+		new Param("params" 		,0, &paramsFileName,"cumulative file with parameters"),
+		new Param("log" 		,0, &logFileName	 ,"cumulative log-file"),
+		new Param("aliases" 	,0, &aliaseFil	,0),
 //=============================================================================================================
 		new Param("input parameters"),
-		new Param("chrom"		, &chromFile	,"chromosome file"),
-		new Param("intervals"	, &intervFlag0	,intervalTypes,"interval type in BED file"),
-		new Param("gene"		, &intervFlag0	,GENE		,"consider entire gene"),
-		new Param("exon"		, &intervFlag0	,EXON		,"consider exons"),
-		new Param("ivs"			, &intervFlag0	,IVS 	 	,"consider introns"),
-		new Param("gene_beg"	, &intervFlag0	,GENE_BEG	,"gene starts"),
-		new Param("exon_beg"	, &intervFlag0	,EXON_BEG	,"exons starts"),
-		new Param("ivs_beg"		, &intervFlag0	,IVS_BEG	,"introns starts"),
-		new Param("gene_end"	, &intervFlag0	,GENE_END	,"gene ends"),
-		new Param("exon_end"	, &intervFlag0	,EXON_END	,"exons ends"),
-		new Param("ivs_end"		, &intervFlag0	,IVS_END	,"introns ends"),
-		new Param("bpType" 	  	, &bpType  		,bpTypes	,"The value used as a score for BroadPeak input file"),
-		new Param("pcorProfile" , &pcorProfile	,"Track for partial correlation"),
-		new Param("NA"       	, &NAFlag     	,1 , "use NA values as unknown and fill them by noise"),
-		new Param("threshold"	, &threshold	,"threshold for input data for removing too small values: 0..250"),
-		new Param("map" 		, &mapFil 		,0),
-		new Param("mapIv" 		, &miv			,0),
+		new Param("chrom"		,0, &chromFile	,"chromosome file"),
+		new Param("intervals"	,1, &intervFlag0	,intervalTypes,"interval type in BED file"),
+		new Param("gene"		,0, &intervFlag0	,GENE		,"consider entire gene"),
+		new Param("exon"		,0, &intervFlag0	,EXON		,"consider exons"),
+		new Param("ivs"			,0, &intervFlag0	,IVS 	 	,"consider introns"),
+		new Param("gene_beg"	,0, &intervFlag0	,GENE_BEG	,"gene starts"),
+		new Param("exon_beg"	,0, &intervFlag0	,EXON_BEG	,"exons starts"),
+		new Param("ivs_beg"		,0, &intervFlag0	,IVS_BEG	,"introns starts"),
+		new Param("gene_end"	,0, &intervFlag0	,GENE_END	,"gene ends"),
+		new Param("exon_end"	,0, &intervFlag0	,EXON_END	,"exons ends"),
+		new Param("ivs_end"		,0, &intervFlag0	,IVS_END	,"introns ends"),
+		new Param("bpType" 	  	,1, &bpType  		,bpTypes	,"The value used as a score for BroadPeak input file"),
+		new Param("pcorProfile" ,1, &pcorProfile	,"Track for partial correlation"),
+		new Param("NA"       	,1, &NAFlag     	,1 , "use NA values as unknown and fill them by noise"),
+		new Param("threshold"	,1, &threshold	,"threshold for input data for removing too small values: 0..250"),
+		new Param("map" 		,1, &mapFil 		,0),
+		new Param("mapIv" 		,1, &miv			,0),
 //=============================================================================================================
 		new Param("Analysis parameters"),
-		new Param("kernelType"	, &kernelType	,kernelTypes,0),
-		new Param("kernelSigma"	, &kernelSigma  ,"Kernel width"),
-		new Param("kernelShift"	, &kernelShift  ,0),
-		new Param("wSize" 	  	, &wSize  		,"Window size"),
-		new Param("wStep" 	  	, &wStep  		,0),
-		new Param("kernelNS"	, &kernelNS  	,0),
-		new Param("flankSize"	, &flankSize  	,0),
-		new Param("maxNA"		, &maxNA  		,"Max number of NA values in window (percent)"),
-		new Param("maxZero"		, &maxZero0  	,"Max number of zero values in window (percent)"),
-		new Param("nShuffle"	, &nShuffle  	,"Number of shuffles for background calculation (percent of window pairs)"),
-		new Param("MaxShuffle"	, &maxShuffle  	,"Max number of shuffles"),
-		new Param("MinShuffle"	, &minShuffle  	,"Min number of shuffles"),
-		new Param("noiseLevel"	, &noiseLevel  	,0),
-		new Param("complFg"		, &complFg		,complFlags,0),
+		new Param("kernelType"	,1, &kernelType	,kernelTypes,0),
+		new Param("kernelSigma"	,1, &kernelSigma  ,"Kernel width"),
+		new Param("kernelShift"	,1, &kernelShift  ,0),
+		new Param("wSize" 	  	,1, &wSize  		,"Window size"),
+		new Param("wStep" 	  	,1, &wStep  		,0),
+		new Param("kernelNS"	,0, &kernelNS  	,0),
+		new Param("flankSize"	,1, &flankSize  	,0),
+		new Param("maxNA"		,1, &maxNA  		,"Max number of NA values in window (percent)"),
+		new Param("maxZero"		,1, &maxZero0  	,"Max number of zero values in window (percent)"),
+		new Param("nShuffle"	,1, &nShuffle  	,"Number of shuffles for background calculation (percent of window pairs)"),
+		new Param("MaxShuffle"	,0, &maxShuffle  	,"Max number of shuffles"),
+		new Param("MinShuffle"	,0, &minShuffle  	,"Min number of shuffles"),
+		new Param("noiseLevel"	,1, &noiseLevel  	,0),
+		new Param("complFg"		,1, &complFg		,complFlags,0),
 //=============================================================================================================
 		new Param("Output parameters"),
-		new Param("outSpectr" 	, &outSpectr   	,"write fourier spectrums"),
-		new Param("outChrom" 	, &outChrom   	,"write statistics by chromosomes"),
-		new Param("writeDistr" 	, &writeDistr   ,"write foreground and background distributions"),
-		new Param("Rscrpit" 	, &RScriptFg   	,0),
-		new Param("r" 			, &RScriptFg   	,1,"write R script for the result presentation"),
-		new Param("crossWidth" 	, &crossWidth   ,0,"Width of cross-correlation plot"),
-		new Param("Distances" 	, &writeDistCorr,1,"Write distance correlations"),
-		new Param("outLC"		, &outWIG		,outWigTypes,"parameters for local correlation file"),
-		new Param("lc"			, &outWIG		,WIG_BASE|WIG_SUM,"produce profile correlation with parameter BASE"),
-		new Param("LCScale"		, &LCScale		,LCScaleTypes,"Local correlation scale: LOG_LOG | LOG | LIN"),
+		new Param("outSpectr" 	,0, &outSpectr   	,"write fourier spectrums"),
+		new Param("outChrom" 	,1, &outChrom   	,"write statistics by chromosomes"),
+		new Param("writeDistr" 	,1, &writeDistr   ,"write foreground and background distributions"),
+		new Param("Rscrpit" 	,0, &RScriptFg   	,0),
+		new Param("r" 			,0, &RScriptFg   	,1,"write R script for the result presentation"),
+		new Param("crossWidth" 	,0, &crossWidth   ,0,"Width of cross-correlation plot"),
+		new Param("Distances" 	,1, &writeDistCorr,1,"Write distance correlations"),
+		new Param("outLC"		,1, &outWIG		,outWigTypes,"parameters for local correlation file"),
+		new Param("lc"			,0, &outWIG		,WIG_BASE|WIG_SUM,"produce profile correlation with parameter BASE"),
+		new Param("LCScale"		,1, &LCScale		,LCScaleTypes,"Local correlation scale: LOG_LOG | LOG | LIN"),
 
-		new Param("outThreshold", &outThreshold	,"threshold for output to correlation profile scaled to 0..1000"),
-		new Param("corrOnly" 	, &corrOnly   	,0),
-		new Param("corr" 		, &corrOnly   	,1, 0),
-		new Param("outRes" 		, &outRes 		,outResTypes,"format for results in statistics file"),
-		new Param("AutoCorr"  	, &doAutoCorr  	,0),
+		new Param("outThreshold",1, &outThreshold	,"threshold for output to correlation profile scaled to 0..1000"),
+		new Param("corrOnly" 	,0, &corrOnly   	,0),
+		new Param("corr" 		,0, &corrOnly   	,1, 0),
+		new Param("outRes" 		,0, &outRes 		,outResTypes,"format for results in statistics file"),
+		new Param("AutoCorr"  	,0, &doAutoCorr  	,0),
 //=========================================== Additional parameters (see Undocumented) ===============================
-		new Param("outBPeak" 	, &writeBPeak   ,"write BradPeak file"),
-		new Param("pVal"		, &pVal  		,"threshold for BroadPeak output"),
-		new Param("qVal"		, &qVal  		,"threshold for BroadPeak output"),
-		new Param("pcaSegment" 	, &pcaSegment	,0),
-		new Param("nPca" 		, &nPca			,0),
-		new Param("cage" 		, &cage			,0),
-		new Param("inpThreshold", &inpThreshold ,0),	//input binarization testing, %of max
-		new Param("d", &debugFg  	,1, 0),							//debug mode
-		new Param("pdf", &writePDF  ,1, 0),							//write R plots to pdf
+		new Param("outBPeak" 	,0, &writeBPeak   ,"write BradPeak file"),
+		new Param("pVal"		,0, &pVal  		,"threshold for BroadPeak output"),
+		new Param("qVal"		,0, &qVal  		,"threshold for BroadPeak output"),
+		new Param("pcaSegment" 	,0, &pcaSegment	,0),
+		new Param("nPca" 		,0, &nPca			,0),
+		new Param("cage" 		,0, &cage			,0),
+		new Param("inpThreshold",0, &inpThreshold ,0),	//input binarization testing, %of max
+		new Param("d"			,0, &debugFg  	,1, 0),	//debug mode
+		new Param("pdf"			,0, &writePDF  ,1, 0),	//write R plots to pdf
 
 		new Param("Happy correlations!"),
 		0,
@@ -242,26 +251,35 @@ Param *pparams[]={
 //=================================================================================================
 //===================================  End declaration ============================================
 //=================================================================================================
-void Param::init(const char* _name, void *_prm, int _type, Name_Value **fg, const char* descr){
+void Param::init(const char* _name,int print,void *_prm, int _type, Name_Value **fg, const char* descr){
 	name=_name;
+	printFg=print;
 	enums=fg;
 	description=descr;
 	prm=_prm;
 	type=_type;
 	value=PRM_UNKNOWN;
 }
-Param::Param(const char* descr)												{init("",0,0,0 ,descr);}
-Param::Param(const char* _name,  int    *_prm, const char* descr)			{init(_name,_prm,PRM_INT	,0 ,descr);}
-Param::Param(const char* _name,  int    *_prm, Name_Value **fg, const char* descr){init(_name,_prm,PRM_ENUM	,fg,descr);}
-Param::Param(const char* _name,  bool   *_prm,  const char* descr)			{init(_name,_prm,PRM_FG		,0 ,descr);}
-Param::Param(const char* _name,  double *_prm,  const char* descr)			{init(_name,_prm,PRM_DOUBLE	,0 ,descr);}
-Param::Param(const char* _name,  char*  *_prm, const char* descr)			{init(_name,_prm,PRM_STRING	,0 ,descr);}
-Param::Param(const char* _name,  char*  *_prm, const char* descr, bool path) {init(_name,_prm,PRM_PATH	,0 ,descr);}
-Param::Param(const char* _name, MapIv   *_prm, const char* descr)			{init(_name,_prm,PRM_MAPIV	,0 ,descr);}
-Param::Param(const char* _name,  int    *_prm, int val, const char* descr)	{init(_name,_prm,PRM_INT	,0 ,descr);
-	value=val;}
-Param::Param(const char* _name,  bool    *_prm, bool val, const char* descr)	{init(_name,_prm,PRM_FG	,0 ,descr);
-	value=val;}
+Param::Param(const char* descr)
+	{init("",0,0,0,0 ,descr);}
+Param::Param(const char* _name,int print,  int    *_prm, const char* descr)
+	{init(_name,print,_prm,PRM_INT	,0 ,descr);}
+Param::Param(const char* _name,int print,  int    *_prm, Name_Value **fg, const char* descr)
+	{init(_name,print,_prm,PRM_ENUM	,fg,descr);}
+Param::Param(const char* _name,int print,  bool   *_prm,  const char* descr)
+	{init(_name,print,_prm,PRM_FG		,0 ,descr);}
+Param::Param(const char* _name,int print,  double *_prm,  const char* descr)
+	{init(_name,print,_prm,PRM_DOUBLE	,0 ,descr);}
+Param::Param(const char* _name,int print,  char*  *_prm, const char* descr)
+	{init(_name, print,_prm,PRM_STRING	,0 ,descr);}
+Param::Param(const char* _name,int print,  char*  *_prm, const char* descr, bool path)
+	{init(_name,print,_prm,PRM_PATH	,0 ,descr);}
+Param::Param(const char* _name,int print, MapIv   *_prm, const char* descr)
+	{init(_name,print,_prm,PRM_MAPIV	,0 ,descr);}
+Param::Param(const char* _name,int print,  int    *_prm, int val, const char* descr)
+	{init(_name,print,_prm,PRM_INT	,0 ,descr);	value=val;}
+Param::Param(const char* _name,int print,  bool    *_prm, bool val, const char* descr)
+	{init(_name,print,_prm,PRM_FG	,0 ,descr);	value=val;}
 //====================================================================================================
 int Param::readEnum(char *s){
 	for(int i=0; enums[i]!=0; i++){
@@ -320,6 +338,45 @@ void Param::setVal(){
 	case PRM_INT:  		*(int *)  (prm)=value; break;
 	case PRM_FG:		*(bool*)  (prm)=value; break;
 	default: break;
+	}
+}
+
+//===========================================================================================================
+char *Param::printParamValue(char *buf){
+	strcpy(buf,"NONE");
+	switch(type){
+	case PRM_INT: 		sprintf(buf,"%i",*(int *)prm); break;
+	case PRM_DOUBLE: 	sprintf(buf,"%f",*(double*)prm); break;
+	case PRM_STRING: 	if(prm){
+		char *s=*(char**)prm;
+		if(s) sprintf(buf,"%s",s);} break;
+	case PRM_ENUM: 		sprintf(buf,"%s",getNamebyVal(enums,*(int*)prm)); break;
+	case PRM_FG: 		sprintf(buf,"%i",(*(int*)prm) ? 1:0); break;
+	case PRM_MAPIV:		if(prm)((MapIv *)prm) -> print(buf); break;
+	case PRM_PATH:		if(prm){
+		char *s=*(char**)prm;
+		if(s) sprintf(buf,"%s",s);} break;
+	}
+	return buf;
+}
+
+void printParamNames(FILE* f){
+	fprintf(f,"id");
+	for(int i=0; pparams[i] ; i++){
+		if(pparams[i]->printFg) fprintf(f,"\t%s",pparams[i]->name);
+	}
+}
+void printParams(FILE* f){
+	char b[256];
+	fprintf(f,"%08lx",id);
+	for(int i=0; pparams[i] ; i++){
+		if(pparams[i]->printFg) fprintf(f,"\t%s",pparams[i]->printParamValue(b));
+	}
+}
+void printXMLparams(FILE *f){
+	char b[256];
+	for(int i=0; pparams[i] ; i++){
+		if(pparams[i]->printFg) fprintf(f,"%s=\"%s\" ",pparams[i]->name,pparams[i]->printParamValue(b));
 	}
 }
 
@@ -487,7 +544,7 @@ void parseArgs(int argc, char **argv){
 int main(int argc, char **argv) {
 //	test();
 //	clearDeb();
-//	debugFg=DEBUG_LOG|DEBUG_PRINT;
+	debugFg=DEBUG_LOG|DEBUG_PRINT;
 	for(int i=0; i<argc; i++){strtok(argv[i],"\r\n");}
 
 	const char * progName="StereoGene";
@@ -515,7 +572,8 @@ int main(int argc, char **argv) {
 	if(aliaseFil!=0)  alTable.readTable(aliaseFil);		// read aliases
 	readChromSizes(chromFile);							// read chromosomes
 //	if(cage) {CageMin(files[0].fname,files[1].fname); exit(0);}
-
+//PrintParams();
+//exit(0);
 	Correlator();
 	fflush(stdout);
 	fclose(stdout);

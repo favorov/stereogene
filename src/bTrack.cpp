@@ -322,9 +322,8 @@ int  bTrack::countZero(int pos, bool cmpl){
 	return c;
 }
 
-bTrack::bTrack(const char* fname){::bTrack();  read(fname);}
-
-bTrack::bTrack(){
+bTrack::bTrack(const char* fname){init();  read(fname);}
+void bTrack::init(){
 	cbytes=bytes=0; name=0; profWindow=0; autoCorr=0;
 	avWindow=sdWindow=0;// mean and stdDev in current window
 
@@ -336,6 +335,9 @@ bTrack::bTrack(){
 	projCoeff=0;
 	hasCompl=false;
 	scaleFactor=0.2;
+}
+bTrack::bTrack(){
+	init();
 }
 //======================================= decode binary value to real value
 double bTrack::getVal(unsigned char b){

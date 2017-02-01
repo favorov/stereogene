@@ -7,7 +7,6 @@
  */
 #include "track_util.h"
 
-
 struct ScaledAray{
 	float *array;		// values
 	char  *counts;		// counts of observations in given points
@@ -168,13 +167,11 @@ void ScaledAray::write(){
 	else{
 		fprintf(outWigFile,"\n#scale: out=1000*(LC-min)/(max-min)\n");
 	}
-
   fprintf(outWigFile,"#Source statstics: av1=%.4f;  av2=%.4f; sd1=%.4f; sd2=%.4f\n", bTrack1.av0,bTrack2.av0, bTrack1.sd0,bTrack2.sd0);
 
 	for(int i=0; i<profileLength; i++){
 		if(i%1000000 ==0) verb("%5.1f%%\r",1.*i/profileLength*100);
 		int k=(int)normWig(array[i]);
-
 		if(k>=outThreshold){
 			filePos2Pos(i,&pos,binSize);
 			if(pos.chrom != pos0.chrom  || pos.beg-pos0.beg > binSize){
@@ -218,24 +215,28 @@ void calcSmoothProfile(int k, bool cmpl){
 				ReY=kern->ft.re[i],
 				ImY=kern->ft.im[i];
 		ImX=cmpl ? -ImX : ImX; ImY=cmpl ? -ImY : ImY;
-		LCorrelation.datRe[i]=(ReX*ReY+ImX*ImY);
-		LCorrelation.datIm[i]=(ReX*ImY-ImX*ReY);
+		LCorrelation.datRe[i]= (ReX*ReY+ImX*ImY);
+		LCorrelation.datIm[i]= (ReX*ImY-ImX*ReY);
 	}
 	LCorrelation.calc(0);				//reverse transformation
 }
 //==================== Make correlation track
-double LocalCorrTrack(int pos, bool cmpl1, bool cmpl2){
-	if(outWIG==NONE) return 0;
-	getMem0(smoothProf2,profWithFlanksLength+10, "storeCorrTrack");
+double *lcTmp=0;
 
-	calcSmoothProfile(1, cmpl2);	// calculate smooth ptrofile c=\int f*\rho for the second profile (y)
-	memcpy(smoothProf2,LCorrelation.re,profWithFlanksLength*sizeof(double));
-	calcSmoothProfile(0, cmpl1);	// calculate smooth profile for the first profile (x)
-	smoothProf1=LCorrelation.re;
+double LocalCorrTrack(int pos, bool cmpl1, bool cmpl2, bool rnd){
+
+	if(outWIG==NONE) return 0;
+	getMem0(smoothProf1,profWithFlanksLength+10, "storeCorrTrack");
+	getMem0(lcTmp,profWithFlanksLength+10, "storeCorrTrack");
+	calcSmoothProfile(0, cmpl1);	// calculate smooth ptrofile c=\int f*\rho for the second profile (y)
+	memcpy(smoothProf1,LCorrelation.re,profWithFlanksLength*sizeof(double));
+	calcSmoothProfile(1, cmpl2);	// calculate smooth profile for the first profile (x)
+	smoothProf2=LCorrelation.re;
 
 	double av=0;
 	double sd=bTrack1.sd0*bTrack2.sd0;
 	int qc=0;
+	double xx=0,yy=0;
 	for(int i=LFlankProfSize; i<profWithFlanksLength-RFlankProfSize; i++){
 		double x=smoothProf1[i]	/profWithFlanksLength;					//the smoothed profile for x
 		double y=smoothProf2[i]	/profWithFlanksLength;					//the smoothed profile for y
@@ -245,16 +246,16 @@ double LocalCorrTrack(int pos, bool cmpl1, bool cmpl2){
 			lc=x*y/sd;
 		}
 		if((outWIG & WIG_SUM ) == WIG_SUM ){
-			double xx=kern->fx.datRe[i], yy=kern->fy.datRe[i];
+			xx=kern->fx.datRe[i]; yy=kern->fy.datRe[i];
 			if((outWIG & WIG_CENTER) == WIG_CENTER) {xx-=bTrack1.av0; yy-=bTrack2.av0; }
 			lc=0.5*(xx*y+yy*x)/sd;
 		}
-		LCorrelation.im[i]=lc; av+=lc;	// We use wCorrelation.im as a tmp buffer
-		dHist.add(lc,pos < 0 ? 1:0);
-		if(pos >= 0) qc++;
+		lcTmp[i]=lc; av+=lc;	// We use wCorrelation.im as a tmp buffer
+		dHist.add(lc,rnd ? 1:0);
+		if(!rnd) qc++;
 	}
 	av/=profileLength;
-	if(pos>=0) wigCorr.addArray(LCorrelation.im+LFlankProfSize,pos);
+	if(!rnd) wigCorr.addArray(lcTmp+LFlankProfSize,pos);
 
 	return av;
 }

@@ -96,10 +96,12 @@ void getStat(double *set, int n, double &av, double &sd){
 }
 
 double avBg=0,sdBg=0,avFg=0,sdFg=0;
+
 void printStat(){
 	verb("Write statistics\n");
 	writeLog("Write statistics\n");
 	char b[2048];
+	FILE *f=0;
 
 	MannW=MannWhitney(FgSet, nFg, BkgSet, nBkg);	// do Mann-Whitney test
 	xverb("p-val=%e\nnWindows=%i\n=================================\n",
@@ -107,14 +109,7 @@ void printStat(){
 
 	getStat(FgSet, nFg, avFg,sdFg);
 	getStat(BkgSet,nBkg,avBg,sdBg);
-
-	FILE *f=0;
-	const char *pcname = "-";
-	char pc = '-';
-	if (pcorProfile!=0){
-		pc = '+';
-		pcname = pcorProfile;
-	}
+	const char *pc= pcorProfile==0 ? "NONE" : pcorProfile;
 
 	bool fg=fileExists(statFileName);
 	if((outRes & TAB)!=0) {
@@ -126,23 +121,23 @@ void printStat(){
 		}
 	}
 	if(!fg && f){								//================ write the header
-		fprintf(f,"%-6s\t%-20s\t%-20s","id","name1","name2");
+		fprintf(f,"%-6s\t%-20s%-20s\t%-20s","id","version","name1","name2");
 		fprintf(f,"\t%-6s\t%-6s\t%-6s\t%-6s","window","kern","nFgr","nBkg");
 		fprintf(f,"\t%-8s\t%-8s\t\%-8s","Fg_Corr","Fg_av_Corr","FgCorr_sd");
 		fprintf(f,"\t%-8s\t%-8s\t\%-8s","Bg_Corr","Bg_av_Corr","BgCorr_sd");
 		fprintf(f,"\t%-8s\t%-7s", "Mann-Z","p-value");
-		fprintf(f,"\t%-6s\n", "pc");
+		fprintf(f,"\t%-6s\n", "P-corr");
 	}
 	//==================================================== write the statistics
 	if(f){
 		char nm1[1024], nm2[1024];
 		alTable.convert(bTrack1.name, nm1);
 		alTable.convert(bTrack2.name, nm2);
-		fprintf(f,"%08lx\t%-10s\t%-10s",id,nm1, nm2);
+		fprintf(f,"%08lx\t%-10s\t%-10s\t%-10s",id,version, nm1, nm2);
 		fprintf(f,"\t%-6i\t%-6s\t%6i\t%6i",wSize,getKernelType(),nFg, nBkg);
 		fprintf(f,"\t%8.4f\t%8.4f\t%8.4f",totCorr, avFg,sdFg);
 		fprintf(f,"\t%8.4f\t%8.4f\t%8.4f",BgTotal, avBg, sdBg);
-		fprintf(f,"\t%8.4f\t%-7.2e\t%-6c\n",MannW->z,MannW->pVal, pc);
+		fprintf(f,"\t%8.4f\t%-7.2e\t%s\n",MannW->z,MannW->pVal, pc);
 		funlockFile(f);
 		fclose(f);
 	}
@@ -158,27 +153,13 @@ void printStat(){
 		}
 	}
 	if(!fg && f){								//================ write the header
-		fprintf(f,"%-6s\t%-20s\t%-20s","id","trackPath","resPath");
-		fprintf(f,"\t%-20s\t%-12s\t%-20s","map","mapIv","pcorProfile");
-		fprintf(f,"\t%-2s\t%-6s\t%-6s","NA", "maxNA","maxZer");
-		fprintf(f,"\t%-6s\t%-6s","interv", "compl");
-		fprintf(f,"\t%-4s\t%-6s","bin", "bpType");
-		fprintf(f,"\t%-6s\t%-6s\t%-6s\t%-6s","wSize", "wStep","flank","noise");
-		fprintf(f,"\t%-6s\t%-8s\t%-8s","kernel", "Kern-Sgm","kern-Sh");
-		fprintf(f,"\t%-8s\t%-8s\t%-8s\n","nShuffle", "MaxShfl","threshold");
+		printParamNames(f);
+		fprintf(f,"\n");
 	}
 	//==================================================== write the parameters
 	if(f){
-		fprintf(f,"%08lx\t%-20s\t%-20s",id,trackPath,resPath);
-		const char *mf=mapFil ? mapFil : "-";
-		fprintf(f,"\t%-20s\t%-12s\t%-20s",mf,miv.print(b),pcname);
-		fprintf(f,"\t%-2i\t-%6.1f\t%-6.1f",NAFlag, maxNA0,maxZero0);
-		fprintf(f,"\t%-6i\t%-6i",intervFlag0, complFg);
-		fprintf(f,"\t%-4i\t%-6i",binSize, bpType);
-		fprintf(f,"\t%-6i\t%-6i\t%-6i\t%-6.2f",wSize, wStep,flankSize,noiseLevel);
-		fprintf(f,"\t%-6s\t%-8.0f\t%-8.0f",getKernelType(), kernelSigma,kernelShift);
-		fprintf(f,"\t%-i\t%-i\t%-8i\n",nShuffle, maxShuffle,threshold);
-		funlockFile(f);
+		printParams(f);
+		fprintf(f,"\n");
 		fclose(f);
 	}
 	if((outRes & XML)!=0) {
@@ -195,26 +176,7 @@ void printStat(){
 		fprintf(xml,"\t<input track1=\"%s\" track2=\"%s\"/>\n",bTrack1.name,bTrack2.name);
 		fprintf(xml,"\t<output out=\"%s\"/>\n",outFile);
 		fprintf(xml,"\t<prm ");
-		fprintf(xml,"kernel=\"%s\" ",getKernelType());
-		fprintf(xml,"kernelSigma=\"%.0f\" ",kernelSigma);
-		fprintf(xml,"kernelShift=\"%.0f\" ",kernelShift);
-		fprintf(xml,"kernelNS=\"%.0f\" ",kernelNS*100);
-		fprintf(xml,"wSize=\"%i\" ",wSize);
-		fprintf(xml,"wStep=\"%i\" ", wStep);
-		fprintf(xml,"flankSize=\"%i\" ",flankSize);
-		fprintf(xml,"noiseLevel=\"%.2f\" ",noiseLevel);
-		fprintf(xml,"nShuffle=\"%i\" ",nShuffle);
-		fprintf(xml,"maxShuffle=\"%i\" ", maxShuffle);
-		fprintf(xml,"threshold=\"%i\" ",threshold);
-		fprintf(xml,"binSize=\"%i\" ",binSize);
-		fprintf(xml,"bpType=\"%i\" ", bpType);
-		fprintf(xml,"NAFlag=\"%i\" ",NAFlag);
-		fprintf(xml,"maxNA=\"%.1f\" ", maxNA0);
-		fprintf(xml,"maxZero=\"%.1f\" ",maxZero0);
-		fprintf(xml,"intervFlag=\"%x\" ",intervFlag0);
-		fprintf(xml,"complFg=\"%i\" ",complFg);
-		if(mapFil) fprintf(xml,"mapFile=\"%s\" miv=\"%s\"",mapFil,b);
-		if (pcorProfile!=0) fprintf(xml,"pcname=\"%s\" ",pcname);
+		printXMLparams(xml);
 		fprintf(xml,"/>\n");
 
 		fprintf(xml,"\t<res ");

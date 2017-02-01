@@ -20,6 +20,7 @@ Fourier::Fourier(int n){init(n);}
 Fourier::Fourier(){re=im=datRe=datIm=0; length=0; err=0; spectrum=0; autocorr=0;}
 
 void Fourier::init(int len){
+	if(length==len) return;
 	length=len; err=0;
 	errStatus="Fourier init";
 	getMem(re,len, "Fourier init #1");
@@ -28,6 +29,7 @@ void Fourier::init(int len){
 	zeroMem(datIm,len);
 	errStatus=0;
 }
+
 
 Fourier::~Fourier(){
 	freeMem();
@@ -48,15 +50,54 @@ void Fourier::setDat(double *reD, double *imD){
 	datIm=imD;
 }
 void Fourier::calc(double *reD, double *imD, int deriv){
-	double *dim0=datIm;
+	double *dIm0=datIm;
 	setDat(reD,imD);
 	calc(deriv);
-	datIm=dim0;
+	datIm=dIm0;
 }
 void Fourier::calc(double *dRe, int deriv){
 	setDat(dRe);
 	calc0(deriv);
 }
+
+Fourier tmpF;
+void Fourier::random(){
+	int ishift=rand()%length;
+	double r=(double) ishift / length;
+//	double r=((double)rand())/RAND_MAX;
+//	pVal=r=0.357830;
+//pVal=r=0.358;
+//clearLog();
+	double psi=(1-r)*2.*PI;
+	tmpF.init(length);
+	getMem(tmpF.datRe,length,0);
+	for(int i=0; i<length; i++){
+		double sk=sin(psi*i);
+		double ck=cos(psi*i);
+//writeLog("%i\t%.8f\t%.8f\t%8f\n",i,sk,ck, sk*sk+ck*ck);
+		double rr=re[i]*ck-im[i]*sk;
+		double ii=re[i]*sk+im[i]*ck;
+		re[i]=rr; im[i]=ii;
+//		tmpF.datRe[i]=rr;
+//		tmpF.datIm[i]=-ii;
+	}
+//if(wigtst)
+//{
+//	deb("==================  RANDOM ===============");
+//	tmpF.calc();
+//	clearLog();
+//	writeLog("========= Random ==========  r=%f\n",r);
+//	for(int i=0; i<profWithFlanksLength; i++){
+//		int ii=(i-(int)(r*profWithFlanksLength)+profWithFlanksLength-1)%profWithFlanksLength;
+//		writeLog("%i\t%i\t%f\t%f\n",i,ii,
+//				bTrack1.profWindow[ii],
+//				tmpF.re[i]/profWithFlanksLength);
+//	}
+//}
+//exit(0);
+
+}
+
 
 void Fourier::norm(){
 	for(int i=0; i<length; i++) {re[i]/=length; im[i]/=length;}
@@ -76,7 +117,7 @@ void Fourier::calc0(int deriv){
 
 
 void Fourier::calc(double *dRe,double *dIm,double *rRe,double *rIm){
-	fftl(length,dRe, dIm,rRe,rIm);
+	fftl(length, dRe, dIm, rRe, rIm);
 }
 
 void Fourier::derivat(int deriv){
@@ -135,7 +176,9 @@ void Kernel::init(int n){
 }
 
 //============================== Calculate FFT
-void Kernel::fftx(double* x, int deriv){fx.calc(x,deriv);}
+void Kernel::fftx(double* x, int deriv){
+	fx.calc(x,deriv);
+}
 void Kernel::ffty(double* y, int deriv){fy.calc(y,deriv);}
 
 
@@ -270,7 +313,7 @@ double RightExpKernel::kernVal(double x){
 //=============================================================================
 //============================== initiation ===================================
 void XYCorrelation::initXY(){
-	length=kern->length;
+	init(kern->length);
 	fx=&kern->fx; fy=&kern->fy;
 	nCorr=nPlus=nMinus=0; min=max=av=sd=0;
 	getMem0(correlation,length, "init correlation #1"); zeroMem(correlation,length);
@@ -278,7 +321,6 @@ void XYCorrelation::initXY(){
 	getMem0(corrPlus   ,length, "init correlation #3");	zeroMem(corrPlus   ,length);
 	getMem0(datRe      ,length, "init correlation #4");	zeroMem(datRe      ,length);
 	spectrumX=0; spectrumY=0;
-	init(length);
 }
 
 //============================= Calculate XYCorrelation ======================

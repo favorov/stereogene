@@ -302,6 +302,7 @@ struct bTrack{		        // Binary track
 
 	bTrack();						// empty constructor
 	bTrack(const char* fname);		// constructor that reads file
+	void init();
 	void read(const char *fname);	// read file
 	double *getProfile(int pos, bool cmpl);	// decode profile starting with given position
 	double getVal(unsigned char b);
@@ -393,14 +394,15 @@ public:
 	void init(int len);
 	void setDat(double *reD);
 	void setDat(double *reD, double *imD);
-	void calc(double *reD, double *imD, int deriv);	//do transform with real and Im data
-	void calc(double *dat, int deriv);     	// Do transformation with given real data
-	void calc(int deriv); 			       	// Do transformation
-	void calc0(int deriv); 			       	// Do transformation
+	void calc(double *reD, double *imD, int deriv=0);	//do transform with real and Im data
+	void calc(double *dat, int deriv=0);     	// Do transformation with given real data
+	void calc(int deriv=0); 			       	// Do transformation
+	void calc0(int deriv=0); 			       	// Do transformation
 	void calc(double *dRe,double *dIm,double *rRe,double *rIm);
 	void norm();						   	// divide transform by length
 	void derivat();						   	// get derivative from fft
 	void derivat(int deriv);
+	void random();
 	float *getSpectrum();					// get spectrum
 	double *getAutoCorr();					// get aoutocorrelation
 };
@@ -692,7 +694,7 @@ extern "C" void fft(double xRe[], double xIm[],double yRe[], double yIm[]);
 extern "C" void initFFT(int n);
 
 //============================================ Output ====================
-double LocalCorrTrack(int pos, bool cmpl1, bool cmpl2);
+double LocalCorrTrack(int pos, bool cmpl1, bool cmpl2, bool rnd);
 void calcAutoCorr();
 void initOutWig();
 void finOutWig();
@@ -702,6 +704,10 @@ void printBroadPeak();
 void printRreport();
 void printR();
 void printRmd();
+void printParamNames(FILE* f);
+void printParams(FILE* f);
+void printXMLparams(FILE *f);
+void PrintParams();
 
 void printCorrelations();
 void printChomosomes(char *fname);

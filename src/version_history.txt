@@ -112,6 +112,8 @@
 2. Numerical parameter 'lAuto' replaced by boolean parameter 'AutoCorr'.
 3. Fixed bug with logarithmic data scaling
 ========== Version 1.72 ====================
-1. Parameter Distances changed. Now value DETAIL'Write by chromosomes' depends on 'outChrom' parameter. 
+1. Parameter Distances changed. Now value DETAIL 'Write by chromosomes' depends on 'outChrom' parameter. 
 2. The local correlation track now can be written with linear scale, logarithmic scale, and double-logarithmic scale.
 3. The parameter -lc introduced. This parameter equivalent to outLC=BASE
+========== Version 1.73 ====================
+1. Files 'Parameters' and 'Statistics' changed

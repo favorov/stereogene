@@ -14,7 +14,7 @@
 #include <sys/file.h>
 //#include <dir.h>
 
-const char* version="1.72";
+const char* version="1.73";
 
 int debugFg=0;
 //int debugFg=DEBUG_LOG|DEBUG_PRINT;
