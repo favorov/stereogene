@@ -1,2 +1,2 @@
 The software (excluding mixfft.c ) is disributed under MIT Arrtistic License v 2.0 https://opensource.org/licenses/Artistic-2.0 ;
-mixfft.c is distributed under it author's 'noncommertial use' license, see mixfft.c comments for details.
+mixfft.c is distributed under it author's 'noncommercial use' license, see mixfft.c commnts for details.
