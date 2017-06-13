@@ -46,7 +46,7 @@ double stdNormal[71] = {
                        1.288081E-12, //7.0
  };
 
-double pisq = sqrt(2 * M_PI);
+double pisq = sqrt(2 * PI);
 //==================================================== Normal density
 double normalDensity(double x) {
     return exp( -x * x / 2) / pisq;
@@ -99,6 +99,8 @@ statTest *MannWhitney( double *set1, int nSet1, double *set2,int nSet2){
 	return MannWhitney0(set1,nSet1,set2,nSet2);
 }
 statTest *MannWhitney0( double *set1, int nSet1, double *set2,int nSet2){
+	if(nSet1==0) errorExit("No background data");
+	if(nSet2==0) errorExit("No foreground data");
 	qsort((void *)set1,nSet1,sizeof(double),doubleCmp);
 	qsort((void *)set2,nSet2,sizeof(double),doubleCmp);
 

@@ -60,45 +60,6 @@ void Fourier::calc(double *dRe, int deriv){
 	calc0(deriv);
 }
 
-Fourier tmpF;
-void Fourier::random(){
-	int ishift=rand()%length;
-	double r=(double) ishift / length;
-//	double r=((double)rand())/RAND_MAX;
-//	pVal=r=0.357830;
-//pVal=r=0.358;
-//clearLog();
-	double psi=(1-r)*2.*PI;
-	tmpF.init(length);
-	getMem(tmpF.datRe,length,0);
-	for(int i=0; i<length; i++){
-		double sk=sin(psi*i);
-		double ck=cos(psi*i);
-//writeLog("%i\t%.8f\t%.8f\t%8f\n",i,sk,ck, sk*sk+ck*ck);
-		double rr=re[i]*ck-im[i]*sk;
-		double ii=re[i]*sk+im[i]*ck;
-		re[i]=rr; im[i]=ii;
-//		tmpF.datRe[i]=rr;
-//		tmpF.datIm[i]=-ii;
-	}
-//if(wigtst)
-//{
-//	deb("==================  RANDOM ===============");
-//	tmpF.calc();
-//	clearLog();
-//	writeLog("========= Random ==========  r=%f\n",r);
-//	for(int i=0; i<profWithFlanksLength; i++){
-//		int ii=(i-(int)(r*profWithFlanksLength)+profWithFlanksLength-1)%profWithFlanksLength;
-//		writeLog("%i\t%i\t%f\t%f\n",i,ii,
-//				bTrack1.profWindow[ii],
-//				tmpF.re[i]/profWithFlanksLength);
-//	}
-//}
-//exit(0);
-
-}
-
-
 void Fourier::norm(){
 	for(int i=0; i<length; i++) {re[i]/=length; im[i]/=length;}
 }
@@ -134,7 +95,7 @@ void Fourier::derivat(){
 }
 
 float *Fourier::getSpectrum(){
-	getMem0(spectrum,length,"Spectrum");
+	getMem(spectrum,length,"Spectrum");
 	for(int i=0; i<length; i++)
 		spectrum[i]=(float)(re[i]*re[i]+im[i]*im[i]);
 	return spectrum;
@@ -145,10 +106,10 @@ double *tmpDRe=0, *tmpDIm=0, *tmpIm=0;
 
 double *Fourier::getAutoCorr(){
 
-	getMem0(autocorr,length,"AutoCorr #1");
-	getMem0(tmpDRe,length,"AutoCorr #2");
-	getMem0(tmpDIm,length,"AutoCorr #3");
-	getMem0(tmpIm,length,"AutoCorr #4");
+	getMem(autocorr,length,"AutoCorr #1");
+	getMem(tmpDRe,length,"AutoCorr #2");
+	getMem(tmpDIm,length,"AutoCorr #3");
+	getMem(tmpIm,length,"AutoCorr #4");
 
 	tmpDRe[0]=0;
 	for(int i=1; i<length; i++){
@@ -194,6 +155,7 @@ double Kernel::scalar(Fourier *f1, Fourier *f2, Complex *c, bool complem){
 	if(f2->length !=length) return 0;
 	double re=0, im=0;
 	Fourier *zft=complem ? &cft : &ft;
+
 	for(int i=0; i<length/2; i++){
 		double RaRb_plus_IaIb =f1->re[i]*f2->re[i] + f1->im[i]*f2->im[i]; //==== Re(a)*Re(b)+Im(a)*Im(b)
 		double RaIb_minus_IaRb=f1->re[i]*f2->im[i] - f1->im[i]*f2->re[i]; //==== Re(a)*Im(b)-Im(a)*Re(b)
@@ -236,7 +198,8 @@ double Kernel::dist(Fourier *f1, Fourier *f2, bool complem){
 
 	//================================================ correlation for the window
 	d11-=dd11; d12-=dd12; d22-=dd22;
-	if(d11==0 || d22==0) return -400;
+	if(d11==0) return -400;
+	if(d22==0) return -500;
 	double cc=d12/sqrt(d11*d22);
 
 
@@ -262,10 +225,7 @@ void Kernel::makeKernel(int n){
 		ckern[length-i-1]=kern[i]=kernVal(x1)+kernVal(x2);
 		d+=kern[i];
 	}
-	for(int i=0; i<length; i++){
-		ckern[length-i-1]/=d;
-		kern[i]/=d;
-	}
+	for(int i=0; i<length; i++){ckern[i]/=d; kern[i]/=d;}
 	fft();
 }
 
@@ -276,11 +236,10 @@ NormKernel::NormKernel(double ee,double sgm, int l){
 	makeKernel(l);name= strdup("Normal_Kernel");
 }
 
-
 double NormKernel::kernVal(double x){
 	double x0=x;
 	x-=e; x/=sigma;
-	double val=exp(-x*x);
+	double val=exp(-x*x/2);
 	return NSCorrection(x0,val);
 }
 
@@ -308,6 +267,21 @@ double RightExpKernel::kernVal(double x){
 	x-=e; x/=sigma; hasCompl=true;
 	return NSCorrection(x0,(x<0)?0:exp(-x));
 }
+//======================== Custom  Kernel ==============================
+CustKernel::CustKernel(){ initCust(0,1000);}
+CustKernel::CustKernel(double ee,double sgm, int l){
+	initCust(ee,sgm);
+	makeKernel(l);name= strdup("custm_Kernel");
+}
+void CustKernel::initCust(double ee, double sgm){
+	frml=frmlInit(customKern);
+	frmlSetValue(frml,"sigma",sgm);
+	frmlSetValue(frml,"e",ee);
+	name= strdup("custm_Kernel");
+}
+double CustKernel::kernVal(double x){
+	return NSCorrection(x,frmlCalc(frml,x));
+}
 //=============================================================================
 //====================          Cross correlation              ================
 //=============================================================================
@@ -316,10 +290,10 @@ void XYCorrelation::initXY(){
 	init(kern->length);
 	fx=&kern->fx; fy=&kern->fy;
 	nCorr=nPlus=nMinus=0; min=max=av=sd=0;
-	getMem0(correlation,length, "init correlation #1"); zeroMem(correlation,length);
-	getMem0(corrMinus  ,length, "init correlation #2");	zeroMem(corrMinus  ,length);
-	getMem0(corrPlus   ,length, "init correlation #3");	zeroMem(corrPlus   ,length);
-	getMem0(datRe      ,length, "init correlation #4");	zeroMem(datRe      ,length);
+	getMem(correlation,length, "init correlation #1"); zeroMem(correlation,length);
+	getMem(corrMinus  ,length, "init correlation #2");	zeroMem(corrMinus  ,length);
+	getMem(corrPlus   ,length, "init correlation #3");	zeroMem(corrPlus   ,length);
+	getMem(datRe      ,length, "init correlation #4");	zeroMem(datRe      ,length);
 	spectrumX=0; spectrumY=0;
 }
 
@@ -345,8 +319,8 @@ void XYCorrelation::calcXYCorr(bool cmpl1, bool cmpl2){
 	calc(0);		//=========	reverse transformation
 	norm();			//========= divide by length
 	//========= normalize by std dev
-	double e1=bTrack1.avWindow, d1=bTrack1.sdWindow;
-	double e2=bTrack2.avWindow, d2=bTrack2.sdWindow;
+	double e1=track1->avWindow, d1=track1->sdWindow;
+	double e2=track2->avWindow, d2=track2->sdWindow;
 
 	for(int i=0; i<length; i++)
 		re[i]=(re[i]-length*e1*e2)/(d1*d2*length);
@@ -399,8 +373,8 @@ void normChromDist(){
 	}
 }
 void XYCorrelation::makeSpectrum()	{
-	getMem0(spectrumX, length,"spectX");
-	getMem0(spectrumY, length,"spectY");
+	getMem(spectrumX, length,"spectX");
+	getMem(spectrumY, length,"spectY");
 	float *spX=fx->getSpectrum();
 	float *spY=fy->getSpectrum();
 	for(int i=0; i<length; i++){

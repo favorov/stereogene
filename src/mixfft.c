@@ -2,8 +2,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define FIX
-#define FULLSIZE
+//#define FIX
+//#define FULLSIZE
+#define  maxFactorCount 20
+
 /************************************************************************
   fft(int n, double xRe[], double xIm[], double yRe[], double yIm[])
  ------------------------------------------------------------------------

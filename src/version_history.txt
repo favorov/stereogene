@@ -112,8 +112,33 @@
 2. Numerical parameter 'lAuto' replaced by boolean parameter 'AutoCorr'.
 3. Fixed bug with logarithmic data scaling
 ========== Version 1.72 ====================
-1. Parameter Distances changed. Now value DETAIL 'Write by chromosomes' depends on 'outChrom' parameter. 
+1. Parameter Distances changed. Now value DETAIL'Write by chromosomes' depends on 'outChrom' parameter. 
 2. The local correlation track now can be written with linear scale, logarithmic scale, and double-logarithmic scale.
 3. The parameter -lc introduced. This parameter equivalent to outLC=BASE
-========== Version 1.73 ====================
-1. Files 'Parameters' and 'Statistics' changed
+============================================
+============================================
+========== Version 2.00 ====================
+1. Binary profile changed from byte to short.
+2. Local correlation presented as bedgraph without normalization.
+3. In-memory arrays changed to buffered swap-file arrays. A parameter for buffer size introduced. 
+4. Parameter nShuffle now defines absolute number of shuffle.
+5. The program 'confounder' introduced. The program calculates the covariation matrix and calculates the first principal component.
+6. The parameter 'confounder' introduced. This parameter defines filename for confounder.
+7. The parameter 'ScaleFactor' removed
+8. The parameter 'strand' removed
+9. The parameter 'scale' removed
+10. The kernel can be defined by user as a formula (parameter 'customKern').
+11. The parameter 'type' removed. The type of input files are defined automatically. 
+12. The parameter 'Step' renamed by 'bin'
+========== Version 2.01 ====================
+1. Fixed a bug in premapping.
+2. premapping uses maxZero parameter implicitly.
+3. A logarithmic scale used for binary presentation: x=scale*log(1+z)
+4. A timer for preparation stage included
+5. The parameter file and XML output changed
+6. Version is reported in the param file, statistics file and XML file
+7. Date/Time of run is reported in the statistics and statistics.xml files
+========== Version 2.02 ====================
+1. ID formation changed.
+2. Now the model is a formula. 
+

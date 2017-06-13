@@ -4,11 +4,128 @@
  *  Created on: 22.02.2013
  *      Author: 1
  */
-#include <stdio.h>
-
-
 #include "track_util.h"
+//#include <sys/types.h>
+//#include <sys/stat.h>
+#include <unistd.h>
 
+
+//struct Histogram{
+//	double  minVal, maxVal,  // Min & Max values. Min=-1; Max=1;
+//			bin,			 // bin size
+//			e,  			 // Mean
+//			sigma,			 // standard deviation
+//			alpha,beta;		 // parameters fof Beta-distribution
+//	int 	nBin,			 // Number of bins
+//			count;			 // Number of observations
+//	double  *dd,			 // Distribution density
+//			*db,			 // Appropriate Beta density
+//			*Fp,			 // Cummulative  left distribution  ( F(x) )
+//			*Fm;			 // Cummulative  right distribution ( 1-F(x) )
+//	int iq,im,iqq;
+//
+//	bool ready;				 // block add() and norm() after norm()
+//	Histogram(int nBin);
+//	void add(double x);
+//	void norm();
+//	void normBeta();		 // Calculate cummulative Beta distribution
+//	void normF();			 // Calculate cummulative real distribution
+//	double pValp(double x);
+//	double pValm(double x);
+//	double interpol(double x, double* fun);
+//	void print(FILE *f);
+//	void calcCDF(double *d);
+//};
+//
+//Histogram::Histogram(int n){
+//	minVal=-1; maxVal=1; e=0; sigma=0; alpha=beta=1; iq=iqq=im=0;
+//	nBin=n; count=0;
+//	dd=0; db=0; Fp=0; Fm=0;
+//	errStatus="init Histogram";
+//	getMem(dd, nBin, "Histogram #1");
+//	getMem(db, nBin, "Histogram #1");
+//	getMem(Fp, (nBin+1), "Histogram #1");
+//	getMem(Fm, (nBin+1), "Histogram #1");
+//	zeroMem(dd,nBin);
+//	bin=(maxVal-minVal)/nBin;
+//	ready=false;
+//	errStatus=0;
+//}
+//
+////=================== Add value to the histogram ===========
+//void Histogram::add(double x){
+//	if(ready) return;
+//	int i=int((x-minVal)/bin);
+//	if(i<0) i=0; if(i>=nBin) i=nBin-1;
+//	dd[i]++; e+=x; sigma+=x*x;
+//	count++;
+//}
+////============= Calculate cummulative Beta distribution for the background distribution
+//void Histogram::normBeta(){
+//	if(ready) return; ready=true;
+//	norm();
+//	double eb=0;
+//	for(int i=0; i<nBin; i++){	// calculate the integral of the beta distrib.
+//		double x=minVal+bin*i;
+//		eb+=(db[i]=xBetaD(alpha,beta,x));
+//	}
+//	for(int i=0; i<nBin; i++)	{	// normalyze beta distribution
+//		db[i]/=eb*bin;
+//	}
+//	calcCDF(db);
+//}
+////======================= calculate cumulative distributions
+//void Histogram::calcCDF(double *d){
+//	Fp[0]=Fm[nBin]=0; Fm[0]=1;
+//	for(int i=1, j=nBin-1; i<nBin; i++,j--){
+//		Fp[i]=Fp[i-1]+d[i]*bin;
+//		Fm[j]=Fm[j+1]+d[j]*bin;
+//	}
+//
+//}
+////======================== normalize the foreground distributions
+//void Histogram::normF(){
+//	if(ready) return; ready=true;
+//	norm();
+//	calcCDF(dd);
+//}
+////===================== normalize the histogram and calculate the statistical parameters
+//void Histogram::norm(){
+//	e/=count; sigma=(sigma-count*e*e)/(count-1);
+//	double eBeta=2e-1,  d=sigma/4, gg=(1-eBeta)/eBeta, gg1=gg+1;
+//	alpha=(gg/(d*gg1*gg1) - 1)/(gg1);
+//	beta=gg*alpha;
+//
+//	sigma=sqrt(sigma);
+//	for(int i=0; i<nBin; i++){
+//		dd[i]=dd[i]/count/bin;
+//	}
+//}
+//
+////============================================ Interpolation
+//double Histogram::interpol(double x, double *fun){
+//	int i=int((x-minVal)/bin);
+//	if(i<0) {i=0;}
+//	if(i>=nBin) {i=nBin-1;}
+//	double dx0=x-(minVal+bin*i), dx1=bin-dx0;
+//	double f0=log(fun[i]), f1=log(fun[i+1]);
+//	return exp((f0*dx1+f1*dx0)/bin);
+//}
+////=======================================================
+//
+//double Histogram::pValp(double x){return interpol(x,Fp);}
+//double Histogram::pValm(double x){return interpol(x,Fm);}
+//
+//double xBetaD(double a, double b, double x){
+//	return pow(1-x,a)*pow(1+x,b);
+//}
+//
+//void Histogram::print(FILE *f){
+//	for(int i=0; i<nBin; i++){
+//		double x=minVal+bin*i;
+//		fprintf(f,"%f\t%f\t%.2e\t%.2e\t%.2e\n",x,dd[i], db[i],Fp[i],Fm[i]);
+//	}
+//}
 int wigStep=300;
 void printBytes(unsigned char* byteprofile,int from, int to){
 	printf("==========\n");
@@ -22,23 +139,6 @@ void printBytes(unsigned char* byteprofile,int from, int to){
 }
 
 
-double *readDistr(const char *fname, int &nn){
-	int capacity=1000;
-	char b[256];
-	double *dstr; getMem(dstr,capacity, "readDistr");
-	nn=0;
-	FILE *f=fopen(fname,"rt");
-	for(;fgets(b,sizeof(b),f);){
-		strtok(b," \t\n\r");
-		double a=atof(b);
-		if(nn>=capacity) capacity*=2;
-		dstr=(double*)realloc(dstr,capacity*sizeof(double));
-		dstr[nn++]=a;
-	}
-	fclose(f);
-	return dstr;
-}
-
 double *gauss(int l){
 	double *x; getMem(x,l, "gauss");
 	double a=0.99;
@@ -48,34 +148,6 @@ double *gauss(int l){
 	return x;
 }
 
-
-void factor(int n){
-	int k=sqrt(n)+1;
-	for(int i=2; i<k; i++){
-		while(n%i ==0){
-			printf(" %i;",i);
-			n/=i;
-		}
-	}
-	if(n!=1) printf(" %i;",n);
-}
-
-//============================================================== print profile (testing)
-void printProfile(float *profile, int from, int to){printProfile(stdout,profile,from,to);}
-void printProfile(FILE *fil, float *profile, int from, int to){
-	for(int i=from; i< to; i+=20){
-		fprintf(fil,"%i\t",i);
-		for(int j=0; j<20 && i+j< to; j++){
-			if(profile[i+j]==NA) fprintf(fil,"    NA");
-			else fprintf(fil," %5.1f",profile[i+j]*100);
-		}
-		fprintf(fil,"\n");
-	}
-}
-//============================================================== print profile (testing)
-void printProfile(float *profile){
-	printProfile(profile, 0, profileLength);
-}
 //=========================================================== print chromosome data (testing)
 void printChrom(){
    for(int i=0; i<n_chrom; i++){
@@ -85,214 +157,38 @@ void printChrom(){
 }
 
 //===========================================================
-void bTrack::printBytes(int from, int to){
-	printBytes(stdout, from,to);
-}
-void bTrack::printBytes(FILE *f, int from, int to){
-	fprintf(f,">>>>>>>>> %i..%i\n",from,to);
-	for(int i=from; i<to; i++) {if(i%25==0) fprintf(f,"\n");fprintf(f," %3i",bytes[i]);}
-	fprintf(f,"\n");
-	if(hasCompl){
-		fprintf(f,"<<<<<<<<<");
-		for(int i=from; i<to; i++)  {if(i%25==0) fprintf(f,"\n");fprintf(f," %3i",cbytes[i]);}
-		fprintf(f,"\n");
-	}
-}
-void bTrack::writeBytes(FILE*f){ // Print bytes (for testing)
-	int n=0, t=15;
-	for(int i=0; i<lProf; i++) {
-		if(bytes[i]>15) {fprintf(f," %3i\n",bytes[i]); n++;}
-	}
-	printf("t=%i n=%i\n",t,n);
-}
+//void bTrack::printBytes(int from, int to){
+//	printBytes(stdout, from,to);
+//}
+//void bTrack::printBytes(FILE *f, int from, int to){
+//	fprintf(f,">>>>>>>>> %i..%i\n",from,to);
+//	for(int i=from; i<to; i++) {if(i%25==0) fprintf(f,"\n");fprintf(f," %3i",bytes[i]);}
+//	fprintf(f,"\n");
+//	if(hasCompl){
+//		fprintf(f,"<<<<<<<<<");
+//		for(int i=from; i<to; i++)  {if(i%25==0) fprintf(f,"\n");fprintf(f," %3i",cbytes[i]);}
+//		fprintf(f,"\n");
+//	}
+//}
+//void bTrack::writeBytes(FILE*f){ // Print bytes (for testing)
+//	int n=0, t=15;
+//	for(int i=0; i<lProf; i++) {
+//		if(bytes[i]>15) {fprintf(f," %3i\n",bytes[i]); n++;}
+//	}
+//	printf("t=%i n=%i\n",t,n);
+//}
 
-void bTrack::printWindow(int n){
-	printWindow(stdout,n);
-}
-void bTrack::printWindow(FILE *f,int n){
-	fprintf(f,"==========\n");
-	for(int i=0; i<n; i++) fprintf(f," %4.1f",profWindow[i]);
-	fprintf(f,"\n");
-}
+//void bTrack::printWindow(int n){
+//	printWindow(stdout,n);
+//}
+//void bTrack::printWindow(FILE *f,int n){
+//	fprintf(f,"==========\n");
+//	for(int i=0; i<n; i++) fprintf(f," %4.1f",profWindow[i]);
+//	fprintf(f,"\n");
+//}
 //===============================================================================
 //===============================================================================
 //===============================================================================
-struct GenePoint{
-	char *chrom;
-	int   pos;
-	char  strand;
-	GenePoint();
-	GenePoint(const char*s, int p, char strnd);
-};
-
-GenePoint::GenePoint(){
-	chrom=0; pos=0; strand='+';
-}
-
-GenePoint::GenePoint(const char*s, int p, char strnd){
-	chrom=strdup(s);
-	pos=p;
-	strand=strnd;
-}
-
-GenePoint **gPoints;
-int n_points=0;
-int maxPoints=20000;
-float *dens;
-int tstWindow=10000;
-
-int GPCmp(const void *o1, const void *o2){
-	GenePoint **gp1=(GenePoint**) o1, **gp2=(GenePoint**) o2;
-	GenePoint *g1=*gp1, *g2=*gp2;
-	int a=strcmp(g1->chrom,g2->chrom);
-	if(a) return a;
-	return g1->pos-g2->pos;
-}
-
-int chkPos(const char *chr, int pos, int i){
-	int fg=strcmp(chr,gPoints[i]->chrom);
-	if(fg) return fg;
-	if(pos < gPoints[i]->pos-tstWindow) return -1;
-	if(pos > gPoints[i]->pos+tstWindow) return  1;
-	return 0;
-}
-
-int findPoint(const char* chr, int pos){
-	int i1=0, i2=n_points,i=0,fg=0;
-
-	while(i2-i1 > 1){
-		i=(i1+i2)/2;
-		fg=chkPos(chr,pos,i);
-		if(fg==0) return i;
-		if(fg<0) i2=i;
-		if(fg>0) i1=i;
-	}
-	if(chkPos(chr,pos,i)==0) return i;
-	return -1;
-}
-
-void readPoints(const char *fname){
-	char b[2096],*s, chrBuf[80];
-	makeFileName(b,trackPath,fname);
-	FILE *f=xopen(b,"rt");
-	getMem(gPoints,maxPoints, "readPoints");
-	char strand='+';
-	for(; (s=fgets(b,sizeof(b),f))!=0;){
-		strtok(s,"\n\r");									 	//======== remove end-of-line signes
-		if(*s=='#') continue;
-		s=strtok(b,"\t "); strcpy(chrBuf,s);
-		int p=atoi(s=strtok(0,"\t "));					//======== read score
-		s=strtok(0," \t\n"); if(s==0) break;			//======== skip the second position
-		s=strtok(0," \t\n"); if(s==0) break;			//======== skip the name
-		s=strtok(0,"\t ");								//======== skip the score
-		s=strtok(0,"\t "); strand=*s;
-		if(strand!='+') continue;
-
-		gPoints[n_points++]=new GenePoint(chrBuf,p,strand);
-		if(n_points >= maxPoints) break;
-	}
-	fclose(f);
-	qsort(gPoints, n_points, sizeof(GenePoint *), GPCmp);
-}
-
-void addSgm(int gPos, int beg, int end, int score, char strand){
-//if(beg > 925500) deb(">>#0  gPos=%i  beg=%i..%i xpos=%i score=%i",gPos,beg,end,beg-gPos,score);
-	for(int i=beg; i<end; i++){
-		int pp=i-gPos;
-		if(strand=='-') pp=-pp;
-		if(pp< -tstWindow || pp>=tstWindow) continue;
-		int p=pp+tstWindow;
-		dens[p]+=score;
-	}
-}
-
-void addSegment(char *chr, int beg, int end, int score){
-	int ii=findPoint(chr,beg);
-	if(ii<0) return;
-	for(int i=ii; i>=0; i--){
-		if(strcmp(gPoints[i]->chrom,chr)) break;
-		if(beg > gPoints[i]->pos + tstWindow) break;
-		addSgm(gPoints[i]->pos,beg,end,score, gPoints[i]->strand);
-	}
-	for(int i=ii+1; i<n_points; i++){
-		if(strcmp(gPoints[i]->chrom,chr)) break;
-		if(end < gPoints[i]->pos - tstWindow) break;
-		addSgm(gPoints[i]->pos,beg,end,score, gPoints[i]->strand);
-	}
-}
-
-void readWig(const char *fname){
-	char b[2096],abuf[1000], chBuf[100],  buff[4096],*s, *chrom=(char*)"";
-	int fg=0, span=0, start=0, beg=0, end=0, score=0, step;
-	makeFileName(b,trackPath,fname);
-	FILE *f=xopen(b,"rt");
-	int ii=0;
-
-	for(; (s=fgets(buff,sizeof(buff),f))!=0; ii++){
-		if(ii%1000000 == 0)
-			verb("%ik\t%s\n",ii/1000,chrom);
-		strtok(s,"\n\r");									 	//======== remove end-of-line signes
-		if(*s=='#') continue;
-		if(strncmp(s,"variableStep", 12)==0){			//======== read parameters for variableStep
-			chrom=getAttr(buff,(char *)"chrom",chBuf);
-			span=1; fg=0;
-			s=getAttr(buff,(char *)"span",abuf);
-			if(s!=0) span=atoi(s);
-			continue;
-		}
-		else if(strncmp(s,(char *)"fixedStep", 9)==0){	//======== read parameters for fixedStep
-			fg=1;
-			chrom=getAttr(buff,(char *)"chrom",chBuf);
-			s=getAttr(buff,(char *)"span",abuf);
-			if(s!=0) span=atoi(s);
-			s=getAttr(buff,(char *)"step",abuf);
-			if(s!=0) step=atoi(s);
-			s=getAttr(buff,(char *)"start",abuf);
-			if(s!=0) start=atol(s);
-			continue;
-			}
-		else{
-			if(fg==0){									//======== variableStep
-				if((s=strtok(s," \t\n\r"))==0) continue;
-				beg=atoi(s); end=beg+span;
-				if((s=strtok(0," \t\n\r"))==0) continue;
-				score=atof(s);
-			}
-			else if(fg==1){										//======== fixedStep
-				beg=start; end=beg+span; start=beg+step;
-				score=atof(strtok(s," \t\n\r"));
-			}
-			if(score>0) addSegment(chrom,beg,end,score);
-		}
-	}
-}
-
-void writeProfile(){
-	FILE *f=fopen("x","wt");
-	for(int i=-tstWindow; i<tstWindow; i++){
-		int pp=i+tstWindow;
-		fprintf(f,"%i\t%f\n",i,dens[pp]);
-	}
-	fclose(f);
-}
-
-void test1(){
-	readPoints("B_G.mRNA_gene_beg_act.bed");
-	getMem(dens,tstWindow*2, "test1");
-	readWig("F_Br.H3K4me1.wig");
-	writeProfile();
-
-//	testFind("chr14",35179587);
-//	testFind("chr14",35100000);
-//	testFind("chr14",35170000);
-//
-//
-}
-
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
-
 const char* gtypes[]={
 		"pseudogene",
 		"lincRNA",
@@ -374,74 +270,14 @@ void DecodeGENECODE(){
 	}
 }
 
-float *tr1,*tr2;
-
-float sumCC(int shift){
-	int ll=bTrack1.lProf;
-	int i0=0, j0=shift;
-	if(j0 <0) {i0-=shift; j0=0;}
-	float cc=0;
-	for(int i=i0, j=j0; i<ll && j <ll; i++,j++)
-		cc+=tr1[i]*tr2[j];
-	printf("%i\t%f\n",shift,cc);
-	return cc;
-}
-
-void checkCrossCorr(){
-	int l=bTrack1.lProf;
-	int w=200;
-	float *cc;
-	getMem(cc,w*2,"chkCorr #1"); zeroMem(cc,w*2);
-	getMem(tr1,l,"chkCorr #2");
-	getMem(tr2,l,"chkCorr #3");
-	double av1=0,av2=0,sd1=0,sd2=0;
-	for(int i=0; i<l; i++){
-		float x;
-		x=bTrack1.getValue(i,0);
-		tr1[i]=x; av1+=x; sd1+=x*x;
-		x=bTrack2.getValue(i,0);
-		tr2[i]=x; av2+=x; sd2+=x*x;
-	}
-	av1/=l; av2/=l;
-	sd1=sqrt((sd1-l*av1*av1)/(l-1));
-	sd2=sqrt((sd2-l*av2*av2)/(l-1));
-	for(int i=0; i<l; i++){
-		tr1[i]=(tr1[i]-av1)/sd1;
-		tr2[i]=(tr2[i]-av2)/sd2;
-	}
-	for(int i=-w; i<w; i++){
-		cc[i+w]=sumCC(i);
-	}
-	FILE *f=fopen("CC","wt");
-	for(int i=0; i<w*2; i++){
-		fprintf(f,"%i\t%f\n", (i-w)*100, cc[i]);
-	}
-	fclose(f);
-}
-
-//=====================================================
-#ifndef M_PI
-#define M_PI 3.14159265358979323846
-#endif
-
-double drand()   /* uniform distribution, (0..1] */
-{
-  return (rand()+1.0)/(RAND_MAX+1.0);
-}
-
-double random_normal()
- /* normal distribution, centered on 0, std dev 1 */
-{
-  return sqrt(-2*log(drand())) * cos(2*M_PI*drand());
-}
-
-
+//===================================================================
+//===================================================================
 double* GaussProcess(double *w,int  n, int kk){
 	getMem0(w,n,"tst");
 	double a=0.995, b=1;
 	double x=0, xmin=1.e+200, xmax=-xmin;
 	for(int i=0; i<n; i++){
-		x=a*x+b*random_normal();
+		x=a*x+b*rGauss();
 		double xx=exp(-0.1*x);
 		w[i]=xx;
 	}
@@ -462,7 +298,7 @@ double* GaussProcess(double *w,int  n, int kk){
 	return w;
 }
 
-
+//==================================================================
 int genomeSize=100000;
 int lStep_test=1000;
 double * random_wig(double *w,int num){
@@ -483,45 +319,208 @@ double * random_wig(double *w,int num){
 	return w;
 }
 
-//int intCmp(void*a1, void*a2){return (int)(*a1)-(int)(*a2);}
+//===========================================================================
+int l_chrom=2000000;
+int n_nucl = 100000;
+int *nucl_pos;
+char *nucl_prop;
+int bin=30;
+int delta=20;
+float *pr1, *pr2;
+double pre,prd,pr1e,pr2e,pr1d,pr2d;
 
-void test(){
-	clearDeb();
-	debugFg=DEBUG_LOG|DEBUG_PRINT;
-	int lpr=10000;
-	float *ccor;
-	getMem(ccor,lpr*2+10,""); zeroMem(ccor,lpr*2+10);
-	int nn=0;
+void makeLabel(float *pr, double lam, int p){
+	zeroMem(pr,l_chrom);
+	for(int i=0; i<n_nucl; i++){
+if(i%1000 ==0) verb("i=%i\r",i);
+		int k=nucl_pos[i];
+		if(k<0) continue;
+		if((nucl_prop[i] & p)==p){
+			double x=-log(drand()/lam)*lam;
+			double sigma=delta/3.; sigma*=sigma;
 
-	double y=0;
-	for(int i=0; i<bTrack1.lProf; i++){
-		int x=bTrack1.bytes[i];
-		if(x>1){
-			nn++;
-			for(int k=0, j=i-lpr; k<lpr*2; k++,j++){
-				if(j<0 || j>=bTrack1.lProf) continue;
-				y=bTrack2.bytes[j];
-				if(y>threshold) ccor[k]+=0.01*y;
-			}
-		}
-		x=bTrack1.cbytes[i];
-		if(x>1){
-			nn++;
-			for(int k=lpr*2-1, j=i-lpr; k >=0; k--,j++){
-				if(j<0 || j>=bTrack1.lProf) continue;
-				y=bTrack2.bytes[j];
-				if(y>threshold) ccor[k]+=0.01*y;
+			int j0=k-delta, j1=k+delta;
+			if(j0<0) j0=0; if(j1>=l_chrom) j1=l_chrom;
+			for(int j=j0; j<j1; j++){
+				float d=j-k;
+				double y=x*exp(-d*d/sigma);
+				pr[j]+=y;
 			}
 		}
 	}
+	pre=0; prd=0;
+	double nz=0;
+	for(int i=0; i<l_chrom; i++){
+		double x=pr[i];
+		if(x==0) nz++;
+		pre+=x; prd+=x*x;
+	}
+	pre/=l_chrom; prd=prd/l_chrom-pre*pre; prd=sqrt(prd);
+	verb("e=%f sd=%f   nz=%f\n",pre,prd, nz/l_chrom);
+}
 
-	FILE * f=fopen("ccor","wt");
-	deb(nn);
-	for(int k=0; k<2*lpr; k++)
-		fprintf(f,"%i\t%f\n",k-lpr,ccor[k]/nn);
+void wr(const char *fname, float *pr){
+	FILE *f=fopen(fname,"w");
+	fprintf(f,"track type=bedGraph name=\"%s\" description=\"test\"\n", fname);
+	for(int i=0; i<l_chrom; i++){
+if(i%1000000==0) verb("wr %i\r",i);
+		ScoredRange pos, pos0;
+		double x=int(pr[i]*10)/10.;
+		pos.score=x; pos.end=(pos.beg=i*bin)+bin;
+		if(pos.score == pos0.score){
+			pos0.end=pos.end; continue;
+		}
+		if(pos0.chrom !=0)
+			pos0.printBGraph(f);
+		pos0.beg=pos.beg; pos0.end=pos.end; pos0.chrom=(char*)"chr1"; pos0.score=pos.score;
+		pos0.printBGraph(f);
+	}
+verb("\n");
 	fclose(f);
+}
 
+void wr_chrom(){
+	FILE *f=fopen("test_chr","w");
+	fprintf(f,"chr1\t%i\n",l_chrom*bin);
+	fclose(f);
+}
+
+double p0[]={15,40,40, 5};
+double pTrans[4][4]={
+		{ 3,	47,	47,	3},
+		{ 4,	90,	3,	3},
+		{ 4,	3,	90,	3},
+		{ 2,	2,	2,	94},
+};
+
+void normTrans(){
+	double xx=0;
+	for(int a=0; a<4; a++){
+		xx=0;
+		for(int i=0; i<4; i++) xx+=pTrans[a][i];
+		for(int i=0; i<4; i++) pTrans[a][i]/=xx;
+	}
+	xx=0;
+	for(int i=0; i<4; i++) xx+=p0[i];
+	for(int i=0; i<4; i++) p0[i]/=xx;
+	printf("---------------------\n");
+	for(int i=0; i<4; i++){
+		for(int j=0; j<4; j++)
+			printf("%f\t",pTrans[i][j]);
+		printf("\n");
+	}
+	printf("---------------------\n");
+	for(int i=0; i<4; i++) printf("%f\t",p0[i]);
+		printf("\n");
+
+}
+
+int next(int a){
+	double r=drand(), x=0;
+
+//	for(int i=0; i<4; i++){
+//		x+=p0[i];
+//		if(r<x) return i;
+//	}
+//
+	x=0;
+	for(int i=0; i<4; i++){
+		x+=pTrans[a][i];
+		if(r < x) return i;
+	}
+	return 0;
+}
+
+int intcmp(const void* a, const void* b){
+	return *((int*)a)-*((int*)b);
+}
+
+void makeNucleosomes(){
+	for(int i=0; i<n_nucl; i++){
+		nucl_pos[i]=randInt(l_chrom);
+	}
+	qsort(nucl_pos,n_nucl,sizeof(int),intcmp);
+	for(int i=1; i<n_nucl; i++){
+		if(nucl_pos[i]==nucl_pos[i-1]) nucl_pos[i-1]=-1;
+	}
+	//================================ Markov process
+	double x=0, r=drand();
+	for(int i=0; i<4; i++){
+		x+=r; if(x < p0[i]) nucl_prop[0]=i;
+		break;
+	}
+
+	int n0=0, n1=0, n2=0, n3=0;
+
+	for(int i=1; i<n_nucl; i++){
+		nucl_prop[i]=next(nucl_prop[i-1]);
+		int p=nucl_prop[i];
+		if(p==0) n0++;
+		if(p==1) n1++;
+		if(p==2) n2++;
+		if(p==3) n3++;
+	}
+
+deb(">>>>>>>>> n1=%i  n2=%i  n3=%i",n1,n2,n3);
+double nn=n0+n1+n2+n3;
+printf("%f\t%f\t%f\t%f\n",n0/nn,n1/nn, n2/nn, n3/nn);
+
+}
+
+void test(){
+	char b[256];
+	clearDeb();
+	debugFg=DEBUG_LOG|DEBUG_PRINT;
+verb("================ GENERATE TEST DATA =============\n");
+	getMem(pr1,l_chrom,0);
+	getMem(pr2,l_chrom,0);
+	getMem(nucl_pos,n_nucl,0);
+	getMem(nucl_prop,n_nucl,0);
+	normTrans();
+	wr_chrom();
+
+	makeNucleosomes();
+	makeLabel(pr1,8,1); pr1e=pre; pr1d=prd;
+	outFile=strcpy(b,"label1");
+	wr("l1.bgraph",pr1);
+
+//	makeNucleosomes();
+	makeLabel(pr2,8,2); pr2e=pre; pr2d=prd;
+	outFile=strcpy(b,"label2");
+	wr("l2.bgraph",pr2);
+	double cc=0;
+	for(int i=0; i<l_chrom; i++){
+		cc+=(pr1[i]-pr1e)*(pr2[i]-pr2e)/pr1d/pr2d;
+	}
+	cc/=l_chrom;
+	deb("=======>>>> cc=%f",cc);
 	exit(0);
+}
+//===================================================================
+//===================================================================
+//===================================================================
+//===================================================================
+void test_formula();
+
+const int progType=0;
+void printMiniHelp(){;}
+
+char timerBuffer[256];
+char *dateTime1(){
+	time_t lt=time(NULL);
+	tm *t=localtime(&lt);
+	sprintf(timerBuffer,"%02i.%02i.%02i %02i:%02i:%02i",t->tm_mday, t->tm_mon+1, t->tm_year%100,
+			t->tm_hour, t->tm_min, t->tm_sec);
+	return timerBuffer;
 }
 
 
+int main(int argc, char **argv) {
+	debugFg=DEBUG_LOG|DEBUG_PRINT;
+	clearDeb();
+	verbose=1;
+	test_formula();
+	return 0;
+
+//	test();
+}

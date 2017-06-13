@@ -14,7 +14,7 @@
 #include <sys/file.h>
 //#include <dir.h>
 
-const char* version="1.73";
+const char* version="2.02";
 
 int debugFg=0;
 //int debugFg=DEBUG_LOG|DEBUG_PRINT;
@@ -31,6 +31,8 @@ long long GenomeLength=0;      // TOTAL LENGTH OF THE GENOME
 int n_chrom;
 char trackName[4096];       // current track name
 char *chromFile=0;
+char *confFile=0;		// confounder file name
+char *cfgFile=0;		// config file name
 char *profPath=0;
 char *trackPath=0;
 
@@ -43,7 +45,6 @@ char *profile2=0;		// second profile file file name
 char *resPath=0;
 char *statFileName=(char*)"./statistics";
 char *paramsFileName=(char*)"./params";
-char *mapFil=0;			// map file
 char *inputProfiles=0;
 char *outTrackFile=0; // Filename for write out track
 
@@ -52,92 +53,77 @@ bool  silent=0;				// inhibit stdout
 bool  syntax=1;				// Strong syntax control
 
 bool  writeDistr=1;
-bool  writeBPeak=0;
 bool  writeDistCorr=1;		    // write BroadPeak
 int   crossWidth=10000;
 bool  outSpectr=0;
 bool  outChrom=0;
-int  outRes=XML|TAB;
-int  inpThreshold=0;		// Testing of binarized input data, % of max
-bool writePDF=true;
+int   outRes=XML|TAB;
+int   inpThreshold=0;		// Testing of binarized input data, % of max
+bool  writePDF=true;
 int   complFg=IGNORE_STRAND;
 int   profileLength;			// size of the profile array
-float *profile =0;				// uncompressed profile array
-float *profilec=0;				// uncompressed profile array
-
-unsigned char *byteprofile;	 	// compressed profile array
-unsigned char *byteprofilec;	// compressed profile array
-
-int   logScale=AUTO_SCALE;
 
 char *pcorProfile=0;    // partial correlation profile file name
-
-int kernelType=KERN_NORM;
-double noiseLevel=0.2;
-int wSize=100000;        // size of widow (nucleotides)
-int wStep=0;             // window step   (nucleotides)
-int flankSize=0;
-double kernelSigma=1000.;    	// kernel width (nucleotides)
-double kernelShift=0;      	    // Kernel mean (for Gauss) or Kernel start for exponent
-int intervFg0;
-double scaleFactor0=0.2;
-int outWIG=NONE;
-//int LCScale=LIN_SCALE;
-int LCScale=LOG_SCALE;
-int outThreshold=1;
+int  binBufSize=10000000;
 
 
-int wProfStep;          	// window step   (profile scale)
-int wProfSize;          	// size of widow (profile scale)
-int LFlankProfSize;         // size of flank (profile scale)
-int RFlankProfSize;         // size of flank (profile scale)
-int profWithFlanksLength; 	// size of profWindow array (including random flanks)
-double kernelProfSigma;     // kernel width ((profile scale)
-double kernelProfShift;
-double kernelNS;			// Correction for non-specifisity
-bTrack bTrack1, bTrack2, projTrack, mapTrack;
-Kernel *kern;
-double maxNA0=95;
-double maxZero0=95;
-double maxNA;
-double maxZero;
-int nShuffle=100;
-int maxShuffle=10000;
-int minShuffle=1000;
-double pVal=2;
-double qVal=0;
-MapIv miv;				// interval for mapping
-Model model;
+int 	kernelType=KERN_NORM;
+char* 	customKern=0;
+double 	noiseLevel=0.2;
+int 	wSize=100000;        // size of widow (nucleotides)
+int 	wStep=0;             // window step   (nucleotides)
+int 	flankSize=0;
+double 	kernelSigma=1000.;    	// kernel width (nucleotides)
+double 	kernelShift=0;      	    // Kernel mean (for Gauss) or Kernel start for exponent
+int 	intervFg0;
+double 	scaleFactor=0.2;
+bool 	outLC=0;
+int 	LCScale=LOG_SCALE;
+//int 	LCScale=LIN_SCALE;
+double 	lcFDR=0.5;
 
-int threshold=0;
+int 	wProfStep=0;          	// window step   (profile scale)
+int 	wProfSize=0;          	// size of widow (profile scale)
+int 	LFlankProfSize=0;         // size of flank (profile scale)
+int 	RFlankProfSize=0;         // size of flank (profile scale)
+int 	profWithFlanksLength=0; 	// size of profWindow array (including random flanks)
+double 	kernelProfSigma=1000;     // kernel width ((profile scale)
+double 	kernelProfShift=0;
+double 	kernelNS=0;			// Correction for non-specifisity
+Track 	*track1=0, *track2=0, *projTrack=0;
+Kernel 	*kern=0;
+double 	maxNA0=95;
+double 	maxZero0=95;
+double 	maxNA=100;
+double 	maxZero=100;
+int 	nShuffle=10000;
+Model 	*model;
 
-FILE *logFile=0;
-bool doAutoCorr=0;
+int 	threshold=0;
 
-int corrScale=10;
-bool corrOnly=0;
-double prod11=0,prod12=0,prod22=0, eprod1,eprod2;
-int nprod=0;
+FILE 	*logFile=0;
+bool 	doAutoCorr=0;
+
+int 	corrScale=10;
+double 	prod11=0,prod12=0,prod22=0, eprod1,eprod2;
+int 	nprod=0;
 XYCorrelation XYfgCorrelation;		    // array for correlation picture
 XYCorrelation XYbgcorrelation;		// array for correlation picture
 Fourier LCorrelation;
 
-int pcaFg=0;
-int nPca=100000;
-int pcaSegment=100;
-double totCorr=0, BgTotal=0;
+double 	totCorr=0, BgTotal=0;
 unsigned long id;
-bool RScriptFg=0;
-int bpType=BP_SIGNAL;
-int cage=0;
-bool clearProfile=false;
-int scoreType=AV_SCORE;
+bool 	RScriptFg=0;
+int 	bpType=BP_SIGNAL;
+int 	cage=0;
+bool 	clearProfile=false;
+int 	scoreType=AV_SCORE;
 AliasTable alTable;
 FileListEntry files[256];
-int   nfiles;
+int   	nfiles;
 
-double BgAvCorr;
-double FgAvCorr;
+double 	BgAvCorr=0;
+double 	FgAvCorr=0;
 
 unsigned int hashx(unsigned int h,unsigned int x);
 unsigned int hashx(unsigned int h,char c);
@@ -151,6 +137,15 @@ unsigned int hashx(unsigned int h,double c);
 ScoredRange::ScoredRange(){
 	chr=0; chrom=0;	beg=end=0;	score=0;
 }
+//==================================== print a range to a BED GRAPH
+void ScoredRange::printBGraph(FILE *f){
+	if(score!=NA)
+		fprintf(f,"%s\t%li\t%li\t%.2f\n",chrom,beg, end,score);
+	else
+		fprintf(f,"#%s\t%li\t%li\t?\n",chrom,beg, end);
+}
+
+
 //====================================================================================
 char *AliasTable::convert(char*oldName, char *newName){
 	char b0[1024],b1[1024];
@@ -211,7 +206,7 @@ void AliasTable::readTable(const char* fname){
 Chromosome::Chromosome(char *chr, long l, int bb){
     chrom=chr;		//Chromosome name
     length=l;		//Chromosome length
-    base=bb;			//Start position in binary profile
+    base=bb;		//Start position in the binary profile
     av1=av2=corr=lCorr=count=0;
     densCount=0;
     distDens=0;
@@ -220,7 +215,7 @@ Chromosome::Chromosome(char *chr, long l, int bb){
 void Chromosome::clear(){
     av1=av2=corr=lCorr=count=0; densCount=0;
     if(profWithFlanksLength) {
-    	getMem0(distDens,profWithFlanksLength,  "Chromosome::clear #1");
+    	getMem(distDens,profWithFlanksLength,  "Chromosome::clear #1");
     	zeroMem(distDens,profWithFlanksLength);
     }
 }
@@ -307,6 +302,7 @@ void filePos2Pos(int pos, ScoredRange *gr, int length){
 	gr->chr=ch0;
 	gr->chrom=ch0->chrom;
 	gr->end=(gr->beg=p1)+length;
+	if(gr->end >= ch0->length) gr->end = ch0->length-1;
 	return;
 }
 
@@ -381,10 +377,12 @@ bool isDouble(const char *s){
 //=================================== extract attribute value by attr name
 char * getAttr(char *s0, const char *name, char *buf){
 	char *s=s0;
+	int ll=strlen(name);
+	char *ss=buf;
 	while(*s!=0){
-		char *ss=buf;
-		s=strstr(s,name);
+		s=strchr(s,*name);
 		if(s==0) return 0;
+		if(strncmp(s,name,ll)!=0) { s++; continue;}
 		s=skipSpace(s+strlen(name));
 		if(*s==0 || *s!='=') continue;
 	    s=skipSpace(s+1);
@@ -431,7 +429,7 @@ char *trim(char *s){
 		else break;
 	}
 	if(*s=='\"') s++;
-	char *ss=strchr(s,'\"'); if(ss) *ss=0;
+	char *ss=strrchr(s,'\"'); if(ss) *ss=0;
 	return s;
 }
 
@@ -443,6 +441,7 @@ const char*getKernelType(){
 	if(kernelType==KERN_NORM	 ) type="N";
 	else if(kernelType==KERN_LEFT_EXP ) type="L";
 	else if(kernelType==KERN_RIGHT_EXP) type="R";
+	else if(kernelType==KERN_CUSTOM) type=customKern;
 	else return "X";
 	char b[80];
 	if(kernelShift >0){
@@ -530,7 +529,7 @@ void errorExit(const char *format, va_list args){
 		char b[1024];
 		vsprintf(b, format, args);
 	    fprintf(stderr, "%s", b);
-	    if(errStatus) fprintf(stderr, "%s\n", errStatus);
+	    if(errStatus) fprintf(stderr, " %s\n", errStatus);
 	    else fprintf(stderr, "\n");
 	    FILE *f=openLog();
 		if(f) {
@@ -555,7 +554,7 @@ void errorExit(const char *format, ...){
 //============================================================
 //=======================    Debug     =======================
 //============================================================
-
+Timer debTimer;
 FILE *debLogFile=0;
 void clearDeb(){
 	if((debugFg&DEBUG_LOG)!=0){
@@ -564,61 +563,82 @@ void clearDeb(){
 	}
 }
 //===========================================
-void _deb_(const char *format, va_list args){
+void _deb_(bool t, const char *format, va_list args){
 	char b[2048];
 	vsprintf(b, format, args);
 	if((debugFg&DEBUG_PRINT)!=0){
-		printf("%s\n",b);
+		printf("%s",b);
+		if(t) printf(" %s",debTimer.getTime());
+		printf("\n");
 	}
 	if((debugFg&DEBUG_LOG)!=0){
 		if(debLogFile==0) debLogFile=fopen("deb_log","a+t");
-		fprintf(debLogFile, "%s\n",b);
+		fprintf(debLogFile, "%s",b);
+		if(t) fprintf(debLogFile, " %s",debTimer.getTime());
+		fprintf(debLogFile, "\n");
 		fclose(debLogFile); debLogFile=0;
 	}
+	if(t) debTimer.reset();
 }
 //===========================================
 
-void deb_(int num){
+void deb(int num, bool t, char e){
 	if((debugFg&DEBUG_PRINT)!=0){
 		if(debS) printf("%s",debS);
-		printf(" #%i ",num);
+		printf(" #%i",num);
+		if(t) printf(" %s",debTimer.getTime());
+		printf("%c",e);
 	}
 	if((debugFg&DEBUG_LOG)!=0){
 		if(debLogFile==0) debLogFile=fopen("deb_log","a+t");
 		if(debS) fprintf(debLogFile, "%s",debS);
-		fprintf(debLogFile, " #%i ",num);
+		fprintf(debLogFile, " #%i",num);
+		if(t) fprintf(debLogFile, " %s",debTimer.getTime());
+		fprintf(debLogFile, "%c",e);
 		fclose(debLogFile); debLogFile=0;
 	}
+	if(t) debTimer.reset();
 }
 
 void deb(int num){
-	if((debugFg&DEBUG_PRINT)!=0){
-		if(debS) printf("%s",debS);
-		printf(" #%i\n",num);
-	}
-	if((debugFg&DEBUG_LOG)!=0){
-		if(debLogFile==0) debLogFile=fopen("deb_log","a+t");
-		if(debS) fprintf(debLogFile,"%s", debS);
-		fprintf(debLogFile, " #%i\n",num);
-		fclose(debLogFile); debLogFile=0;
-	}
+	deb(num, false,'\n');
 }
-
 
 void deb(const char *format, ...){
 	va_list args;
 	va_start(args, format);
-	_deb_(format, args);
+	_deb_(false, format, args);
 	va_end(args);
 }
 
 void deb(int num, const char *format, ...){
 	if(debugFg==0) return;
-	deb_(num);
+	deb(num,false,' ');
 	va_list args;
 	va_start(args, format);
-	_deb_(format, args);
+	_deb_(false, format, args);
 	va_end(args);
+}
+void debt(int num){
+	deb(num,true,'\n');
+}
+void debt(const char *format, ...){
+	va_list args;
+	va_start(args, format);
+	_deb_(true, format, args);
+	va_end(args);
+}
+
+void debt(int num, const char *format, ...){
+	if(debugFg==0) return;
+	deb(num,false,' ');
+	va_list args;
+	va_start(args, format);
+	_deb_(true, format, args);
+	va_end(args);
+}
+void debt(){
+	debTimer.reset();
 }
 //============================================================
 //=======================      Timer   =======================
@@ -652,6 +672,14 @@ long mtime()
   return mt;
 }
 
+char timerBufferQQ[256];
+char *dateTime(){
+	time_t lt=time(NULL);
+	tm *t=localtime(&lt);
+	sprintf(timerBufferQQ,"%02i.%02i.%02i %02i:%02i:%02i",t->tm_mday, t->tm_mon+1, t->tm_year%100,
+			t->tm_hour, t->tm_min, t->tm_sec);
+	return timerBufferQQ;
+}
 
 //============================================================
 //====================   Files and Paths    ==================
@@ -696,7 +724,8 @@ char* makeFileName(char *b, const char *path, const char*fname){
 	if(*fname=='/' || *fname=='~') return strcpy(b,fname);
 	char *s;
 	if((s=strrchr((char*)fname,'/'))!=0) fname=s+1;
-	sprintf(b,"%s%s",path,fname);
+	if(path && path[strlen(path)-1]=='/') sprintf(b,"%s%s",path,fname);
+	else								  sprintf(b,"%s/%s",path,fname);
 	return b;
 }
 //================= create filename using path and name
@@ -765,7 +794,7 @@ void funlockFile(FILE *f){
 //=================== Check if given file exists
 bool fileExists(const char *fname){
 	bool fg=false;						// The file do not exist. The header should be writen.
-	FILE *f=gopen(fname,"rt");	// check if statistics file exists
+	FILE *f=gopen(fname,"r");	// check if file exists
 	if(f!=0) {fg=true; fclose(f);}
 	return fg;
 }
@@ -822,7 +851,7 @@ void makeDirs(){
 //========================    Memory    ======================
 //============================================================
 void zfree(void *a, const char* b){
-	if(a) free(a); else writeLog("double free %s\n",b);
+	if(a) free(a); else if(b) writeLog("double free %s\n",b);
 }
 void *xmalloc(size_t n, const char *err){
 	void *a=malloc(n);
@@ -830,19 +859,29 @@ void *xmalloc(size_t n, const char *err){
 		if(err==0)
 			errorExit("can't allocate memory: %li",n);
 		else
-			errorExit("can't allocate memory in %s: %li",err,n);
+			errorExit("can't allocate memory. %s: %li",err,n);
 	}
 	return a;
 }
 //============================================================
 //========================    Random    ======================
 //============================================================
+//=====================================================
+inline int longRand(){
+	int x=rand();
+	if(RAND_MAX > 0xfffff) {return x;}
+	return (rand()<<15)|x;
+}
+
+double drand(){   /* uniform distribution, (0..1] */
+	double x=(longRand()+1.0)/(LRAND_MAX+1.0);
+  return x;
+}
+
 double rGauss(){
-	double phi=(double)rand()/RAND_MAX * 2 * M_PI, r=0;
-	while(r==0) r=(double)rand()/RAND_MAX;
-//	if(r==0) r=0.e-200;
+	double phi=drand() * 2 * PI, r=0;
+	while(r==0) r=drand();
 	double rr=sqrt(-2.*log(r))*sin(phi);
-//	double rr=log(r)*sin(phi);
 	return rr;
 }
 
@@ -853,103 +892,12 @@ double rGauss(double e, double sigma){
 
 // random integer in given interval
 unsigned long randInt(unsigned long n){
-	unsigned long rn=(unsigned long)((double)(rand())/(double(RAND_MAX))*n);
+	int k=longRand();
+	double x=(double)(k)/(double)(LRAND_MAX);
+	unsigned long rn=(unsigned long)(x*n);
 	return rn;
 }
 
-//============================================================
-//===================    Standard Histogram    ===============
-//============================================================
-
-Histogram::Histogram(int n){
-	minVal=-1; maxVal=1; e=0; sigma=0; alpha=beta=1; iq=iqq=im=0;
-	nBin=n; count=0;
-	dd=0; db=0; Fp=0; Fm=0;
-	errStatus="init Histogram";
-	getMem(dd, nBin, "Histogram #1");
-	getMem(db, nBin, "Histogram #1");
-	getMem(Fp, (nBin+1), "Histogram #1");
-	getMem(Fm, (nBin+1), "Histogram #1");
-	zeroMem(dd,nBin);
-	bin=(maxVal-minVal)/nBin;
-	ready=false;
-	errStatus=0;
-}
-
-//=================== Add value to the histogram ===========
-void Histogram::add(double x){
-	if(ready) return;
-	int i=int((x-minVal)/bin);
-	if(i<0) i=0; if(i>=nBin) i=nBin-1;
-	dd[i]++; e+=x; sigma+=x*x;
-	count++;
-}
-//============= Calculate cummulative Beta distribution for the background distribution
-void Histogram::normBeta(){
-	if(ready) return; ready=true;
-	norm();
-	double eb=0;
-	for(int i=0; i<nBin; i++){	// calculate the integral of the beta distrib.
-		double x=minVal+bin*i;
-		eb+=(db[i]=xBetaD(alpha,beta,x));
-	}
-	for(int i=0; i<nBin; i++)	{	// normalyze beta distribution
-		db[i]/=eb*bin;
-	}
-	calcCDF(db);
-}
-//======================= calculate cumulative distributions
-void Histogram::calcCDF(double *d){
-	Fp[0]=Fm[nBin]=0; Fm[0]=1;
-	for(int i=1, j=nBin-1; i<nBin; i++,j--){
-		Fp[i]=Fp[i-1]+d[i]*bin;
-		Fm[j]=Fm[j+1]+d[j]*bin;
-	}
-
-}
-//======================== normalize the foreground distributions
-void Histogram::normF(){
-	if(ready) return; ready=true;
-	norm();
-	calcCDF(dd);
-}
-//===================== normalize the histogram and calculate the statistical parameters
-void Histogram::norm(){
-	e/=count; sigma=(sigma-count*e*e)/(count-1);
-	double eBeta=2e-1,  d=sigma/4, gg=(1-eBeta)/eBeta, gg1=gg+1;
-	alpha=(gg/(d*gg1*gg1) - 1)/(gg1);
-	beta=gg*alpha;
-
-	sigma=sqrt(sigma);
-	for(int i=0; i<nBin; i++){
-		dd[i]=dd[i]/count/bin;
-	}
-}
-
-//============================================ Interpolation
-double Histogram::interpol(double x, double *fun){
-	int i=int((x-minVal)/bin);
-	if(i<0) {i=0;}
-	if(i>=nBin) {i=nBin-1;}
-	double dx0=x-(minVal+bin*i), dx1=bin-dx0;
-	double f0=log(fun[i]), f1=log(fun[i+1]);
-	return exp((f0*dx1+f1*dx0)/bin);
-}
-//=======================================================
-
-double Histogram::pValp(double x){return interpol(x,Fp);}
-double Histogram::pValm(double x){return interpol(x,Fm);}
-
-double xBetaD(double a, double b, double x){
-	return pow(1-x,a)*pow(1+x,b);
-}
-
-void Histogram::print(FILE *f){
-	for(int i=0; i<nBin; i++){
-		double x=minVal+bin*i;
-		fprintf(f,"%f\t%f\t%.2e\t%.2e\t%.2e\n",x,dd[i], db[i],Fp[i],Fm[i]);
-	}
-}
 //============================================================
 //===================    Dynamic  Histogram    ===============
 //============================================================
@@ -960,6 +908,12 @@ DinHistogram::DinHistogram(int ll){
 	getMem(cnts[0],l,"Dinamic histogram 3");
 	getMem(cnts[1],l,"Dinamic histogram 4");
 	clear();
+}
+DinHistogram::~DinHistogram(){
+	xfree(hist[0],"Dinamic histogram 0");
+	xfree(hist[1],"Dinamic histogram 1");
+	xfree(cnts[0],"Dinamic histogram 3");
+	xfree(cnts[1],"Dinamic histogram 4");
 }
 
 void DinHistogram::clear(){
@@ -1146,13 +1100,16 @@ int getFlag(char*s){
 //=================================================================
 int   fileId=0;
 
-void addFile(const char* fname, int id){
+void addFile(char* fname, int id){
+	fname=trim(fname);
+	if(strlen(fname)==0) return;
+
 	files[nfiles].fname=strdup(fname);
 	files[nfiles].id=fileId;
 	nfiles++;
 }
 
-void addFile(const char* fname){
+void addFile(char* fname){
 	if(nfiles > 256) errorExit("too many input files\n");
 	char b[4096], *s;
 	strcpy(b,fname); s=strrchr(b,'.'); if(s) s++;
@@ -1165,7 +1122,7 @@ void addFile(const char* fname){
 		}
 		for(;(s=fgets(b,sizeof(b),f))!=0;){
 			strtok(b,"\r\n#");
-			s=skipSpace(b);
+			s=trim(b);
 			if(strlen(s)==0 || *s=='#') continue;
 			addFile(s, fileId);
 		}
@@ -1179,7 +1136,7 @@ void addFile(const char* fname){
 
 
 unsigned int hashx(unsigned int h,char c){
-	return h+(c-32)+1234567;
+	return h+(c-32)+1234;
 }
 unsigned int hashx(unsigned int h,const char *s){
 	if(s==0) return h;
@@ -1205,26 +1162,55 @@ unsigned int hashx(unsigned int h,double c){
 }
 
 void makeId(){
-	id=hashx(id,outFile);
+	id=0;
 	id=hashx(id,chromFile);
+	id=hashx(id,flankSize);
+	id=hashx(id,kernelType);
 	id=hashx(id,binSize);
 	id=hashx(id,intervFlag0);
-	id=hashx(id,qVal);
-	id=hashx(id,pVal);
 	id=hashx(id,nShuffle);
 	id=hashx(id,maxZero);
 	id=hashx(id,maxNA0);
 	id=hashx(id,kernelSigma);
-	id=hashx(id,profile1);
-	id=hashx(id,profile2);
 	id=hashx(id,wSize);
 	id=hashx(id,wStep);
-	id=hashx(id,flankSize);
-	id=hashx(id,kernelType);
-
-	id=hashx(id,intervFlag0);
 	id=hashx(id,threshold);
-	id=hashx(id,threshold);
+	id=hashx(id,outFile);
+	id=hashx(id,mtime());
 }
+//======================================================================
+BufFile::~BufFile(){
+	if(f!=0) fclose(f);
+	if(buffer) xfree(buffer,"buff file");
+}
+
+void BufFile::init(const char *fname){
+	f=fopen(fname,"rb");
+	getMem(buffer,SG_BUFSIZ+SG_BUFEXT,"err");
+	int n=fread(buffer,1,SG_BUFSIZ,f);
+	if(n <= 0) {curString=0;}
+	else {curString=buffer; buffer[n]=0;}
+}
+
+
+char *BufFile::getString(){
+	if(curString==0) return 0;
+	char *s0=curString;
+	while(isspace(*s0)) s0++;
+	char *ss=strchr(curString,'\n');
+	if(ss==0){
+		strcpy(buffer,curString);
+		char *bb=buffer+strlen(curString);
+		int n=fread(bb,1,SG_BUFSIZ,f);
+		if(n <= 0) {curString=0; return s0;}
+		else {curString=buffer; bb[n]=0;}
+		return(getString());
+	}
+	curString=ss+1;
+	while(isspace(*ss)) *ss--=0;
+//	*ss=0;
+	return s0;
+}
+//======================================================================
 
 

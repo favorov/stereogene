@@ -7,13 +7,13 @@
 #include "track_util.h"
 
 
-void removeNA(unsigned char *s, int l){
+void removeNA(BINVAL *s, int l){
 	if(NAFlag) return;
 	for(int i=0; i<l; i++){
-		if(s[i]==0) s[i]=1;
+		if(s[i]==NA) s[i]=0;
 		if(inpThreshold){
-			if((s[i]-1)*100./250 > inpThreshold) s[i]=250;
-			else s[i]=1;
+			if((s[i])*100./250 > inpThreshold) s[i]=250;
+			else s[i]=0;
 		}
 	}
 }
@@ -33,8 +33,8 @@ bool bTrack::check(const char *fname){
 		return false;
 	}
 	char prmFile[4096], binFile[4096], b[4096];
-	makeFileName(prmFile,profPath, name, PRM_EXT);
-	makeFileName(binFile,profPath, name, BPROF_EXT);
+	makeFileName(prmFile,profPath, fname, PRM_EXT);
+	makeFileName(binFile,profPath, fname, BPROF_EXT);
 //======================================================= check existing files
 	if(! fileExists(binFile)) {
 		verb("file < %s > does not exist. Preparing binary track\n",binFile); return false;
@@ -43,17 +43,15 @@ bool bTrack::check(const char *fname){
 		verb("file < %s > does not exist. Preparing binary track\n",prmFile); return false;
 	}
 	//================= Check modification time
-	makeFileName(b,trackPath, name);
+	makeFileName(b,trackPath, fname);
 	unsigned long tPrm  =getFileTime(prmFile);
 	unsigned long tTrack=getFileTime(b);
-
 	if(tPrm < tTrack){
-		verb("Old profile prm_time=%li  track_time=%li\n",tPrm,tTrack); return false;
+		verb("Old profile:  prm_time=%li  track_time=%li\n",tPrm,tTrack); return false;
 	}
-
 //======================================================= check parameters
 	FILE* f=xopen(prmFile,"rt");
-	trackType=getTrackType((const char*)name);
+	trackType=getTrackType(fname);
 	bool fg=true;
 	char bver[80]="";
 	for(;fgets(b,sizeof(b),f)!=0;){
@@ -65,11 +63,7 @@ bool bTrack::check(const char *fname){
 			strcpy(bver,s2);
 		}
 		if(strcmp(s1,"input"    )==0){
-			if(trackType == MODEL_TRACK){
-				model.readMap(name);
-				if(strcmp(s2,model.definition)) {failParam("input");  fg=false; break;}
-			}
-			else if(strcmp(s2,name)) {
+			if(strcmp(s2,fname)) {
 				failParam("input");  fg=false; break;}}
 		else if(strcmp(s1,"bin")==0){
 			if(atoi(s2)!=binSize) {failParam("bin");  fg=false; break;}
@@ -79,9 +73,6 @@ bool bTrack::check(const char *fname){
 		}
 		else if(trackType==BED_TRACK &&  strcmp(s1,"ivFlag")==0){
 			if(atoi(s2)!=intervFlag0) {failParam("intervals");  return false;}
-		}
-		else if(strcmp(s1,"lscale")==0){
-			if(atoi(s2)!=logScale && logScale!=AUTO_SCALE) {failParam("scale");  return false;}
 		}
 	}
 	fclose(f);
@@ -93,18 +84,10 @@ bool bTrack::check(const char *fname){
 
 
 //=============================================================================
-void bTrack::read(const char *fname){
-
-	for(;*fname==DERIV; fname++) {
-		deriv++;
-	}
-	name=strdup(fname);
-	char prmFile[4096], binFile[4096], b[4096];
+bool bTrack::readPrm(){
+	char prmFile[4096], b[4096];
 	makeFileName(prmFile,profPath, name, PRM_EXT);
-	makeFileName(binFile,profPath, name, BPROF_EXT);
-	if(!check(fname)) makeBinTrack();
-
-	//============================================== Read params
+	if(!fileExists(prmFile)) return false;
 	errStatus="read bytes";
 	FILE *f=xopen(prmFile,"rt");
 	for(;fgets(b,sizeof(b),f)!=0;){
@@ -115,42 +98,217 @@ void bTrack::read(const char *fname){
 		else if(strcmp(s1,"average")==0) av0 =atof(s2);
 		else if(strcmp(s1,"stdDev" )==0) sd0 =atof(s2);
 		else if(strcmp(s1,"strand" )==0) hasCompl=atoi(s2);
-		else if(strcmp(s1,"lscale" )==0) lScale  =atoi(s2);
-		else if(strcmp(s1,"scaleFactor" )==0) scaleFactor=atof(s2);
+		else if(strcmp(s1,"scale" )==0)  scaleFactor  =atof(s2);
 	}
 	if(sd==NAN) sd=1;
 	fclose(f);
-	//============================================== Read bytes
-	f=xopen(binFile,"rb"); if(f==0) return;
+	return true;
+}
 
-	//============================================= get file length
-	fseek(f, 0L, SEEK_END); lProf = (int) ftell(f);
-	fseek(f, 0L, SEEK_SET);
-	if(hasCompl) lProf/=2;
-	getMem0(bytes,(lProf+10), "Read bTrack");
+//=============================================================================
+void BuffArray::init(Track *bbt, bool cmpl, bool wrr){		// Prepare
+	if(bbt->name==0) return;
+	bufBeg=bufEnd=-1; offset=0; wr=false; f=0;
+	bt=bbt;
 
-	fread(bytes,1,lProf,f); removeNA(bytes,lProf);
-	if(hasCompl){
-		getMem0(cbytes,(lProf+10), "bTrack read #1");
-		fread(cbytes,1,lProf,f); removeNA(cbytes,lProf);
+	getMem(bval,binBufSize+2*wProfSize, "Read bTrack");
+	char binFile[4096];
+	makeFileName(binFile,profPath, bt->name, BPROF_EXT);
+	if(wrr){													// Track for write
+		f=xopen(binFile,"w+b"); if(f==0) return;
+		for(int i=0; i<binBufSize; i++) bval[i]=NA;			// Fill the file with NA
+		if(cmpl) {
+			offset=profileLength*sizeof(BINVAL);
+			fseek(f,offset,SEEK_SET);
+		}
+		for(int i=0; i<profileLength; i+=binBufSize){
+			int l=profileLength-i; if(l > binBufSize) l=binBufSize;
+			fwrite(bval, sizeof(*bval), l, f);
+		}
 	}
+	else{													// Track for read
+		f=xopen(binFile,"rb"); if(f==0) return;
+		if(cmpl){
+			offset=profileLength*sizeof(BINVAL);
+			fseek(f,offset,SEEK_SET);
+		}
+	}
+}
+
+void BuffArray::readBuff(int pos){
+	bufBeg=(pos/binBufSize)*binBufSize-wProfSize;
+	if(bufBeg < 0) bufBeg=0;
+	bufEnd=bufBeg+binBufSize+wProfSize*2;
+	if(bufEnd > profileLength) bufEnd = profileLength;
+	fseek(f,bufBeg*sizeof(*bval)+offset,SEEK_SET);
+	int l=bufEnd - bufBeg;
+	fread(bval, sizeof(*bval), l, f);
+}
+
+BINVAL BuffArray::get(int pos){
+	if(pos < bufBeg || pos >= bufEnd)  readBuff(pos);
+	BINVAL x=bval[pos-bufBeg];
+	return x;
+}
+
+
+void BuffArray::writeBuff(){
+	if(wr){		//============= the buffer is changed
+		fseek(f,bufBeg*sizeof(*bval)+offset,SEEK_SET);
+		int l=bufEnd - bufBeg;
+		fwrite(bval, sizeof(*bval), l, f);
+	}
+}
+
+void BuffArray::set(int pos, BINVAL v){
+	if(pos < bufBeg || pos >= bufEnd){
+		if(bufBeg >= 0) writeBuff();
+		readBuff(pos);
+	}
+	bval[pos-bufBeg]=v; wr=true;
+}
+
+BuffArray::BuffArray(){
+	bval=0; f=0; offset=0;	bufBeg=-1; bufEnd=-1; bt=0; wr=false;
+}
+
+void BuffArray::close(){
+	if(f) fclose(f); f=0;
+}
+
+BuffArray::~BuffArray(){
+	xfree(bval,0);
+	close();
+}
+//==========================================================================
+void FloatArray::init(int na){
+	if(f==0){                //===================== simple array without file
+		for(int i=0; i<profileLength; i++) val[i]=na;	//== fill initial values
+		return;
+	}
+	fseek(f,0,SEEK_SET);
+	bufBeg=bufEnd=-1; wr=false;
+	for(int i=0; i<binBufSize; i++) val[i]=na;			// Fill the file with NA
+	for(int i=0; i<profileLength; i+=binBufSize){
+		int l=profileLength-i; if(l > binBufSize) l=binBufSize;
+		fwrite(val, sizeof(*val), l, f);
+	}
+}
+
+FloatArray::~FloatArray(){
+	xfree(val,"float profile");
+	if(f==0) return;
 	fclose(f);
+	remove(fname);
+	xfree(fname,0);
+}
 
-	delta=minP;
-	bScale=(maxP-minP)/250.;
+FloatArray::FloatArray(){
+	bufBeg=bufEnd=-1; wr=false; f=0; val=0;
+	if(binBufSize>=profileLength){
+		getMem(val,profileLength, "Read bTrack"); return;
+	}
+	getMem(val,binBufSize+2*wProfSize, "Read bTrack");
+	char binFile[4096];
+	unsigned int tt=mtime()+rand();	// generate filename
+	sprintf(binFile,"%x.tmp",tt);
+	fname=strdup(binFile);
+	f=xopen(binFile,"w+b"); if(f==0) return;
+}
 
-	av=sd=nn=0;
+void FloatArray::readBuf(int pos){
+	if(f==0) return;
+	//============================================ flush existing buffer before read
+	if(bufBeg >= 0)	writeBuf();
+	//============================================ define block to read
+	bufBeg=(pos/binBufSize)*binBufSize-wProfSize*2;
+	if(bufBeg <0) bufBeg=0;
+	bufEnd=bufBeg+binBufSize+wProfSize*2;
+	if(bufEnd > profileLength) bufEnd = profileLength;
+	fseek(f,bufBeg*sizeof(*val),SEEK_SET);
+	int l=bufEnd - bufBeg;
+	l=fread(val, sizeof(*val), l, f);
+	wr=false;
+}
 
-	getMem0(profWindow,(profWithFlanksLength+10), "bTrack read #2");
+float FloatArray::get(int pos){
+	//=============================================read the value
+	if(pos < bufBeg || pos >= bufEnd)  readBuf(pos);
+	float x=val[pos-bufBeg];
+	return x;
+}
+float FloatArray::getLog(int pos){
+	//=============================================read the value
+	if(pos < bufBeg || pos >= bufEnd)  readBuf(pos);
+	float x=val[pos-bufBeg];
+	if(x!=NA) x=log(x+1);
+	return x;
+}
+
+
+void FloatArray::writeBuf(){
+	if(wr && f){		//=========== file exists & the buffer changed
+		fseek(f,bufBeg*sizeof(*val),SEEK_SET);
+		int l=bufEnd - bufBeg;
+		fwrite(val, sizeof(*val), l, f);
+	}
+}
+
+void FloatArray::set(int pos, float v){
+	if(pos < bufBeg || pos >= bufEnd){	//=== position to write outside the buffer
+		readBuf(pos);
+	}
+	wr=true;
+	val[pos-bufBeg]=v;
+}
+float FloatArray::add(int pos, float v){
+	float x=get(pos);
+	if(v==NA) return x;
+	x=(x==NA) ? v : x+v;
+	set(pos,x);
+	return x;
+}
+
+//=============================================================================
+bool bTrack::readBin(){
+	//============================================= get file length
+	char b[1024];
+	if(bytes==0) bytes=new BuffArray();
+	makeFileName(b,profPath, name, BPROF_EXT);
+	if(!fileExists(b)) return false;
+	bytes->init(this,0,0);
+	if(hasCompl){
+		if(cbytes==0) cbytes=new BuffArray();
+		cbytes->init(this,1,0);
+	}
+	return true;
+}
+
+bool Track::openTrack(const char *fname){
+	if(!readTrack(fname)) return false;
+	getMem(profWindow,(profWithFlanksLength+10), "bTrack read #2");
 	if(doAutoCorr) {
-		getMem0(autoCorr,(profWithFlanksLength+10), "bTrack read #2");
+		getMem(autoCorr,(profWithFlanksLength+10), "bTrack read #2");
 		zeroMem(autoCorr, profWithFlanksLength+10);
 	}
+	return true;
+}
+bool bTrack::readTrack(const char *fname){
+	for(;*fname==DERIV; fname++) {
+		deriv++;
+	}
+	name=strdup(fname);
+	//============================================== Read params
+	if(!readPrm()) return false;
+	if(!readBin()) return false;
+	//============================================== Read bytes
+	av=sd=nn=0;
 	errStatus=0;
+	return true;
 }
 
 //===============================================================================
-double bTrack::addStatistics(){
+double Track::addStatistics(){
 	double avv=0, sdd=0;
 	for(int i=0; i<profWithFlanksLength; i++){
 		double x=profWindow[i];
@@ -159,7 +317,7 @@ double bTrack::addStatistics(){
 	av+=avv; sd+=sdd;
 	return avv/profWithFlanksLength;
 }
-void bTrack::finStatistics(){
+void Track::finStatistics(){
 	av/=nn; sd=sd-av*av*nn; sd/=nn-1; sd=sqrt(sd);
 	if(doAutoCorr){
 		double a=autoCorr[0];
@@ -169,211 +327,207 @@ void bTrack::finStatistics(){
 }
 
 //========================================================================
-void multByteProf(unsigned char *bytes,unsigned char *p1,unsigned char *p2){
-	if(p1==0 && p2==0) return;
-	for(int i=0; i<profileLength; i++){
-		int x=0;
-		if(p1) x|=p1[i];
-		if(p2) x|=p2[i];
-		bytes[i]=bytes[i]*x;
-	}
+bool bTrack::isNA(int i, bool cmpl){
+	return getBVal(i,cmpl)==NA;
 }
-void bTrack::makeIntervals(){
-	if(hasCompl) {
-		multByteProf(bytes,mapTrack.bytes,0);
-		makeIntervals(bytes, &ivs);
-		if(mapTrack.hasCompl){
-			multByteProf (cbytes,mapTrack.cbytes,0);
-			makeIntervals(cbytes,&ivsC);
-		}
-		else{
-			multByteProf (cbytes, mapTrack.bytes,0);
-			makeIntervals(cbytes, &ivsC);
-		}
-	}
-	else if(mapTrack.hasCompl){
-		multByteProf (bytes, mapTrack.bytes, mapTrack.cbytes);
-		multByteProf (bytes, mapTrack.bytes, 0);
-		makeIntervals(bytes, &ivs);
-	}
-	else{
-		multByteProf(bytes,mapTrack.bytes,0);
-		makeIntervals(bytes, &ivs);
-	}
-
-	if(ivs.nIv+ivsC.nIv == 0) errorExit("no nonZero windows");
-	ivs.fin();
-	if(ivsC.nIv) ivsC.fin();
-
-	int l0=lProf; if(hasCompl) l0*=2;
-	int l1=ivs.totLength; if(hasCompl) l1+=ivsC.totLength;
-	av0=av0*l0/l1;
-	sd0=sd0*sqrt(l0/l1);
-
-}
-//========================================================================
-
-int isZero(unsigned char *bytes, int i){
-	if(bytes[i] <2 || bytes[i] <= threshold) return 1;
-	return 0;
-}
-void bTrack::makeMapIntervals(){
-	makeMapIntervals(bytes, &ivs);
-	if(hasCompl) makeIntervals(cbytes,&ivsC);
-//	deb("!======= Map =======");
-//	for(int i=0; i<10; i++)	deb("%i..%i",ivs.ivs[i]->f,ivs.ivs[i]->t);
+bool bTrack::isZero(int i, bool cmpl){
+	return getBVal(i,cmpl)<=threshold;
 }
 
-//========================================================================
-void bTrack::makeMapIntervals(unsigned char *bytes, IVSet *iv){
+void Track::makeIntervals(bool cmpl, IVSet *iv){
 	int f=0;
 	bool space=true;
-	for(int i=0; i<lProf; i++){
-		if(isZero(bytes,i)){
-			if(!space){
-				iv->addIv(f,i);
-			}
-			space=true;
-			}
-		else{
-			if(space) f=i;
-			space=false;
-		}
-	}
-	if(!space) iv->addIv(f,lProf);
-}
-
-
-void bTrack::makeIntervals(unsigned char *bytes, IVSet *iv){
-	int f=0;
-	bool space=true;
-
 	int nZ=0;
 	int wp=wProfSize;
-	for(int i=0; i<wp; i++)
-		if(isZero(bytes,i)) nZ++;
-	for(int i=wp; i<lProf; i++){
-		if(nZ >= wp-1){
-			if(!space) iv->addIv(f,i-wp);
+	int maxZ=min(maxZero, maxNA);
+	for(int i=0; i<wp; i++){
+		if(isZero(i,cmpl)) nZ++;
+	}
+	for(int i=wp; i<profileLength; i++){
+		if(nZ >= maxZ){
+			if(!space){
+				iv->addIv(f,i-wp);
+			}
 			space=true;
 			}
 		else{
 			if(space) f=i-wp;
 			space=false;
 		}
-
-		if( isZero(bytes,i          )) nZ++;
-		if( isZero(bytes,i-wp)) nZ--;
+		if( isZero(i   ,cmpl)) nZ++;
+		if( isZero(i-wp,cmpl)) nZ--;
 	}
-	if(!space) iv->addIv(f,lProf);
+	if(!space) {
+		iv->addIv(f,profileLength);
+	}
+}
+
+void Track::makeIntervals(){
+	makeIntervals(0, ivs);
+	if(hasCompl) makeIntervals(1, ivsC);
+
+	if(ivs->nIv+ivsC->nIv == 0) errorExit("no nonZero windows");
+	ivs->fin();
+	if(ivsC->nIv) ivsC->fin();
+
+	int l0=profileLength; if(hasCompl) l0*=2;
+	int l1=ivs->totLength; if(hasCompl) l1+=ivsC->totLength;
+	av0=av0*l0/l1;
+	sd0=sd0*sqrt(l0/l1);
 }
 
 //========================================================================
-int bTrack::getRnd(bool cmpl){
+int Track::getRnd(bool cmpl){
 	int pos;
-	pos=cmpl ? ivsC.randPos() : ivs.randPos();         // get random position in the interval
+	pos=cmpl ? ivsC->randPos() : ivs->randPos();         // get random position in the interval
 	return pos;
 }
 
 
 //========================================================================
-void bTrack::clear(){
-	ivs.clear();
-	xfree(name,"clear btrack");
+void Track::clear(){
+	ivs->clear();
+	if(name) xfree(name,"clear btrack");
 }
 
+void bTrack::clear(){
+	Track::clear();
+	if(bytes ) bytes->close();
+	if(cbytes) cbytes->close();
+}
 //========================================================================
-int  bTrack::countNA(int pos, bool cmpl){
-	int c=pos+wProfSize >= lProf ? wProfSize+pos-lProf-1 : 0;
-	for(int i=0; i< wProfSize && i+pos < lProf; i++) {
+int  Track::countNA(int pos, bool cmpl){
+	int c=pos+wProfSize >= profileLength ? wProfSize+pos-profileLength-1 : 0;
+	for(int i=0; i< wProfSize && i+pos < profileLength; i++) {
 		if(complFg==IGNORE_STRAND){		// ignore strand
 			int x=1;
-			if(             bytes[pos+i]!=0) x=0;
-			if(hasCompl && cbytes[pos+i]!=0) x=0;
+			if(            !isNA(pos+i,0)) x=0;
+			if(hasCompl && !isNA(pos+i,1)) x=0;
 			c+=x;
 		}
 		else if(!cmpl || !hasCompl) 		// colinear or profile do not know the orient
-			{if( bytes[pos+i]==0) 	c++;}
+			{if(isNA(pos+i,0)) 	c++;}
 		else if(cmpl)						// comlement
-			{if(cbytes[pos+i]==0) 	c++;}
+			{if(isNA(pos+i,1)) 	c++;}
 	}
 	return c;
 }
 
 //========================================================================
-int  bTrack::countZero(int pos, bool cmpl){
-	int c=pos+wProfSize >= lProf ? wProfSize+pos-lProf-1 : 0;
-	int thr= threshold;
-	for(int i=0; i< wProfSize && i+pos < lProf; i++) {
-		if(             bytes[pos+i] ==0 && NAFlag) continue;
-		if(hasCompl && cbytes[pos+i] ==0 && NAFlag) continue;
+int  Track::countZero(int pos, bool cmpl){
+	int c=pos+wProfSize >= profileLength ? wProfSize+pos-profileLength-1 : 0;
+	for(int i=0; i< wProfSize && i+pos < profileLength; i++) {
+		if(            !isNA(pos+i,0) && NAFlag) continue;
+		if(hasCompl && !isNA(pos+i,1) && NAFlag) continue;
 		if(complFg==IGNORE_STRAND){		// ignore strand
 			int x=1;
-			if(bytes[pos+i] > thr) x=0;
-			if(hasCompl && cbytes[pos+i] > thr) x=0;
+			if(            !isZero(pos+i,0)) x=0;
+			if(hasCompl && !isZero(pos+i,1)) x=0;
 				c+=x;
 		}
 		else if(cmpl || !hasCompl) 		// colinear or profile do not know the orient
-			{if(bytes[pos+i] <= thr) 	c++;}
+			{if(isZero(pos+i,0)) 	c++;}
 		else if(cmpl){					// comlement
-			{if(cbytes[pos+i] <= thr) 	c++;}
+			{if(isZero(pos+i,1)) 	c++;}
 		}
 	}
 	return c;
 }
 
-bTrack::bTrack(const char* fname){init();  read(fname);}
-void bTrack::init(){
-	cbytes=bytes=0; name=0; profWindow=0; autoCorr=0;
+void Track::init(){
+	name=0;
+	profWindow=0;
+	autoCorr=0;
 	avWindow=sdWindow=0;// mean and stdDev in current window
-
-	lProf=lScale=0;
-	av=sd=minP=maxP=bScale=delta=nn=0;
+	ivs =new IVSet();
+	ivsC=new IVSet();
+	av=sd=minP=maxP=nn=0;
 	av0=sd0=0;
 	deriv=0;
 	trackType=0;
 	projCoeff=0;
 	hasCompl=false;
-	scaleFactor=0.2;
+	scaleFactor=1;
 }
+void bTrack::initBtr(){
+	cbytes=bytes=0;
+}
+
 bTrack::bTrack(){
+	initBtr();
+}
+bTrack::bTrack(const char* fname){
+	initBtr();
+	openTrack(fname);
+}
+
+Track::Track(){
 	init();
 }
+
+Track::~Track(){
+	xfree(profWindow,0);
+	xfree(autoCorr,0);
+	xfree(name,0);
+	if(ivs ) delete ivs;
+	if(ivsC) delete ivsC;
+}
+bTrack::~bTrack(){
+	if( bytes) delete bytes;
+	if(cbytes) delete cbytes;
+}
 //======================================= decode binary value to real value
-double bTrack::getVal(unsigned char b){
-	if(b==0 && NAFlag && trackType==WIG_TRACK){
-		double x=rGauss();
-		double y=x*sd0*noiseLevel+av0;
-		return y;
+double bTrack::getVal(BINVAL b){
+	if(b==NA){
+			if(NAFlag && trackType==WIG_TRACK){
+			double x=rGauss();
+			double y=x*sd0*noiseLevel+av0;
+			return y;
+		}
+		else return 0;
 	}
-	if(b < threshold) return 0;
-	if(b==1) return 0;
-	double x=bScale*(b-1)+delta;
-	if(lScale) x=(exp(x)-1)/scaleFactor;
+	if(b < threshold  && b > - threshold) return 0;
+	double x=exp(b/scaleFactor)-1;
 	return x;
 }
 
 //======================================= decode binary value at certain position
-double bTrack::getValue(int pos, int cmpl){
+int    bTrack::getBVal(int pos, int cmpl){
+	if(pos >= profileLength) return NA;
 	if(cmpl){
-		if(hasCompl) return getVal(cbytes[pos]);
-		else return getVal(bytes[pos]);
+		if(hasCompl) return cbytes->get(pos);
+		else return bytes->get(pos);
 	}
-	return getVal(bytes[pos]);
+	return bytes->get(pos);
+}
+
+double bTrack::getValue(int pos, int cmpl){
+	BINVAL b=getBVal(pos,cmpl);
+	if(b==NA){
+			if(NAFlag && trackType==WIG_TRACK){
+			double x=rGauss();
+			double y=x*sd0*noiseLevel+av0;
+			return y;
+		}
+		else return 0;
+	}
+	if(b < threshold  && b > - threshold) return 0;
+	double x=exp(b/scaleFactor)-1;
+	return x;
 }
 
 //====================================== calculate projection to orthogonal subspace
-void bTrack::ortProject(){
+void Track::ortProject(){
 	projCoeff=0;
 	if(pcorProfile==0) return;
 	double xy=0, xx=0;
-	for(int i=0; i<lProf; i++){
+	for(int i=0; i<profileLength; i++){
 		double x,y;
-		x=projTrack.getValue(i,false);
+		x=projTrack->getValue(i,false);
 		y=getValue(i,false);
 		xx+=x*x; xy+=x*y;
 		if(hasCompl){
-			x=projTrack.getValue(i,true);
+			x=projTrack->getValue(i,true);
 			y=getValue(i,true);
 			xx+=x*x; xy+=x*y;
 		}
@@ -382,15 +536,15 @@ void bTrack::ortProject(){
 }
 
 //================================================= Get projected value
-double bTrack::getProjValue(int pos, bool cmpl){
-	if(pos >= lProf) return 0;
+double Track::getProjValue(int pos, bool cmpl){
+	if(pos >= profileLength) return 0;
 	double x=getValue(pos,cmpl);
-	if(projCoeff) x-=projCoeff*projTrack.getValue(pos,cmpl);
+	if(projCoeff) x-=projCoeff*projTrack->getValue(pos,cmpl);
 	return x;
 }
 
 //================================================= decode the values to an array
-double * bTrack::getProfile(int pos, bool cmpl){ //====== pos - profile position; cmpl=true <=> +strand
+double * Track::getProfile(int pos, bool cmpl){ //====== pos - profile position; cmpl=true <=> +strand
 	double *a=profWindow;
 	avWindow=sdWindow=0;
 	//======================================================= fill window
@@ -408,6 +562,7 @@ double * bTrack::getProfile(int pos, bool cmpl){ //====== pos - profile position
 		*a=x;
 		avWindow+=x; sdWindow+=x*x;
 	}
+
 	//======================================= Window Statistics
 	avWindow/=wProfSize;
 	sdWindow=sdWindow-avWindow*avWindow/wProfSize;
@@ -423,7 +578,7 @@ double * bTrack::getProfile(int pos, bool cmpl){ //====== pos - profile position
 }
 //======================================================
 //======================================================
-void bTrack::writeWig(){
+void Track::writeWig(){
 	FILE *f=xopen(name,"wt");
 	verb("write track <%s>\n",name);
 	fprintf(f,"track type=wiggle_0 description=\"%s\"\n",name);
@@ -433,10 +588,9 @@ void bTrack::writeWig(){
 	fclose(f);
 }
 //======================================================
-void bTrack::writeWig(FILE* f, Chromosome *ch){
+void Track::writeWig(FILE* f, Chromosome *ch){
 	int pos1=ch->base;
 	int pos2=pos1+ch->length/binSize;
-//	verb("%s\n",ch->chrom);
 	int fg=0;
 	int tr=10;
 	for(int i=0,j=pos1; j<pos2; j++,i++){
@@ -449,4 +603,83 @@ void bTrack::writeWig(FILE* f, Chromosome *ch){
 		fprintf(f,"%.0f\n",x); fg=1;
 	}
 }
+
+//================================================================================
+//================================================================================
+//================================================================================
+Model::Model(){
+	definition=0; form=0; trackType=MODEL_TRACK;
+}
+
+//================================================================================
+void Model::readModel(const char *fnam){
+	name=strdup(fnam);
+	char bb[2048];
+	char b[2048];
+	makeFileName(bb,trackPath, fnam);
+	FILE *f=fopen(bb,"r");
+	*bb=0;
+	for(char *s; (s=fgets(b,sizeof(b),f))!=0;){
+		s=trim(s);
+		if(*s=='#') continue;
+		strcat(bb,b);
+	}
+	definition=strdup(bb);
+	form=frmlInit(bb);
+	for(int i=0; i<form->nTracks; i++){
+		getTrack(i)->readTrack(getTrackName(i));
+	}
+}
+
+//================================================================================
+bool   Model::readTrack(const char *fname){
+	name=strdup(fname);
+	readModel(fname);
+	return true;
+}
+
+//================================================================================
+bool   Model::isNA(int pos, bool cmpl){
+	for(int i=0; i<form->nTracks; i++){
+		bTrack *bt=getTrack(i);
+		if(bt->isNA(pos,cmpl)) return true;
+	}
+	return false;
+}
+//================================================================================
+bool   Model::isZero(int pos, bool cmpl){
+	return getValue(pos,0) == 0;
+}
+//================================================================================
+double Model::getValue(int pos, int cmpl){
+	return form->calc(pos);
+}
+
+//================================================================================
+void  Model::clear(){
+	for(int i=0; i<form->nTracks; i++){
+		bTrack *bt=getTrack(i);
+		bt->clear();
+	}
+}
+
+//================================================================================
+Model::~Model(){
+	if(definition) xfree(definition,"");
+	delete form;
+}
+
+//================================================================================
+//================================================================================
+Track * trackFactory(const char* fname){
+	if(isModel(fname)){
+		Model *mod=new Model();
+		mod->openTrack(fname);
+		return mod;
+	}
+	bTrack *bt=new bTrack(fname);
+	return bt;
+}
+
+
 

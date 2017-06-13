@@ -17,7 +17,6 @@ void printCorrelations(){
 	errStatus="printCorrelations";
 	//============================================================= Write the foreground distribution
 	if(writeDistr) printFgDistr();
-	if(writeBPeak) printBroadPeak();
 	if(writeDistCorr)
 		printChrDistances(strcat(strcpy(b,outFile),".dist"));
 	if(outSpectr) XYfgCorrelation.printSpect(strcat(strcpy(b,outFile),".spect"));
@@ -30,10 +29,10 @@ void printChrDistances(char *fname){
 	XYbgcorrelation.normilize();
 	XYfgCorrelation.normilize();
 	normChromDist();
-	fprintf(f,"# %s vs %s\n",bTrack1.name, bTrack2.name);
+	fprintf(f,"# %s vs %s\n",track1->name, track2->name);
 
 	//========================================
-	double *autoCorrX=bTrack1.autoCorr, *autoCorrY=bTrack2.autoCorr;
+	double *autoCorrX=track1->autoCorr, *autoCorrY=track2->autoCorr;
 	fprintf(f,"x");
 	if(doAutoCorr) fprintf(f,"\tAutoCorr1\tAutoCorr2");
 	fprintf(f,"\tBkg\tFg\tFgPlus\tFgMinus");
@@ -73,7 +72,7 @@ void printChrDistances(char *fname){
 
 void printChomosomes(char *fname){
 	FILE *f=xopen(fname,"wt");
-	fprintf(f,"%s\n%s\n",bTrack1.name, bTrack2.name);
+	fprintf(f,"%s\n%s\n",track1->name, track2->name);
 	fprintf(f,"%6s\t%5s \t%5s \t%5s \t%5s\n",
 			"chrom","av1", "av2", "cc",  "count");
 	for(int i=0; i<n_chrom; i++){
@@ -96,20 +95,22 @@ void getStat(double *set, int n, double &av, double &sd){
 }
 
 double avBg=0,sdBg=0,avFg=0,sdFg=0;
-
 void printStat(){
 	verb("Write statistics\n");
 	writeLog("Write statistics\n");
 	char b[2048];
-	FILE *f=0;
-
 	MannW=MannWhitney(FgSet, nFg, BkgSet, nBkg);	// do Mann-Whitney test
 	xverb("p-val=%e\nnWindows=%i\n=================================\n",
 		MannW->pVal, nFg);
 
 	getStat(FgSet, nFg, avFg,sdFg);
 	getStat(BkgSet,nBkg,avBg,sdBg);
-	const char *pc= pcorProfile==0 ? "NONE" : pcorProfile;
+
+	FILE *f=0;
+	const char *pcname = "-";
+	if (pcorProfile!=0){
+		pcname = pcorProfile;
+	}
 
 	bool fg=fileExists(statFileName);
 	if((outRes & TAB)!=0) {
@@ -121,23 +122,23 @@ void printStat(){
 		}
 	}
 	if(!fg && f){								//================ write the header
-		fprintf(f,"%-6s\t%-20s%-20s\t%-20s","id","version","name1","name2");
-		fprintf(f,"\t%-6s\t%-6s\t%-6s\t%-6s","window","kern","nFgr","nBkg");
+		fprintf(f,"%-6s\t%-6s\t%-20s\t%-20s\t%-20s","id","Date","version","name1","name2");
+		fprintf(f,"\t%-6s\t%-6s\t%-6s\t%-6s","wSize","kernelType","nFgr","nBkg");
 		fprintf(f,"\t%-8s\t%-8s\t\%-8s","Fg_Corr","Fg_av_Corr","FgCorr_sd");
 		fprintf(f,"\t%-8s\t%-8s\t\%-8s","Bg_Corr","Bg_av_Corr","BgCorr_sd");
 		fprintf(f,"\t%-8s\t%-7s", "Mann-Z","p-value");
-		fprintf(f,"\t%-6s\n", "P-corr");
+		fprintf(f,"\t%-6s\n", "pcorProfile");
 	}
 	//==================================================== write the statistics
 	if(f){
 		char nm1[1024], nm2[1024];
-		alTable.convert(bTrack1.name, nm1);
-		alTable.convert(bTrack2.name, nm2);
-		fprintf(f,"%08lx\t%-10s\t%-10s\t%-10s",id,version, nm1, nm2);
-		fprintf(f,"\t%-6i\t%-6s\t%6i\t%6i",wSize,getKernelType(),nFg, nBkg);
+		alTable.convert(track1->name, nm1);
+		alTable.convert(track2->name, nm2);
+		fprintf(f,"%08lx\t%6s\t%-10s\t%-10s\t%-10s",id,dateTime(),version,nm1, nm2);
+		fprintf(f,"\t%-6i\t\"%-6s\"\t%6i\t%6i",wSize,getKernelType(),nFg, nBkg);
 		fprintf(f,"\t%8.4f\t%8.4f\t%8.4f",totCorr, avFg,sdFg);
 		fprintf(f,"\t%8.4f\t%8.4f\t%8.4f",BgTotal, avBg, sdBg);
-		fprintf(f,"\t%8.4f\t%-7.2e\t%s\n",MannW->z,MannW->pVal, pc);
+		fprintf(f,"\t%8.4f\t%-7.2e\t%-6s\n",MannW->z,MannW->pVal, pcname);
 		funlockFile(f);
 		fclose(f);
 	}
@@ -154,26 +155,25 @@ void printStat(){
 	}
 	if(!fg && f){								//================ write the header
 		printParamNames(f);
-		fprintf(f,"\n");
 	}
 	//==================================================== write the parameters
 	if(f){
 		printParams(f);
-		fprintf(f,"\n");
+		funlockFile(f);
 		fclose(f);
 	}
 	if((outRes & XML)!=0) {
 		sprintf(b,"%s.xml",statFileName);
 		fg=fileExists(b);
 		FILE *xml=0;
-		if(!fg) {xml=xopen(b,"w"); fprintf(xml,"<xml>\n");}
+		if(!fg) {xml=xopen(b,"wb"); fprintf(xml,"<xml>\n");}
 		else{
-			xml=xopen(b,"r+");
+			xml=xopen(b,"r+b");
 			fseek(xml,-7,SEEK_END);
 		}
 		flockFile(xml);
-		fprintf(xml,"<run id=\"%08lx\" ver=\"%s\">\n", id, version);
-		fprintf(xml,"\t<input track1=\"%s\" track2=\"%s\"/>\n",bTrack1.name,bTrack2.name);
+		fprintf(xml,"<run id=\"%08lx\" date=\"%s\" ver=\"%s\">\n", id, dateTime(), version);
+		fprintf(xml,"\t<input track1=\"%s\" track2=\"%s\"/>\n",track1->name,track2->name);
 		fprintf(xml,"\t<output out=\"%s\"/>\n",outFile);
 		fprintf(xml,"\t<prm ");
 		printXMLparams(xml);
@@ -196,12 +196,17 @@ void printStat(){
 		funlockFile(xml);
 		fclose(xml);
 	}
+	if(customKern){
+		FILE*cust=gopen("kernels","a+");
+		fprintf(cust,"%08lx\t\"%s\"", id, customKern);
+		fclose(cust);
+	}
 	writeLog("Write Statistics -> Done\n");
 }
 
 void XYCorrelation::printSpect(char *fname){
 	FILE *f=xopen(fname,"wt");
-	fprintf(f,"#\t%s\t%s\n",bTrack1.name, bTrack2.name);
+	fprintf(f,"#\t%s\t%s\n",track1->name, track2->name);
 	fprintf(f,"Wave_Length\tSpectrum1\tSpectrum2\n");
 	double dx=0,dy=0;
 	for(int i=0; i<profWithFlanksLength; i++){
@@ -235,64 +240,10 @@ void printFgDistr(){
 	fclose(fFgDistr);
 }
 
-//============================================== write the BroadPeak file
-void printBroadPeak(){
-	char b[1024];
-	ScoredRange *pPair;
-	getMem(pPair,(nPairs+10), "printBroadPeak");
-	int nPpint=0;
-	//============================================================= Select pairs to print
-	for(int i=0; i<nPairs; i++){
-		PairEntry *pe=pairs+i;
-		double pv= bgHist.pValm(pe->d);						// get p--value
-		double qv=pv/(fgHist.pValp(pairs[i].d));			//q-value=nPairs*pv/(nPairs-pe->rank);
-		if(wSize > wStep) qv=qv*wSize/wStep;				// correct q-value if step < window
-		if(qv > 0.99999) qv=0.99999;
-		pv=-log10(pv); qv=-log10(qv);						// log p-value & q-value
-		if(pv > pVal && qv > qVal){							// p-value and q-value are good enough
-			filePos2Pos(pe->profPos,&pPair[nPpint],wSize);		// get chromosome position
-			pPair[nPpint].score=pe->d;						// define information for write
-			nPpint++;
-		}
-	}
-
-
-	//============================================================== Clear overlaps
-	for(int i=1; i<nPpint; i++){
-		if(strcmp(pPair[i-1].chrom,pPair[i].chrom)==0){
-			if(pPair[i-1].end > pPair[i].beg){			//===== pairs overpep
-				if(pPair[i-1].beg > pPair[i].beg)
-					pPair[i].beg=pPair[i-1].end;
-				else if(pPair[i-1].score < pPair[i].score)	//===== select highest score
-					pPair[i-1].end=pPair[i].beg;
-				else
-					pPair[i].beg=pPair[i-1].end;
-			}
-		}
-	}
-
-	//=============================================================== Print broad peak file
-	strcat(strcpy(b,outFile),".bpeak");
-	FILE *fBpeak=xopen(b,"wt");
-	//============================================================= write header
-	fprintf(fBpeak,"track type=broadPeak name=%s__%s\n",bTrack1.name,bTrack2.name);
-	for(int i=0; i<nPpint; i++){
-		ScoredRange *pe=pPair+i;
-		double pv= bgHist.pValm(pe->score);			// get p-value
-		double qv=pv/(fgHist.pValp(pairs[i].d));  	//qv=nPairs*pv/(nPairs-pe->rank);// get q-value
-		if(wSize > wStep) qv=qv*wSize/wStep;
-		if(qv > 0.99999) qv=0.99999;
-		if(pv==0) pv=1.e-256;
-		if(qv==0) qv=1.e-256;
-		pv=-log10(pv); qv=-log10(qv);							// log p-value & q-value
-		int score=int((pe->score+1)*500);
-		if(pe->end - pe->beg > 2)								// not-empty interval
-		fprintf(fBpeak,"%s\t%li\t%li\t.\t%i\t.\t.\t%5.1f\t%5.1f\n",
-				pe->chrom, pe->beg, pe->end, score,pv,qv);
-	}
-	xfree(pPair,"pPair");
-	fclose(fBpeak);
-}
+//=====================================================
+//=====================================================
+//=====================================================
+//=====================================================
 void printRmd(){
 	char b[2048];
 	sprintf(b,"%sreport_r_template.Rmd",resPath);
@@ -429,8 +380,8 @@ void printRreport(){
 	fprintf(f, "library(\"markdown\")\n");
 	
 	fprintf(f, "args = commandArgs(TRUE)\n");
-	fprintf(f, "fname1<-\"%s\"\n", bTrack1.name);
-	fprintf(f, "fname2<-\"%s\"\n", bTrack2.name);
+	fprintf(f, "fname1<-\"%s\"\n", track1->name);
+	fprintf(f, "fname2<-\"%s\"\n", track2->name);
 	if (pcorProfile!=0) {
 		fprintf(f,"pc_fname <- \"%s\"\n",pcorProfile);
 	}
@@ -473,13 +424,7 @@ void printRreport(){
 void printR(){
 	char fn[1024], *s, b[2048], fname[1024];
 	alTable.convert(outFile, fn);
-//	const char *cex="cex.axis = 0.8,  cex.lab = 0.8,  cex.main = 0.8", *lwd="lwd=2",
-//			*lab="xlab=\'correlation coefficient\',ylab=\'density\'";
-//
-//	int    x0,x1;
-//	double y0,y1;
-//	correlation.getLimits(x0,x1, y0, y1);
-//
+
 	strcat(strcpy(b,fn),".r");
 	FILE *f=xopen(b,"wt");
 
@@ -505,7 +450,7 @@ void printR(){
 	fprintf(f," #  create the plot \n");
 	fprintf(f," old.par <- par( no.readonly = TRUE ) \n");
 	fprintf(f," par( mfrow = c( %i, 1 ), oma = c( 0, 0, 0, 0 ),mar=c(3,3,3,1),mgp=c(1.6,0.45,0)) \n\n",
-			outWIG?3:2);
+			outLC?3:2);
 	char sub[1024]; if(writePDF) sub[0]=0; else sprintf(sub,"\\n%s",fname);
 	fprintf(f," plot(density(bkg[[1]]), xlim=c(-1,1), ylim=c(0, y_lim1), xlab='correlation coefficient',ylab='density', \n");
 	fprintf(f," col='red', main='Distribution of correlations%s', \n",sub);
@@ -520,29 +465,36 @@ void printR(){
 	fprintf(f," lines(dist$x/1000,dist$Bkg , col='red',lwd=2) \n");
 	fprintf(f," #plot line for chomosome \n");
 	fprintf(f," #lines(dist$x/1000, dist_chrom , col='green',lwd=2) \n\n");
-	if(outWIG){
+	if(outLC){
 		const char *ss="";
 		if(LCScale==LOG_SCALE) ss="(log)";
-		if(LCScale==LOG_LOG_SCALE) ss="(log log)";
-		double nn=fiveFDR*2; if(nn > 1000) nn=1000;
-		fprintf(f,"lc=read.table(paste(name, \'.LChist\', sep = \'\'),, header=TRUE)\n");
-		fprintf(f,"xmax=%.0f; x0=xmax-150; x1=x0+20; y0=90; dy=7;\n",nn);
-		fprintf(f,"plot(lc$val, lc$cdf_obs*100000, col='blue', lwd=2, \n");
-		fprintf(f,"type=\'l\',ylim=c(0,100), xlim=c(0,xmax), ylab=\'FDR\',");
+		fprintf(f,"\nlc=read.table(paste(name, \'.LChist\', sep = \'\'),header=TRUE)\n");
+		fprintf(f,"xmax=%.0f; xmin=%.0f; x0=xmax-150; x1=x0+20; y0=90; dy=7;\n",1000.,0.);
+//		fprintf(f,"xmax=%.0f; xmin=%.0f; x0=xmax-150; x1=x0+20; y0=90; dy=7;\n",LCmax,LCmin);
+		fprintf(f,"plot(lc$val, lc$r_CDF_obs*1000, col=\'blue\', lwd=2, \n");
+		fprintf(f,"type=\'l\',ylim=c(0,100), ylab=\'FDR\',");
 		fprintf(f,"xlab=\'normalized LC-values %s\',\n",ss);
 		fprintf(f,"main=\'Local correlation distributions\');\n");
-		fprintf(f,"lines(lc$val, lc$cdf_exp*100000, col=\'red\', lwd=2);\n");
-		fprintf(f,"lines(lc$val, lc$FDR, col='black', lwd=3);\n");
-		fprintf(f," text(x0, y0+7,name,pos=4); y0=y0-5\n");
-		fprintf(f,"segments(x0,y0,x1,y0,col='red',lwd=2); text(x1+5,y0,'expected (1 - cdf) * 100000',pos=4)\n");
-		fprintf(f,"y0=y0-dy;\n");
-		fprintf(f,"segments(x0,y0,x1,y0,col='blue',lwd=2); text(x1+5,y0,'observed (1 - cdf) * 100000',pos=4)\n");
-		fprintf(f,"y0=y0-dy;\n");
-		fprintf(f,"segments(x0,y0,x1,y0,col='black',lwd=3); text(x1+5,y0,'FDR',pos=4)\n");
-		fprintf(f,"y0=y0-dy;\n");
-		fprintf(f,"segments(x0,y0,x1,y0,col='gray',lwd=3); text(x1+5,y0,'FDR=5%%',pos=4)\n");
+		fprintf(f,"lines(lc$val, lc$l_CDF_obs*1000, col=\'blue\', lwd=2);\n");
 
-		fprintf(f,"segments(0,5,xmax,5,col='gray',lwd=1); text(x1+5,y0,'FDR',pos=4)\n");
+
+		fprintf(f,"lines(lc$val, lc$r_CDF_exp*1000, col=\'red\', lwd=2);\n");
+		fprintf(f,"lines(lc$val, lc$l_CDF_exp*1000, col=\'red\', lwd=2);\n");
+
+		fprintf(f,"lines(lc$val, pmin(lc$L_FDR, lc$R_FDR), col='black', lwd=2);\n");
+//		fprintf(f,"lines(lc$val, lc$R_FDR, col='black', lwd=3);\n");
+
+//		fprintf(f," text(x0, y0+7,name,pos=4); y0=y0-5\n");
+//		fprintf(f,"segments(x0,y0,x1,y0,col='red',lwd=2); text(x1+5,y0,'expected (1 - cdf) * 100000',pos=4)\n");
+//		fprintf(f,"y0=y0-dy;\n");
+//		fprintf(f,"segments(x0,y0,x1,y0,col='blue',lwd=2); text(x1+5,y0,'observed (1 - cdf) * 100000',pos=4)\n");
+//		fprintf(f,"y0=y0-dy;\n");
+//		fprintf(f,"segments(x0,y0,x1,y0,col='black',lwd=3); text(x1+5,y0,'FDR',pos=4)\n");
+//		fprintf(f,"y0=y0-dy;\n");
+//		fprintf(f,"segments(x0,y0,x1,y0,col='gray',lwd=3); text(x1+5,y0,'FDR=5%%',pos=4)\n");
+
+		fprintf(f,"segments(-1000,5,1000,5,col='gray',lwd=1);");
+//		fprintf(f,"text(x1+5,y0,'FDR',pos=4)\n");
 	}
 	fprintf(f," par( old.par ) \n\n");
 	if(writePDF) fprintf(f," dev.off() \n");

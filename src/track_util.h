@@ -20,18 +20,26 @@
 #ifndef TRACK_UTIL_H_
 #define TRACK_UTIL_H_
 
+extern const int progType;	//type of the program
+const int SG=1;
+const int PRJ=2;
+const int CNF=4;
+
 const  int DEBUG_PRINT=1;
 const  int DEBUG_LOG=2;
 
 #define PRM_EXT "prm"
 #define BPROF_EXT "bprof"
 #define AC_EXT ".acf"
+#define BGR_EXT "bgraph"
 #define DERIV '_'
 
-#define  maxFactorCount        20
+#define BINVAL short
 
-const  float NA=(1./1024./1024./1024./1024./1024.);
+const  BINVAL NA=0x8080;
+const  BINVAL MAX_SHORT=32000;
 const  double PI=3.14159265358979323846;
+const int LRAND_MAX=(RAND_MAX > 0XFFFFF)?RAND_MAX : 0x3fffffff;
 extern const char* version;
 const  int BED_TRACK=1;
 const  int BED_GRAPH=2;
@@ -61,6 +69,7 @@ const  int EXON_END=0x22;
 const  int KERN_NORM=1;
 const  int KERN_LEFT_EXP =2;
 const  int KERN_RIGHT_EXP=3;
+const  int KERN_CUSTOM=0x80;
 
 const  int COLLINEAR=1;
 const  int COMPLEMENT=2;
@@ -77,6 +86,7 @@ const  int WIG_BASE=1;
 const  int WIG_CENTER=2;
 const  int WIG_SUM=0x10;
 const  int WIG_MULT=0x20;
+extern int binBufSize;
 
 
 const int MAX_GENES=100000;
@@ -85,13 +95,15 @@ const int MAX_GENES=100000;
 void *xmalloc(size_t n, const char * err);
 void zfree(void *a, const char* b);
 //============================================ MACROS
-#define getMem0(a,n,err) {if(a==0) a=(typeof a)xmalloc((n+100)*sizeof(*a),err);}
+//#define getMem0(a,n,err) {if(a==0) a=(typeof a)xmalloc((n+100)*sizeof(*a),err);}
 #define getMem(a,n,err)  {a=(typeof a)xmalloc((n+100)*sizeof(*a),err);}
 #define xfree(a,b) 		 {zfree(a,b); a=0;}
 #define zeroMem(a,n) 	 {memset(a,0,n*sizeof(*a));}
+#define xmemcpy(dest,pds, src, psrc, n) {memcpy(dest+(pds)*sizeof(*dest), src+(psrc)*sizeof(*src),(n)*sizeof(*src));}
 #define max(a,b) a<b ? b : a
 #define min(a,b) a>b ? b : a
 #define abs(a) (a<0 ? -a : a)
+#define sign(a) (a==0 ? 0 : (a<0 ? -1:1))
 
 struct Model;
 //========================= Common parameters ================================
@@ -102,7 +114,6 @@ extern char *profile1;		   // first profile file file name
 extern char *profile2;		   // second profile file file name
 extern char *trackFil;		   // input track
 extern char *aliaseFil;		   // aliases
-extern char *mapFil;		   // map file
 extern char *inputProfiles;    // input formula for track combination
 extern int 	bpType;			   // type of the input data in BroadPeak file
 
@@ -110,6 +121,8 @@ extern bool  writeDistr;		// flag: write distributions
 
 extern char trackName[4096];   	// current track name
 extern char *profPath;		// path to binary profiles
+extern char *cfgFile;		// config file name
+extern char *confFile;		// confounder file name
 extern char *trackPath;		// path to GBrowse track files
 extern char *resPath;		// path to results files (tracks and distributions)
 extern char *outFile;		// output filename
@@ -128,13 +141,10 @@ extern int   complFg;		// Flag: IGNORE_STRAND - ignore strand; COLLINEAR - compa
 extern int   intervFlag0;	// Flag: for bed tracks take intervals with score 1.
 extern bool  NAFlag;		// Flag: 0 -> uncovered_values=0; otherwise uncovered values=NA
 extern int   profileLength;	// size of the profile array
-extern float *profile;		// uncompressed profile array
-extern float *profilec;		// uncompressed profile array
+//extern float *profile;		// uncompressed profile array
+//extern float *profilec;		// uncompressed profile array
 
-extern unsigned char *byteprofile;	 // compressed profile array
-extern unsigned char *byteprofilec;	 // compressed profile array for complement strand
-extern int   logScale;		// use logScale
-extern double scaleFactor0;
+extern double scaleFactor;
 
 extern char *pcorProfile;    	// partial correlation profile file name
 extern float *outTrackProfile;  // correlation track
@@ -157,43 +167,35 @@ extern double kernelProfShift;  // Kernel shift (profile scale)
 
 
 extern int kernelType;   		// kernel type
-extern double maxNA0;				// max allowed NA values - if at lest one of profiles contains more than maxNA NA values the window will be ignored
-extern double maxZero0;				// max allowed zero values - if both profiles contains more than maxZero zeros the window will be ignored
-extern double maxNA;				// max allowed NA values - if at lest one of profiles contains more than maxNA NA values the window will be ignored
-extern double maxZero;				// max allowed zero values - if both profiles contains more than maxZero zeros the window will be ignored
+extern char* customKern;		// formula for the custom kernel
+extern double maxNA0;			// max allowed NA values - if at lest one of profiles contains more than maxNA NA values the window will be ignored
+extern double maxZero0;			// max allowed zero values - if both profiles contains more than maxZero zeros the window will be ignored
+extern double maxNA;			// max allowed NA values - if at lest one of profiles contains more than maxNA NA values the window will be ignored
+extern double maxZero;			// max allowed zero values - if both profiles contains more than maxZero zeros the window will be ignored
 extern int nShuffle;			// number of shuffle in percents
-extern int maxShuffle;		    // max number of shuffle
-extern int minShuffle;		    // min number of shuffle
 extern int nCompare;			// number of observations
 
-extern double pVal;				// min (-log10(p-value)) for output
-extern double qVal;				// min (-log10(q-value)) for output
 extern bool verbose;				// number of suffle
 extern int threshold;
 extern bool doAutoCorr;
 extern int lProfAuto;
 extern int corrScale;			// scale for correlations
-extern bool corrOnly;			// only calculate corr functions
-extern bool writeBPeak;			// write BroadPeak
 extern bool silent;				// inhibit stdout
 extern bool syntax;				// Strong syntax control
 
 extern bool writeDistCorr;		// write BroadPeak
-extern int outWIG;
+extern bool outLC;
 extern int LCScale;
 extern int crossWidth;
-extern int pcaFg;
-extern int nPca;
-extern int pcaSegment;	//segment length in profile scale
 extern bool RScriptFg;
 extern bool outSpectr;
 extern int outRes;
 extern bool outChrom;
-extern int outThreshold;
 extern int cage;
 extern bool clearProfile; //Force profile recalculation
 extern int scoreType;
 extern bool writePDF;
+extern double lcFDR;		// treshold on FDR when write Local Correlation track
 
 extern int profWithFlanksLength; // size of profWindow array (including random flanks)
 //===================================================    results
@@ -208,6 +210,89 @@ extern const char *errStatus;
 extern const char *debS;
 extern int debugFg;
 
+struct Track;
+struct bTrack;
+struct Formula;
+//================================================== Formula function
+struct Identifier{
+	char name[80];
+	int nodeID; 				//indentifier in the ID list
+	char* print(char *b);
+	Identifier(){nodeID=0;}
+	Identifier(Formula *frm, const char * idd);
+};
+struct TrackNode:Identifier{
+	char* print(char *b);
+	bTrack *btr;
+	double value;
+	int    pos;
+	TrackNode(Formula *frm, const char * trackName);
+	~TrackNode();
+	double getValue(int pos);
+};
+
+
+struct FNode{
+	int id;
+	Formula* formula;
+	int childL;
+	int childR;
+	int operation;
+	double value;
+
+	FNode(Formula* form);
+	char *print(char *b);
+	double calc();
+};
+
+struct Formula{
+	FNode *fNodes[256];
+	char *formula;
+	int mainRoot;
+	int nNodes;
+	int roots[80];
+	int nroots;
+	Identifier *identifiers[256];
+	TrackNode *tracks[256];
+	int nIds, nTracks;
+	FNode *arg, *e, *sigma;
+
+	Formula() {init();}
+	~Formula() ;
+	void init();
+	void parse(const char* input);
+	int addIdent(const char* ident);
+	int addTrack(char* ident);
+	Identifier *getIdentificator(const char *);
+	TrackNode *getTrack(const char *);
+	FNode* getNode(int id) {return fNodes[id];}
+	double calc();
+	double calc(double x);
+	double getValue(const char* ident);
+	void setValue(const char* ident, double v);
+	void setArg(double x) ;
+};
+
+
+Formula *frmlInit(const char* txt);		// initiate Formula
+void   frmlClose(Formula* f);			// free formula
+double frmlCalc(Formula* f, double x);	// calculate formula
+void   frmlSetValue(Formula* f, const char* txt, double val);	// set value to the variable
+double frmlGetValue(Formula* f, const char* txt);				// get the variable value
+//====================================================================
+const int SG_BUFSIZ=0x100000;
+const int SG_BUFEXT=0x10000;		// Max string length
+struct BufFile{
+	FILE *f;
+	char *buffer;
+	char *curString;
+	BufFile(){f=0; buffer=0; curString=0;}
+	BufFile(const char * fname){init(fname);}
+	~BufFile();
+	void init(const char *fname);
+	char *getString();
+};
+//====================================================================
 struct Chromosome{
     char *chrom;		//Chromosome name
     long length;		//Chromosome length
@@ -234,6 +319,7 @@ struct ScoredRange{
     long end;		// end chromosome position
     float score;	// score
     ScoredRange();
+    void printBGraph(FILE *f);
 };
 //===============================================================
 struct MapRange{
@@ -257,6 +343,7 @@ struct IVSet{
 	void clear();
 	void write(FILE*f);
 	void print(int f, int t);
+//	void inspect(const char*msg, int i);
 };
 
 //===================================================================
@@ -273,99 +360,153 @@ public:
 };
 
 //===============================================================
-struct bTrack{		        // Binary track
-	unsigned char *bytes;	// byte_track
-	unsigned char *cbytes;	// complement byte_track
+struct Track;
+struct BuffArray;
+struct FloatArray;
+
+struct Track{		        // Binary track
 	double *profWindow;		// decoded profile with flanks
-	char *name;				// track name
-	int lProf,		// profile length (size of bytes array), step (in profile scale)
-		lScale;		// logScale (0 = linear scale, 1 = log scale)
+	char   *name;			// track name
 	double  av,				// average score
 			sd, 			// score standard deviation
 			minP, 			// min score value
 			maxP, 			// max score value
-			bScale, 		// scale factor
-			delta,			// =min-av
 			av0,
 			sd0,
 			nn;
 	double avWindow, sdWindow;// mean and stdDev in current window
-
 	float scaleFactor;
 
 	bool hasCompl;
-	IVSet ivs, ivsC;
+	IVSet *ivs, *ivsC;
 	int trackType;
 	int deriv;						// order of derivative
 	double projCoeff;
 	double *autoCorr;				// autocorrelation function
 
-	bTrack();						// empty constructor
-	bTrack(const char* fname);		// constructor that reads file
+	Track();						// empty constructor
+	virtual ~Track();						// empty constructor
 	void init();
-	void read(const char *fname);	// read file
+
+	bool   openTrack(const char *fname);	// read file
+	virtual bool   readTrack(const char *fname)=0;	// read file
+	virtual bool   isNA(int pos, bool cmpl)  =0;
+	virtual bool   isZero(int pos, bool cmpl)=0;
+	virtual double getValue(int pos, int cmpl)=0;
+	virtual void 	trackDef(char *s);
+	virtual void 	clear();
+
 	double *getProfile(int pos, bool cmpl);	// decode profile starting with given position
-	double getVal(unsigned char b);
-	double getValue(int pos, int cmpl);
+	void allocTrack();
 	double getProjValue(int pos, bool cmpl);
 	double addStatistics();
 	void finStatistics();
 	int  countNA  (int pos, bool cmpl);		// count NA elements in the window
 	int  countZero(int pos, bool cmpl);		// count zero elements in the window
 
-	//======================================= Testing ====================
-	void printBytes(int from, int to); // Print bytes (for testing)
-	void printWindow(int n);
-	void printBytes(FILE*f,int from, int to); // Print bytes (for testing)
-	void writeBytes(FILE*f); // Print bytes (for testing)
-	void printWindow(FILE*f,int n);
-
-	void clear();
 	void ortProject();				// calculate projection coeff
 	void makeIntervals();
-	void makeMapIntervals();
-	void makeIntervals(unsigned char *bytes, IVSet *iv);
-	void makeMapIntervals(unsigned char *bytes, IVSet *iv);
+	void makeIntervals(bool cmpl, IVSet *iv);
 	int  getRnd(bool cmpl1);
-	bool check(const char *fname);
-	void makeBinTrack();
-	void initProfile();
-	void readTrack(const char *fname, int cage=0); //cage: if cage>0 : end=beg+cage; cage<0: beg=end+cage.
-	void trackDef(char *s);
-	void finProfile();
-	void finProfile0();
-	float normProf(float x);
-	void writeByteProfile();
-	void writeProfilePrm();
 	void writeWig();
 	void writeWig(FILE* f, Chromosome *ch);
-	int addSgm(ScoredRange *bed, float *prof);
-	int addSgm(char strnd, ScoredRange *bed, float *prof, float *profc);
+
+
 };
 //============================== Model =======================================
-struct Term{
-	char * fname;
-	float mult;
-	Term(){fname=0; mult=0;}
-	~Term(){if(fname) zfree(fname,"term");}
-	int read(char *b);
-	void add();
-	void make();
-};
+struct bTrack:Track{
+	BuffArray *bytes;	// byte_track
+	BuffArray *cbytes;	// complement byte_track
 
-struct Model:bTrack{
+	bTrack();
+	~bTrack();
+	bTrack(const char* fname);		// constructor that reads file
+	bool 	check(const char *fname);
+
+	void initBtr();
+	virtual bool readTrack(const char *fname);	// read file
+	virtual bool isNA(int pos, bool cmpl);
+	virtual bool isZero(int pos, bool cmpl);
+	virtual double getValue(int pos, int cmpl);
+	virtual void clear();
+
+	bool readPrm();
+	bool readBin();
+	void makeBinTrack(const char *fname);
+	void makeBinTrack();
+	void writeByteProfile();
+	void writeProfilePrm();
+	void writeProfilePrm(const char *path);
+	void readInputTrack(const char *fname, int cage=0); //cage: if cage>0 : end=beg+cage; cage<0: beg=end+cage.
+	int addSgm(ScoredRange *bed, FloatArray *prof);
+	int addSgm(char strnd, ScoredRange *bed);
+	void initProfile();
+	void initProfile(char* name);
+	void finProfile();
+
+	double getVal(BINVAL b);
+	int    getBVal(int pos, int cmpl);
+};
+//============================== Model =======================================
+struct Model:Track{
 	char * definition;
-	Term trm[120];
-	int nTerm;
+	Formula *form;
 
 	Model();
-	~Model(){if(definition) zfree(definition,"model");}
-	void readMap(char *fnam);
-	void create();
-	void write();
+	~Model();
+	void readModel(const char *fnam);
+	bool readTrack(const char *fnam);
+	bTrack *getTrack(int i) {return form->tracks[i]->btr;}
+	char *getTrackName(int i){return form->tracks[i]->name;}
+	virtual bool isNA(int pos, bool cmpl);
+	virtual bool isZero(int pos, bool cmpl);
+	virtual double getValue(int pos, int cmpl);
+	virtual void clear();
+};
+bool isModel(const char *s);
+Track * trackFactory(const char* fname);
+//=================================================================================
+struct BuffArray{
+	BINVAL *bval;
+	Track *bt;
+
+	FILE *f;
+	long offset;
+	long bufBeg, bufEnd;
+	bool wr;
+
+	~BuffArray();
+	BuffArray();
+	void init(Track *bt, bool cmpl, bool write);
+	BINVAL get(int pos);						// read and remove NA
+	void set(int pos, BINVAL v);
+	void readBuff(int pos);				// read; if na then as is
+	void writeBuff();
+	void close();
 };
 
+class FloatArray{
+private:
+	float *val;
+	FILE *f;
+	char *fname;
+	long bufBeg, bufEnd;
+	bool wr;
+public:
+	~FloatArray();
+	FloatArray();
+	void init(int na);
+	float get(int pos);						// read and remove NA
+	float getLog(int pos);					// read and remove NA and log(z+1)
+	void set(int pos, float v);
+	float add(int pos, float v);
+	void readBuf(int pos);				// read; if na then as is
+	void writeBuf();
+};
+
+
 //================================= Timer ===================================
+char *dateTime();
 long mtime();
 struct Timer{
 	long start;
@@ -402,7 +543,6 @@ public:
 	void norm();						   	// divide transform by length
 	void derivat();						   	// get derivative from fft
 	void derivat(int deriv);
-	void random();
 	float *getSpectrum();					// get spectrum
 	double *getAutoCorr();					// get aoutocorrelation
 };
@@ -480,6 +620,15 @@ public:
 	double kernVal(double x);
 };
 
+//=================================================================================
+struct  CustKernel:Kernel{
+public:
+	Formula *frml;
+	CustKernel();
+	CustKernel(double e,double sgm, int l); //Nucleotides
+	void initCust(double e,double sgm);
+	double kernVal(double x);
+};
 
 //=================================================================================
 struct  NormKernel:Kernel{
@@ -502,6 +651,7 @@ struct DinHistogram{		// Dynamic histogram for two variables
 	double e[2],sd[2];		//mean and std deviation
 
 	DinHistogram(int ll);				//constructor
+	~DinHistogram();
 	int getIdx(double value);			// Get index for the value
 	double getValue(int idx);			// Get value by index
 	double getNormValue(int idx);		// Get normalized value (0..1)
@@ -514,63 +664,13 @@ struct DinHistogram{		// Dynamic histogram for two variables
 	void print(FILE* f);
 	void clear();
 };
-extern double fiveFDR;	// the rightmost position on FDR > 5%
 //=================================================================================
-struct Histogram{
-	double  minVal, maxVal,  // Min & Max values. Min=-1; Max=1;
-			bin,			 // bin size
-			e,  			 // Mean
-			sigma,			 // standard deviation
-			alpha,beta;		 // parameters fof Beta-distribution
-	int 	nBin,			 // Number of bins
-			count;			 // Number of observations
-	double  *dd,			 // Distribution density
-			*db,			 // Appropriate Beta density
-			*Fp,			 // Cummulative  left distribution  ( F(x) )
-			*Fm;			 // Cummulative  right distribution ( 1-F(x) )
-	int iq,im,iqq;
-
-	bool ready;				 // block add() and norm() after norm()
-	Histogram(int nBin);
-	void add(double x);
-	void norm();
-	void normBeta();		 // Calculate cummulative Beta distribution
-	void normF();			 // Calculate cummulative real distribution
-	double pValp(double x);
-	double pValm(double x);
-	double interpol(double x, double* fun);
-	void print(FILE *f);
-	void calcCDF(double *d);
-};
-
-//=================================================================================
-struct MapPos{
-	bool fg;				// flag: true-> position relative to the begin (upstream)
-	int pos;				// position
-	bool scaled;
-	MapPos();
-	int read(char *s);
-	void scale(int pstep);
-	void print();
-	void print(char *b);
-};
-
 //=================================================================================
 struct Interval{
 	int f,t;
 };
 
 //=================================================================================
-struct MapIv{				// description of the map interval
-	MapPos beg,end;
-
-	MapIv();
-	void scale(int pstep);
-	int read(char* s);		// read interval. Syntax: b:-500..b:200 = upstream region
-	void print();
-	char* print(char *b);
-};
-
 //================= Alias classes are used for give shorter file names.
 //================= It uses the alias table and renames the output files
 struct Alias{
@@ -600,16 +700,73 @@ struct PairEntry{			//==== correlation for pair of windows
 	float d;				//==== Correlation
 };
 
+//===================================================================
+struct Matrix{
+	int n;
+	double * values;
+	//=========================================
+	//=========================================
+	Matrix(){n=0; values=0;}
+	Matrix(int mm);
+	Matrix(int nn, double *a);
+	Matrix(Matrix *mtx);
+	void init(int nn);
+	void init(int nn, double *a);
+	//=========================================
+	~Matrix(){free(values);}
+	//=========================================
+	int getIndex(int i, int j){return i*n+j;}
+	//=========================================
+	double get(int i, int j){return values[getIndex(i,j)];}
+	//=========================================
+	void set(int i, int j, double a){values[getIndex(i,j)]=a;}
+	//=========================================
+	void set(double *a){memcpy(values,a,n*n*sizeof(double));}
+	//=========================================
+	void transpose();
+	void printMtx(FILE *f);
+	void printMtx();
+};
+
+struct CovarMtx:Matrix{
+	double *cov, *meani, *meanj;
+	int *count;
+	CovarMtx(int n);
+	void init(int n);
+	CovarMtx(){;cov=0; meani=0; meanj=0; count=0;}
+	~CovarMtx();
+	double calc(int i, int j);
+	void addCov(int itrack, int jtrack, int f, int t);
+	void print(FILE *f);
+};
+struct VectorX{
+	double *v;
+	int n;
+	VectorX();
+	VectorX(int nn);
+	void init(int nn);
+
+	void random(int nz);
+	void get(int pos, double *b);
+	void get(int pos);
+	int chk(int pos);
+	int chk();
+	double scalar(VectorX *v);
+	double scalar(VectorX &v);
+	void print(FILE *f);
+	void printH(FILE *f);
+};
+Matrix * eigenVectors(Matrix *x, double *EValues, int nIter, double precsision);
+
+//=====================================================================
 
 //=====================================================================
 extern AliasTable alTable;
 extern Chromosome *chrom_list;       // list of chromosomes
 extern int n_chrom;
 extern Chromosome *curChrom;
-extern bTrack bTrack1, bTrack2, projTrack, mapTrack; // Binary profiles
+extern Track *track1, *track2, *projTrack; // Binary profiles
 extern Kernel *kern;			// current kernel
-extern MapIv miv;				// interval for mapping
-extern Model model;
 extern FileListEntry files[256];
 extern int   nfiles;
 
@@ -620,10 +777,14 @@ extern Fourier LCorrelation;			// distance correlation calculation
 
 extern PairEntry *pairs;				// array for pair's correlation (foreground)
 extern int nPairs;						// number of foreground observations
-extern Histogram bgHist;				// Background Histogram initiation
-extern Histogram fgHist;				// Foreground Histogram initiation
+//extern Histogram bgHist;				// Background Histogram initiation
+//extern Histogram fgHist;				// Foreground Histogram initiation
 extern double BgAvCorr;					// average Background correlation
 extern double FgAvCorr;					// average Foreground correlation
+extern double LCmin, LCmax;
+extern FloatArray *fProfile, *cProfile;
+extern Timer debTimer;
+
 
 //=============================== Chromosomes ===========================
 int  readChromSizes(char *fname);			// read chromosomes
@@ -669,7 +830,11 @@ int   getTrackType(const char *fname);
 unsigned long getFileTime(const char *fname);
 void flockFile(FILE *f);
 void funlockFile(FILE *f);
-void addFile(const char* fname);			// Add filename to file list
+void addFile(char* fname);			// Add filename to file list
+
+void writeBedGr(const char *fname, FloatArray *array, float lTreshold, float rTreshold);
+void writeBedGr(FILE* f, FloatArray *array);
+void writeBedGr(FILE* f, FloatArray *array, float lTreshold, float rTreshold);
 
 //============================================== read config file
 const char*getKernelType();
@@ -680,7 +845,8 @@ const char *getIvFlag();
 //============================================== random & statistics
 double rGauss();							// standard normal random
 double rGauss(double e, double sigma);		// normal random with given mean and sigma
-unsigned long randInt(unsigned long n);							// uniform random int
+unsigned long randInt(unsigned long n);		// uniform random int
+double drand();								// uniform random double [0,1]
 double xBetaD(double beta1, double beta2, double x);	// beta density
 statTest *MannWhitney( double *set1, int nSet1, double *set2,int nSet2);	//Mann-Whitney test
 
@@ -694,28 +860,24 @@ extern "C" void fft(double xRe[], double xIm[],double yRe[], double yIm[]);
 extern "C" void initFFT(int n);
 
 //============================================ Output ====================
-double LocalCorrTrack(int pos, bool cmpl1, bool cmpl2, bool rnd);
+double LocalCorrTrack(int pos1, int pos2, bool cmpl1, bool cmpl2, bool rnd);
 void calcAutoCorr();
-void initOutWig();
-void finOutWig();
+void finOutLC();
+void initOutLC();
+void freeLC();
 void printStat();
 void printFgDistr();
 void printBroadPeak();
 void printRreport();
 void printR();
 void printRmd();
-void printParamNames(FILE* f);
-void printParams(FILE* f);
-void printXMLparams(FILE *f);
-void PrintParams();
 
 void printCorrelations();
 void printChomosomes(char *fname);
 void printChrDistances(char *fname);
-
-//============================================= Calculations =============
-int  Correlator();
-int  Preparator(const char *fname);
+void printParamNames(FILE* f);
+void printParams(FILE* f);
+void printXMLparams(FILE *f);
 
 //============================================ Arrays
 double norm(double *x, int l);			// normalize to z-score
@@ -730,22 +892,23 @@ void xverb(const char *format, ...);
 void deb(int num);
 void deb(const char *format, ...);
 void deb(int num, const char *format, ...);
+void debt(int num);
+void debt(const char *format, ...);
+void debt(int num, const char *format, ...);
+void debt(); 										//reset timer
 void clearDeb();
 
 void helpPage();
-//======================== Mapping
-void mapIntervals();
-void fillMap();
-
 //======================== Testing procedures
-void printBytes(unsigned char* byteprofile,int from, int to);
-void printProfile(float *profile, int from, int to);
-void printProfile(FILE *f, float *profile, int from, int to);
-void printChrom();
-
-double *readDistr(const char *fname, int &nn);
 void test();
-void CageMin(const char *fname1, const char *fname2);
 
+//============================================= Calculations =============
+void printMiniHelp();
+void initSG(int argc, char **argv);
+int  Correlator();
+//int  Preparator(const char *fname);
+void  Preparator();
+void Covariator();
+void Projector();
 
 #endif /* TRACK_UTIL_H_ */
