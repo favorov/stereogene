@@ -1,4 +1,4 @@
-Stereogene v1.73
+Stereogene v2.02
 
 Folders:
 
@@ -11,4 +11,4 @@ www is a local copy of the http://stereogene.bioinf.fbb.msu.ru/ project's webpag
 galaxy contains the Galaxy (https://galaxyproject.org/) integration stub for Stereogene. 
 Please see readme.txt in the galaxy folder for instructions.
 
-18 May 2017
+12 June 2017
