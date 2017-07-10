@@ -61,8 +61,8 @@ double calcCorelations(int pos1, int pos2, bool cmpl1, bool cmpl2, bool rnd){
 	int nz2=track2->countZero(pos2,cmpl2);			// count zeros in the second profile
 	if(na1 > maxNA) {return -101;}					// too many NA in the first profile
 	if(na2 > maxNA) {return -102;}					// too many NA in the second profile
-	if(nz1 > maxZero) return -201; // too many zeros in the profiles
-	if(nz2 > maxZero) return -202; // too many zeros in the profiles
+	if(nz1 > maxZero) return -201; 					// too many zeros in the profiles
+	if(nz2 > maxZero) return -202; 					// too many zeros in the profiles
 
 	double *pr1=track1->getProfile(pos1,cmpl1);		// decode the first profile. Decoder uses hasCompl and complFg flags and combines profiles
 	double *pr2=track2->getProfile(pos2,cmpl2);		// decode the second profile
@@ -215,6 +215,7 @@ void distrCorr(){
 
 	//=================== calculate correlations
 	int n_corr=0; FgAvCorr=0;
+
 	for(int i=0,k=0; i<l; i+=wProfStep,k++){
 		double d;
 		d=100.*k/(l/wProfStep);
@@ -245,14 +246,16 @@ void distrCorr(){
 	}					// end for
 
 	//=================================================== Define rank for q-value calculation
-
-	track1->finStatistics(); track2->finStatistics();
-
-	FgAvCorr/=n_corr;
-	finOutLC();
-	totCorr=calcCC();
-	if(n_corr==0)	xverb("\nno non-zero windows pairs\n",totCorr, FgAvCorr);
-	else			xverb("\nCorrelation=%f\naverage Corrrelation=%f\n",totCorr, FgAvCorr);
+	if(n_corr==0){
+		xverb("\nno non-zero windows pairs\n",totCorr, FgAvCorr);
+	}
+	else{
+		track1->finStatistics(); track2->finStatistics();
+		FgAvCorr/=n_corr;
+		finOutLC();
+		totCorr=calcCC();
+		xverb("\nCorrelation=%f\naverage Corrrelation=%f\n",totCorr, FgAvCorr);
+	}
 	errStatus=0;
 }
 
@@ -334,13 +337,12 @@ int Correlator(){
 	verb("==         kernelSigma=%.0f\n",kernelSigma);
 	verb("==         nShuffle=%i\n",nShuffle);
 
-	writeLog("Correlations:   wSize=%i   kernelType=\"%s\"   kernelSigma=%.0f\n",
-			wSize,getKernelType(),kernelSigma);
 	//====================================================================== Prepare parameters
 	kernelProfSigma=kernelSigma/binSize;   // kernel width ((profile scale)
 	kernelProfShift=kernelShift/binSize;   // kernel shift ((profile scale)
 	maxNA   =(int)(maxNA0  *wProfSize/100);			// rescale maxNA
 	maxZero =(int)(maxZero0*wProfSize/100);			// rescale maxZero
+
 	if(maxZero>=wProfSize) maxZero=wProfSize-1;
 	if(maxNA  >=wProfSize) maxNA  =wProfSize-1;
 	//===================================================================== generate Kernels
@@ -378,6 +380,7 @@ int Correlator(){
 
 	//============================================== Do comparison
 	char *fil1=0, *fil2=0;
+
 	for(int i=0; i<nFPairs; i++){
 		id=(unsigned int)time(0);					// id is undefined yet
 		if(fPairs[i]->fil1 != fil1){
@@ -386,7 +389,7 @@ int Correlator(){
 			if(track1) {delete track1; track1=0;}
 			track1=trackFactory(profile1);
 			if(pcorProfile) track1->ortProject();
-			track1->makeIntervals();
+			if(!track1->makeIntervals()) continue;
 			fil1=fPairs[i]->fil1;
 		}
 		if(fPairs[i]->fil2 != fil2){
@@ -395,12 +398,14 @@ int Correlator(){
 			if(track2) {delete track2; track2=0;}
 			track2=trackFactory(profile2);
 			if(pcorProfile) track2->ortProject();
-			track2->makeIntervals();
+			if(!track2->makeIntervals()) continue;
 			fil2=fPairs[i]->fil2;
 		}
 		Timer thisTimer;
 		outFile=makeOutFilename(profile1, profile2);
 		makeId();
+		writeLog("Correlations:   wSize=%i   kernelType=\"%s\"   kernelSigma=%.0f\n",
+				wSize,getKernelType(),kernelSigma);
 		writeLog("  in1=<%s> in2=<%s> out=<%s>\n", profile1, profile2, outFile);
 
 		xverb("in1=\"%s\"\n", profile1);

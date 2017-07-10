@@ -102,7 +102,7 @@ void zfree(void *a, const char* b);
 #define xmemcpy(dest,pds, src, psrc, n) {memcpy(dest+(pds)*sizeof(*dest), src+(psrc)*sizeof(*src),(n)*sizeof(*src));}
 #define max(a,b) a<b ? b : a
 #define min(a,b) a>b ? b : a
-#define abs(a) (a<0 ? -a : a)
+#define abs(a) ((a) < 0 ? -(a) : (a))
 #define sign(a) (a==0 ? 0 : (a<0 ? -1:1))
 
 struct Model;
@@ -183,6 +183,7 @@ extern int corrScale;			// scale for correlations
 extern bool silent;				// inhibit stdout
 extern bool syntax;				// Strong syntax control
 
+extern bool outPrjBGr;
 extern bool writeDistCorr;		// write BroadPeak
 extern bool outLC;
 extern int LCScale;
@@ -200,10 +201,11 @@ extern double lcFDR;		// treshold on FDR when write Local Correlation track
 extern int profWithFlanksLength; // size of profWindow array (including random flanks)
 //===================================================    results
 extern double prod11,prod12,prod22, eprod1,eprod2;	//cummulative scalar products
-extern int nprod;
+extern int nprod;									//number of windows
 extern double totCorr,BgTotal;
 extern int nBkg, nFg;					// size of background and foreground sets of data
 extern double *BkgSet, *FgSet;			// background and foreground sets of the correlations
+extern bool LCExists;
 
 //=================================================== debug and error
 extern const char *errStatus;
@@ -372,8 +374,8 @@ struct Track{		        // Binary track
 			minP, 			// min score value
 			maxP, 			// max score value
 			av0,
-			sd0,
-			nn;
+			sd0;
+	int		nObs;
 	double avWindow, sdWindow;// mean and stdDev in current window
 	float scaleFactor;
 
@@ -405,7 +407,7 @@ struct Track{		        // Binary track
 	int  countZero(int pos, bool cmpl);		// count zero elements in the window
 
 	void ortProject();				// calculate projection coeff
-	void makeIntervals();
+	bool makeIntervals();
 	void makeIntervals(bool cmpl, IVSet *iv);
 	int  getRnd(bool cmpl1);
 	void writeWig();
@@ -887,6 +889,7 @@ double norm(double *x, int l);			// normalize to z-score
 void errorExit(const char *format, ...);
 void clearLog();
 void writeLog(const char *format, ...);
+void writeLogErr(const char *format, ...);
 void verb(const char *format, ...);
 void xverb(const char *format, ...);
 void deb(int num);

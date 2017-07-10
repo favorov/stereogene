@@ -189,6 +189,7 @@ Param *pparams[]={
 		new Param(SG, "ivs_end"		,0, &intervFlag0	,IVS_END	,"introns ends"),
 		new Param( 7, "bpType" 		,1, &bpType  		,bpTypes	,"The value used as a score for BroadPeak input file"),
 		new Param(SG|PRJ,"pcorProfile" ,1, &pcorProfile	,"Track for partial correlation"),
+		new Param(PRJ,"outPrjBGr"   ,0, &outPrjBGr		,"Write BedGraph for projections"),
 		new Param(SG, "NA"       	,1, &NAFlag     	,1 , "use NA values as unknown and fill them by noise"),
 		new Param(SG, "threshold"	,1, &threshold	,"threshold for input data for removing too small values: 0..250"),
 //======================== =====================================================================================

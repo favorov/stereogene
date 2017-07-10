@@ -13,16 +13,9 @@
 FloatArray *fProfile=0, *cProfile=0;
 
 //=====================================================================================
-const char *memError="not enaugh memory. Try to increase  parameter \"bin\"";
 
 void bTrack::initProfile(){
 	initProfile(0);
-//	errStatus="init Profile";
-//	if(fProfile==0) fProfile=new FloatArray();
-//	fProfile->init(NA);
-//	if(bytes==0) bytes=new BuffArray();
-//	bytes->init(this,0,1);
-//	errStatus=0;
 };
 void bTrack::initProfile(char *tName){
 	errStatus="init Profile";
@@ -55,7 +48,8 @@ int bTrack::addSgm(ScoredRange *bed, FloatArray *prof){
 		d=(bed->score)*((p1 + 1 - curChrom->base)*binSize - bed->beg)/binSize;
 		addProfVal(prof, p1,d);
 		for(int i=p1+1; i<p2; i++){
-			addProfVal(prof, i, bed->score);
+			d=bed->score*rGauss(1,0.001);
+			addProfVal(prof, i, d);
 		}
 		d=(bed->score)*(bed->end - (p2-curChrom->base)*binSize)/binSize;
 		addProfVal(prof, p2,d);
@@ -185,7 +179,6 @@ void bTrack::readInputTrack(const char *fname, int cage){
 		if(i%10000000 ==0)
 			{verb("%li  %s...\n",i,curChrom->chrom); }
 		if(*inputString==0) continue;
-
 		if(strncmp(inputString,"browser"  ,7)==0) continue;					//========= browser line => skip
 		if(strncmp(inputString,"track"    ,5)==0) {trackDef(inputString); continue;}
 		if(strncmp(inputString,"#bedGraph",9)==0) {trackType=BED_GRAPH; continue;}
@@ -402,6 +395,7 @@ void bTrack::finProfile(){
 			if(z < minP) minP=z;
 			if(z > maxP) maxP=z;
 		}
+
 		if(cbytes && (z=cProfile->getLog(i)) != NA){
 			// we take into account only valid profile values
 			av+=z; x2+=z*z; nn++;
@@ -428,7 +422,7 @@ void bTrack::finProfile(){
 			bytes->set(i,x);
 		}
 		else{
-			bytes->set(i,NA);       // undefined values are presented as 0 in the byte profile
+			bytes->set(i,NA);       				// undefined values are presented as 0 in the byte profile
 		}
 		if(cbytes!=0){
 			z=cProfile->getLog(i);

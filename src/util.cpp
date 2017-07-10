@@ -14,7 +14,7 @@
 #include <sys/file.h>
 //#include <dir.h>
 
-const char* version="2.02";
+const char* version="2.03";
 
 int debugFg=0;
 //int debugFg=DEBUG_LOG|DEBUG_PRINT;
@@ -81,6 +81,7 @@ bool 	outLC=0;
 int 	LCScale=LOG_SCALE;
 //int 	LCScale=LIN_SCALE;
 double 	lcFDR=0.5;
+bool 	outPrjBGr=true;
 
 int 	wProfStep=0;          	// window step   (profile scale)
 int 	wProfSize=0;          	// size of widow (profile scale)
@@ -121,6 +122,7 @@ int 	scoreType=AV_SCORE;
 AliasTable alTable;
 FileListEntry files[256];
 int   	nfiles;
+bool LCExists=false;
 
 double 	BgAvCorr=0;
 double 	FgAvCorr=0;
@@ -139,8 +141,16 @@ ScoredRange::ScoredRange(){
 }
 //==================================== print a range to a BED GRAPH
 void ScoredRange::printBGraph(FILE *f){
-	if(score!=NA)
-		fprintf(f,"%s\t%li\t%li\t%.2f\n",chrom,beg, end,score);
+	if(score!=NA){
+		fprintf(f,"%s\t%li\t%li\t",chrom,beg, end);
+		double xx=abs(score);
+		if(xx < 0.000001) 	fprintf(f,"0.0\n");
+		else if(xx < 0.0001) 	fprintf(f,"%.6f\n",score);
+		else if(xx < 0.001) fprintf(f,"%.5f\n",score);
+		else if(xx < 0.01)  fprintf(f,"%.4f\n",score);
+		else if(xx < 0.1)   fprintf(f,"%.3f\n",score);
+		else                fprintf(f,"%.2f\n",score);
+	}
 	else
 		fprintf(f,"#%s\t%li\t%li\t?\n",chrom,beg, end);
 }
@@ -318,18 +328,14 @@ Chromosome *checkRange(ScoredRange *gr){
 
 	if(gr->beg < 0){
 		if(inputErr == 0){ inputErr=1;
-			writeLog(
-					"File <%s> line #%d: incorrect segment start: chrom=%s  beg=%ld.  Ignored\n",curFname, inputErrLine,gr->chrom, gr->beg);
-			fprintf(stderr,
+			writeLogErr(
 					"File <%s> line #%d: incorrect segment start: chrom=%s  beg=%ld.  Ignored\n",curFname, inputErrLine,gr->chrom, gr->beg);
 		}
 		return 0;
 	}
 	if(gr->end  >= chr->length){
 		if(inputErr == 0){ inputErr=1;
-			writeLog(
-					"File <%s> line #%d: incorrect segment end: chrom=%s  end=%ld.  Ignored\n",curFname, inputErrLine,gr->chrom, gr->end);
-			fprintf(stderr,
+			writeLogErr(
 					"File <%s> line #%d: incorrect segment end: chrom=%s  end=%ld.  Ignored\n",curFname, inputErrLine,gr->chrom, gr->end);
 		}
 		return 0;
@@ -463,9 +469,20 @@ const char *errStatus=0;
 void clearLog(){
 	if(logFileName) fclose(gopen(logFileName,"wt"));
 }
+
+
 FILE *openLog(){
 	if(logFileName) {
-		FILE *f=gopen(logFileName,"at");
+		char b[2048];
+		if(*logFileName=='$'){
+			if(outFile && *outFile){
+				sprintf(b,"%s%s",outFile,logFileName+1);
+			}
+			else
+				sprintf(b,"log%s",logFileName+1);
+		}
+		else strcpy(b,logFileName);
+		FILE *f=gopen(b,"at");
 		if(f!=0) return f;
 		else{
 			fprintf(stderr, "Error in opening log file%s Error code=%i\n", logFileName, errno);
@@ -490,6 +507,15 @@ void writeLog(const char *format, ...){
 	va_start(args, format);
 	writeLog(format, args);
 	va_end(args);
+}
+void writeLogErr(const char *format, ...){
+	char b[2048];
+	va_list args;
+	va_start(args, format);
+	vsprintf(b, format,args);
+	va_end(args);
+	writeLog(b);
+	fprintf(stderr,"%s",b);
 }
 
 //============================================================
@@ -851,7 +877,7 @@ void makeDirs(){
 //========================    Memory    ======================
 //============================================================
 void zfree(void *a, const char* b){
-	if(a) free(a); else if(b) writeLog("double free %s\n",b);
+	if(a) free(a); else if(b) writeLogErr("double free %s\n",b);
 }
 void *xmalloc(size_t n, const char *err){
 	void *a=malloc(n);

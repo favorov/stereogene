@@ -117,8 +117,7 @@ void printStat(){
 		f=gopen(statFileName,"a+t");
 		if(f!=0) flockFile(f);
 		else {
-			fprintf(stderr,"Can not open file %s Error code=%i\n",statFileName, errno);
-			writeLog("Can not open file %s\n",statFileName);
+			writeLogErr("Can not open file %s\n",statFileName);
 		}
 	}
 	if(!fg && f){								//================ write the header
@@ -149,8 +148,7 @@ void printStat(){
 		f=gopen(paramsFileName,"a+t");
 		if(f) flockFile(f);
 		else {
-			fprintf(stderr,"Can not open file %s  Error code=%i\n",paramsFileName,errno);
-			writeLog("Can not open file %s\n",paramsFileName);
+			writeLogErr("Can not open file %s\n",paramsFileName);
 		}
 	}
 	if(!fg && f){								//================ write the header
@@ -450,7 +448,7 @@ void printR(){
 	fprintf(f," #  create the plot \n");
 	fprintf(f," old.par <- par( no.readonly = TRUE ) \n");
 	fprintf(f," par( mfrow = c( %i, 1 ), oma = c( 0, 0, 0, 0 ),mar=c(3,3,3,1),mgp=c(1.6,0.45,0)) \n\n",
-			outLC?3:2);
+			LCExists?3:2);
 	char sub[1024]; if(writePDF) sub[0]=0; else sprintf(sub,"\\n%s",fname);
 	fprintf(f," plot(density(bkg[[1]]), xlim=c(-1,1), ylim=c(0, y_lim1), xlab='correlation coefficient',ylab='density', \n");
 	fprintf(f," col='red', main='Distribution of correlations%s', \n",sub);
@@ -465,7 +463,7 @@ void printR(){
 	fprintf(f," lines(dist$x/1000,dist$Bkg , col='red',lwd=2) \n");
 	fprintf(f," #plot line for chomosome \n");
 	fprintf(f," #lines(dist$x/1000, dist_chrom , col='green',lwd=2) \n\n");
-	if(outLC){
+	if(LCExists){
 		const char *ss="";
 		if(LCScale==LOG_SCALE) ss="(log)";
 		fprintf(f,"\nlc=read.table(paste(name, \'.LChist\', sep = \'\'),header=TRUE)\n");

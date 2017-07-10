@@ -177,7 +177,7 @@ void BuffArray::close(){
 }
 
 BuffArray::~BuffArray(){
-	xfree(bval,0);
+	xfree(bval,"~BuffArray");
 	close();
 }
 //==========================================================================
@@ -200,7 +200,7 @@ FloatArray::~FloatArray(){
 	if(f==0) return;
 	fclose(f);
 	remove(fname);
-	xfree(fname,0);
+	xfree(fname,"~FloatArray file");
 }
 
 FloatArray::FloatArray(){
@@ -241,7 +241,10 @@ float FloatArray::getLog(int pos){
 	//=============================================read the value
 	if(pos < bufBeg || pos >= bufEnd)  readBuf(pos);
 	float x=val[pos-bufBeg];
-	if(x!=NA) x=log(x+1);
+	if(x!=NA){
+		if(x < 0) x=-log(1-x);
+		else      x= log(x+1);
+	}
 	return x;
 }
 
@@ -302,7 +305,7 @@ bool bTrack::readTrack(const char *fname){
 	if(!readPrm()) return false;
 	if(!readBin()) return false;
 	//============================================== Read bytes
-	av=sd=nn=0;
+	av=sd=nObs=0;
 	errStatus=0;
 	return true;
 }
@@ -310,15 +313,17 @@ bool bTrack::readTrack(const char *fname){
 //===============================================================================
 double Track::addStatistics(){
 	double avv=0, sdd=0;
+//deb(21,"nn=%i",nObs);
 	for(int i=0; i<profWithFlanksLength; i++){
 		double x=profWindow[i];
-		avv+=x; sdd+=x*x;  nn++;
+		if(x!=NA){avv+=x; sdd+=x*x;  nObs++;}
 	}
+//deb(22,"nn=%i",nObs);
 	av+=avv; sd+=sdd;
 	return avv/profWithFlanksLength;
 }
 void Track::finStatistics(){
-	av/=nn; sd=sd-av*av*nn; sd/=nn-1; sd=sqrt(sd);
+	av/=nObs; sd=sd-av*av*nObs; sd/=nObs-1; sd=sqrt(sd);
 	if(doAutoCorr){
 		double a=autoCorr[0];
 		for(int i=0; i<profWithFlanksLength; i++)
@@ -362,11 +367,15 @@ void Track::makeIntervals(bool cmpl, IVSet *iv){
 	}
 }
 
-void Track::makeIntervals(){
+bool Track::makeIntervals(){
 	makeIntervals(0, ivs);
 	if(hasCompl) makeIntervals(1, ivsC);
 
-	if(ivs->nIv+ivsC->nIv == 0) errorExit("no nonZero windows");
+	if(ivs->nIv+ivsC->nIv == 0) {
+		writeLog("Track <%s>: no nonZero windows",name);
+		fprintf(stderr,"Track <%s>: no nonZero windows",name);
+		return false;
+	}
 	ivs->fin();
 	if(ivsC->nIv) ivsC->fin();
 
@@ -374,6 +383,7 @@ void Track::makeIntervals(){
 	int l1=ivs->totLength; if(hasCompl) l1+=ivsC->totLength;
 	av0=av0*l0/l1;
 	sd0=sd0*sqrt(l0/l1);
+	return true;
 }
 
 //========================================================================
@@ -382,7 +392,6 @@ int Track::getRnd(bool cmpl){
 	pos=cmpl ? ivsC->randPos() : ivs->randPos();         // get random position in the interval
 	return pos;
 }
-
 
 //========================================================================
 void Track::clear(){
@@ -441,7 +450,7 @@ void Track::init(){
 	avWindow=sdWindow=0;// mean and stdDev in current window
 	ivs =new IVSet();
 	ivsC=new IVSet();
-	av=sd=minP=maxP=nn=0;
+	av=sd=minP=maxP=nObs=0;
 	av0=sd0=0;
 	deriv=0;
 	trackType=0;
@@ -466,9 +475,9 @@ Track::Track(){
 }
 
 Track::~Track(){
-	xfree(profWindow,0);
-	xfree(autoCorr,0);
-	xfree(name,0);
+	if(profWindow) xfree(profWindow,"~Track 1");
+	if(autoCorr)   xfree(autoCorr,"~Track 2");
+	if(name)       xfree(name,"~Track 3");
 	if(ivs ) delete ivs;
 	if(ivsC) delete ivsC;
 }
@@ -487,7 +496,7 @@ double bTrack::getVal(BINVAL b){
 		else return 0;
 	}
 	if(b < threshold  && b > - threshold) return 0;
-	double x=exp(b/scaleFactor)-1;
+	double x=b < 0 ? 1-exp(-b/scaleFactor): exp(b/scaleFactor)-1;
 	return x;
 }
 
@@ -565,7 +574,7 @@ double * Track::getProfile(int pos, bool cmpl){ //====== pos - profile position;
 
 	//======================================= Window Statistics
 	avWindow/=wProfSize;
-	sdWindow=sdWindow-avWindow*avWindow/wProfSize;
+	sdWindow=sdWindow-avWindow*avWindow*wProfSize;
 	sdWindow/=wProfSize-1; sdWindow=sqrt(sdWindow);
 	//======================================== fill flanks
 	int x0=wProfSize+LFlankProfSize;
@@ -665,7 +674,7 @@ void  Model::clear(){
 
 //================================================================================
 Model::~Model(){
-	if(definition) xfree(definition,"");
+	if(definition) xfree(definition,"definition");
 	delete form;
 }
 

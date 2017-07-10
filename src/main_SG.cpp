@@ -30,8 +30,6 @@ void printMiniHelp(){
 	exit(0);
 }
 
-// TODO Check models!!!!
-
 int main(int argc, char **argv) {
 debugFg=DEBUG_LOG|DEBUG_PRINT;
 clearDeb();
@@ -39,10 +37,14 @@ clearDeb();
 	initSG(argc, argv);
 //debugFg=DEBUG_LOG|DEBUG_PRINT;
 //	if(debugFg) clearDeb();
-
+//==========================================
+//for(int i=0; i<100; i++){
+//	deb("%e",exp(-i*i));
+//}
+//	exit(0);
+//===========================================
 	Preparator();
 	Correlator();
 	fflush(stdout);
-//	fclose(stdout);
 	return 0;
 }

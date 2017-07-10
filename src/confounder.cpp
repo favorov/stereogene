@@ -77,6 +77,7 @@ void VectorX::print(FILE *f){
 }
 //==========================================================================================
 //==========================================================================================
+
 void Confounder(){
 	bTrack *confdr=new bTrack();
 	if(confFile==0) confFile=strdup("confounder");
@@ -136,6 +137,7 @@ void Confounder(){
 		fprintf(f,"#%s\n",files[i].fname);
 	}
 	verb("Write confounder profile...\n");
+
 	writeBedGr(f,fProfile);
 	verb("\n");
 	fclose(f);
@@ -233,7 +235,9 @@ void calcCovar(){
 			cMtx.calc(i,j);
 		}
 	}
-	FILE *f=fopen("cvr","wt");
+	char b[2048];
+	sprintf(b,"%s.cvr",confFile);
+	FILE *f=xopen(b,"wt");
 	cMtx.print(f);
 	Matrix *x = new Matrix(&cMtx);
 	getMem(eValues,nfiles+10,"eigenVal"); zeroMem(eValues,nfiles);
@@ -265,9 +269,8 @@ void Covariator(){
 	Confounder();
 
 	for(int i=0; i<nfiles; i++) delete tracks[i];
-	xfree(tracks,""); tracks=0;
-	xfree(eValues,"covariator: free");
-	xfree(tracks,"covariator: free");
+	xfree(eValues,"covariator: free eValues");
+	xfree(tracks,"covariator: free tracks");
 	exit(0);
 }
 

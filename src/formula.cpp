@@ -476,12 +476,12 @@ void test_formula(){
 
 char b[256];
 for(int i=0; i<formula.nNodes; i++){
-	deb(formula.getNode(i)->print(b));
+	printf("%s\n",formula.getNode(i)->print(b));
 }
 
 double x=80;
 double y=formula.calc(x);
-deb("f(%f)=%f",x,y);
+printf("f(%f)=%f\n",x,y);
 
 //for(int i=0; i<100; i++){
 //	deb("%i\t%f",i,formula.calc(i));

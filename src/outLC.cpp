@@ -7,7 +7,8 @@
  */
 #include "track_util.h"
 
-double *smoothProf2, *smoothProf1;
+double *smoothProf2=0, *smoothProf1=0;
+double *lcTmp=0;
 FloatArray *lcProfile=0;
 float L_lcTreshold,R_lcTreshold;
 
@@ -61,23 +62,23 @@ void renormDistrib(){	// Produce a NormWHist distribution using dHist
 
 
 ProfileHist::ProfileHist(int l):DinHistogram(l){//========= profile histogrgamm initiation
-	getMem(lFDR,l,"WigHist:getFDR");
+	getMem(lFDR,	l,"WigHist:getFDR");
 	getMem(lCDF_obs,l,"WigHist:getFDR");
 	getMem(lCDF_exp,l,"WigHist:getFDR");
-	getMem(rFDR,l,"WigHist:getFDR");
+	getMem(rFDR,	l,"WigHist:getFDR");
 	getMem(rCDF_obs,l,"WigHist:getFDR");
 	getMem(rCDF_exp,l,"WigHist:getFDR");
 }
 ProfileHist::~ProfileHist(){
-	xfree(lFDR,"WigHist:getFDR");
-	xfree(lCDF_obs,"WigHist:getFDR");
-	xfree(lCDF_exp,"WigHist:getFDR");
-	xfree(rFDR,"WigHist:getFDR");
-	xfree(rCDF_obs,"WigHist:getFDR");
-	xfree(rCDF_exp,"WigHist:getFDR");
-
+	xfree(lFDR,		"WigHist:getFDR 1");
+	xfree(lCDF_obs,	"WigHist:getFDR 2");
+	xfree(lCDF_exp,	"WigHist:getFDR 3");
+	xfree(rFDR,		"WigHist:getFDR 4");
+	xfree(rCDF_obs,	"WigHist:getFDR 5");
+	xfree(rCDF_exp,	"WigHist:getFDR 6");
 }
 
+//====================================================================================
 void ProfileHist::fin(){
 	DinHistogram::fin();					// normalize results
 	double obs=0, exp=0;
@@ -98,6 +99,7 @@ void ProfileHist::fin(){
 	}
 }
 
+//====================================================================================
 
 void ProfileHist::print(FILE* f){						// print the histogram
 	fprintf(f,"#  min=%.3f max=%.3f \n",min,max);
@@ -139,10 +141,15 @@ void addLCProf(double *f, int pos){
 //===================== Write the local correlation into the bedGraph file =====
 void writeLC(){
 	char bf[1024];
+	LCExists=outLC && dHist.n[0] && dHist.n[1];
+	if(dHist.n[0]==0 || dHist.n[1]==0){
+		verb("\nLocal Correlations contains no data\n");
+		writeLog("\nLocal Correlations contains no data\n");
+		return;
+	}
 	verb("\nwrite Local Correlations\n");
 	renormDistrib();
 	writeBedGr(outFile, lcProfile, L_lcTreshold,R_lcTreshold);
-
 	//========================================== Write histograms ===============
 	if(writeDistr) {
 		sprintf(bf,"%s.LChist",outFile);
@@ -155,19 +162,22 @@ void writeLC(){
 }
 //==================================================================
 void initOutLC(){
-	if(outLC==NONE) return;
+	if(!outLC) return;
 	if(lcProfile==0) lcProfile=new FloatArray();
 	lcProfile->init(NA);
 }
 
 void finOutLC(){
-	if(outLC==NONE) return;
+	if(!outLC) return;
 	//====================== write correlation
 	writeLC();
 }
 
 void freeLC(){
 	if(lcProfile) delete lcProfile;
+	if(smoothProf1) xfree(smoothProf1,"free LC 1");
+	if(lcTmp)    	xfree(lcTmp,      "free LC 2");
+
 	lcProfile=0;
 }
 //===================================================================
@@ -189,18 +199,17 @@ void calcSmoothProfile(int k, bool cmpl){
 	LCorrelation.calc(0);				//reverse transformation
 }
 //==================== Make correlation track
-double *lcTmp=0;
 
 double LocalCorrTrack(int pos1, int pos2, bool cmpl1, bool cmpl2, bool rnd){
-
-	if(outLC==NONE) return 0;
-	getMem(smoothProf1,profWithFlanksLength+10, "storeCorrTrack");
-	getMem(lcTmp,profWithFlanksLength+10, "storeCorrTrack");
+//deb(50);
+	if(!outLC) return 0;
+	if(smoothProf1==0) getMem(smoothProf1,profWithFlanksLength+10, "storeCorrTrack");
+	if(lcTmp==0)       getMem(lcTmp,profWithFlanksLength+10, "storeCorrTrack");
 	calcSmoothProfile(0, cmpl1);	// calculate smooth ptrofile c=\int f*\rho for the second profile (y)
 	memcpy(smoothProf1,LCorrelation.re,profWithFlanksLength*sizeof(double));
 	calcSmoothProfile(1, cmpl2);	// calculate smooth profile for the first profile (x)
 	smoothProf2=LCorrelation.re;
-
+//deb(51,"pos=%i %i",pos1,pos2);
 	double av=0;
 	double sd=track1->sd0*track2->sd0;
 	for(int i=LFlankProfSize; i<profWithFlanksLength-RFlankProfSize; i++){
@@ -213,7 +222,6 @@ double LocalCorrTrack(int pos1, int pos2, bool cmpl1, bool cmpl2, bool rnd){
 //		double x0=(ax==NA)?0: bTrack1.getVal(ax), y0=(ay==NA)?0: bTrack2.getVal(ay);
 //		lc=0.5*(x0*y+y0*x);
 		lc=x*y/sd;
-//if(!rnd) deb("%i  bb=%i,%i vxy=%f,%f xy=%f,%f lc=%f",i,ax,ay,bTrack1.getVal(ax), bTrack2.getVal(ay),x,y,lc);
 		lc=normLC(lc);
 		lcTmp[i]=lc; av+=lc;	    // We use wCorrelation.im as a tmp buffer
 		dHist.add(lc,rnd ? 1:0);
@@ -249,15 +257,17 @@ void writeBedGr(FILE* f, FloatArray *array, float lTreshold, float rTreshold){
 	for(int i=0; i<profileLength; i++){
 		if(i%1000000 ==0) verb("%5.1f%%\r",1.*i/profileLength*100);
 		float x=array->get(i);
+
 		if(x <= rTreshold && x >= lTreshold) x=NA;
 		filePos2Pos(i,&pos,binSize); pos.score=x;
-		if(pos.chrom == pos0.chrom && pos.score == pos0.score){
-			pos0.end=pos.end; continue;
+		if(pos.chrom == pos0.chrom && abs(pos.score - pos0.score) < 0.000001){
+			pos0.end=pos.end;
+			continue;
 		}
-		if(pos0.chrom !=0)
+		if(pos0.chrom !=0){
 			pos0.printBGraph(f);
+		}
 		pos0.beg=pos.beg; pos0.end=pos.end; pos0.chrom=pos.chrom; pos0.score=pos.score;
-
 	}
 	if(pos0.chrom !=0) pos0.printBGraph(f);
 }

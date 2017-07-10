@@ -58,16 +58,16 @@ void makeProj(char *fname){
 	fprintf(prjLog,"<%s>\t%f\t%f\t%f\tz=%f\n",fname, pMin, pMax, e/nn,z);
 
 	//=================================================== Write wig
-	makeFileName(b,confTrackPath, fname, "bgraph");
-	FILE *f=fopen(b,"wt");
-
-	fprintf(f,"track type=wiggle_0 ");
-	fprintf(f,"description=\"%s_projection_%s\" \n",curTrack->name,confFile);
-
-	verb("Write profile %s...\n", curTrack->name);
-	writeBedGr(f, fProfile);
-	verb("\n");
-	fclose(f);
+	if(outPrjBGr){
+		makeFileName(b,confTrackPath, fname, "bgraph");
+		FILE *f=fopen(b,"wt");
+		fprintf(f,"track type=wiggle_0 ");
+		fprintf(f,"description=\"%s_projection_%s\" \n",curTrack->name,confFile);
+		verb("Write profile %s...\n", curTrack->name);
+		writeBedGr(f, fProfile);
+		verb("\n");
+		fclose(f);
+	}
 
 	projT->trackType=BED_GRAPH;
 	projT->hasCompl=0;

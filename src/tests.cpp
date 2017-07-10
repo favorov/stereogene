@@ -273,7 +273,7 @@ void DecodeGENECODE(){
 //===================================================================
 //===================================================================
 double* GaussProcess(double *w,int  n, int kk){
-	getMem0(w,n,"tst");
+	getMem(w,n,"tst");
 	double a=0.995, b=1;
 	double x=0, xmin=1.e+200, xmax=-xmin;
 	for(int i=0; i<n; i++){

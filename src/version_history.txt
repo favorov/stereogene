@@ -141,4 +141,8 @@
 ========== Version 2.02 ====================
 1. ID formation changed.
 2. Now the model is a formula. 
-
+3. User can switch off writing bedGraph for projection (only binary profiles will be written)
+4. Log-file can be defined as $.log where $ means current output file. If the user do not define $ the log-file will be cumulative.  
+========== Version 2.03 ====================
+1. For avoid long constant tracks a randomize procedure introduced. On track preparation every observed value multiplied by rGauss(1,0.001). 
+2. Fixed bug with out bed graph 
