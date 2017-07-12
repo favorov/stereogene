@@ -748,8 +748,6 @@ char *correctFname(char* s){
 char* makeFileName(char *b, const char *path, const char*fname){
 	if(path==0) return strcpy(b,fname);
 	if(*fname=='/' || *fname=='~') return strcpy(b,fname);
-	char *s;
-	if((s=strrchr((char*)fname,'/'))!=0) fname=s+1;
 	if(path && path[strlen(path)-1]=='/') sprintf(b,"%s%s",path,fname);
 	else								  sprintf(b,"%s/%s",path,fname);
 	return b;
