@@ -147,7 +147,7 @@ void distrBkg(){
 
 		if(d<=-10) {							// invalid windows (too many NA's of Zeros)
 			i--;
-			if(tst++ > 10000){					// too many attempt to get a background correlations
+			if(tst++ > 100000){					// too many attempt to get a background correlations
 				errorExit("too many empty/zero windows\n");
 			}
 			continue;
@@ -272,6 +272,29 @@ char * makeOutFilename(char * prof1, char*prof2){
 	sprintf(b,"%s%s",resPath,p1Fname);
 	return resFileName(b,p2Fname);
 }
+//==================== Check for duplication of the comparison
+struct FilePair{
+	char *fil1, *fil2;
+	FilePair(char *f1, char *f2){
+		fil1=f1; fil2=f2;
+	}
+};
+const int maxFilePairs=0x10000;
+FilePair *fPairs[maxFilePairs];
+int nFPairs=0;
+
+int addPair(char *f1, char *f2){
+	char *ff1,*ff2;
+	if(strcmp(f1,f2)< 0) {ff1=f1; ff2=f2;}
+	else				{ff2=f1; ff1=f2;}
+	for(int i=0; i<nFPairs; i++){
+		if(strcmp(ff1, fPairs[i]->fil1)==0 && strcmp(ff2, fPairs[i]->fil2)==0) return 0;
+	}
+	if(nFPairs >= maxFilePairs) errorExit("too many comparisons in one run");
+	fPairs[nFPairs++]=new FilePair(ff1,ff2);
+	return nFPairs;
+}
+
 
 
 int Correlator(){
@@ -345,6 +368,7 @@ int Correlator(){
 			Timer thisTimer;
 			if(files[j].id==files[i].id) continue;
 			if(strcmp(files[j].fname,files[i].fname)==0) continue;
+			if(addPair(files[j].fname,files[i].fname)==0) continue;
 			profile2=files[j].fname;
 			if(outFile) free(outFile);
 			outFile=makeOutFilename(profile1, profile2);
@@ -392,7 +416,6 @@ int Correlator(){
 	writeLog("====== DONE ======\n");
 	}
     verb("***   calculation time for %i comparisons = %s\n",n_cmp, timer.getTime());
-
 	//====================================================================== Read Data
 	return 0;
 }

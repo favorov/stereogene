@@ -576,6 +576,6 @@ int main(int argc, char **argv) {
 //exit(0);
 	Correlator();
 	fflush(stdout);
-	fclose(stdout);
+//	fclose(stdout);
 	return 0;
 }
