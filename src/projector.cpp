@@ -110,7 +110,7 @@ void Projector(){
 		projT->clear();
 	}
 	fclose(prjLog);
-	delete fProfile; fProfile=0;
+	del(fProfile); fProfile=0;
 }
 
 

@@ -34,24 +34,27 @@ void addProfVal(FloatArray *p, int pos, float v){
 	p->add(pos,v);
 }
 
+
 int bTrack::addSgm(ScoredRange *bed, FloatArray *prof){
+	total+=bed->score;
 	if(!checkRange(bed)) return 0;
+	double noise=0.001;
 	int p1=pos2filePos(bed->chrom, bed->beg);
 	int p2=pos2filePos(bed->chrom, bed->end);
-	if(p1<0) p1=0; if(p2>=profileLength) p2=profileLength-1;
+	if(p1<0) {p1=0;} if(p2>=profileLength) {p2=profileLength-1;}
 	float d;
 	if(p1==p2){
-		d=bed->score*(bed->end-bed->beg)/binSize;
+		d=bed->score*(bed->end-bed->beg)/binSize*rGauss(1,noise);
 		addProfVal(prof,p1, d);
 	}
 	else{
 		d=(bed->score)*((p1 + 1 - curChrom->base)*binSize - bed->beg)/binSize;
 		addProfVal(prof, p1,d);
 		for(int i=p1+1; i<p2; i++){
-			d=bed->score*rGauss(1,0.001);
+			d=bed->score*rGauss(1,noise);
 			addProfVal(prof, i, d);
 		}
-		d=(bed->score)*(bed->end - (p2-curChrom->base)*binSize)/binSize;
+		d=(bed->score)*(bed->end - (p2-curChrom->base)*binSize)/binSize*rGauss(1,noise);
 		addProfVal(prof, p2,d);
 	}
 	return 1;
@@ -160,12 +163,11 @@ void bTrack::readInputTrack(const char *fname, int cage){
 	float score=0;
     ScoredRange bed;
 	char *inputString, abuf[1000], chBuf[256], *sx;
-	long i=0;
+	long iLine=0;
 	char strand=0;
 	int nStrand=0;
 	hasCompl=1;
 	trackType=getTrackType(fname);
-	int intervFlag=(trackType == BED_TRACK) ? intervFlag0 : 0;
 
 	FILE *f=xopen(fname, "rt"); setvbuf ( f , NULL , _IOFBF , 65536 );
 	strcpy(curFname,fname);
@@ -173,11 +175,11 @@ void bTrack::readInputTrack(const char *fname, int cage){
 	BufFile input;
 	input.init(fname);
 
-	for(;(inputString=input.getString())!=0; i++){
+	for(;(inputString=input.getString())!=0; iLine++){
 		inputErrLine++;
 		int dataFg=1;									 	//======== remove end-of-line signes
-		if(i%10000000 ==0)
-			{verb("%li  %s...\n",i,curChrom->chrom); }
+		if(iLine%100000 ==0)
+			{verb("== %li  %s...                   \r",iLine,curChrom->chrom); }
 		if(*inputString==0) continue;
 		if(strncmp(inputString,"browser"  ,7)==0) continue;					//========= browser line => skip
 		if(strncmp(inputString,"track"    ,5)==0) {trackDef(inputString); continue;}
@@ -189,93 +191,26 @@ void bTrack::readInputTrack(const char *fname, int cage){
 
 		switch(trackType){
 			case BED_TRACK:										//======== BED
-				intervFlag=(trackType==BED_TRACK) ? intervFlag0 : 0;
 				score=1;										//======== default score=1
 				strand=0;										//======== default strand=unknown
 				chrom=readChrom(inputString);								//======== find chrom field
 				beg=readInt();									//======== find beg field
 				end=readInt();									//======== find end field
-				sx=strtok(0," \t\n"); if(sx==0) break;			//======== ignore name field
-				sx=strtok(0," \t\n"); if(sx==0) break;			//======== take score field
-				if(*sx!=0 && (isdigit(*sx) || *sx=='-')) score=atof(sx);
-				if(intervFlag) score=100;
-				sx=strtok(0," \t\n"); if(sx==0) break;			//======== take strand field
+				sx=strtok(0,"\t\n"); if(sx==0) break;			//======== ignore name field
+				sx=strtok(0,"\t\n"); if(sx==0) break;			//======== take score field
+				if(*sx!=0 && (isdigit(*sx) || *sx=='-')) {
+					score=atof(sx);
+					if(score==0) score=0.01;
+				}
+				sx=strtok(0,"\t\n"); if(sx==0) break;			//======== take strand field
 				if(*sx!=0 && *sx!='.') {strand=*sx; nStrand++;}
-				if(intervFlag==GENE || intervFlag==NONE) break;
-				if(intervFlag==GENE_BEG){
-					if(strand=='-') beg=end-1;
-					else 			end=beg+1;
-					break;
-					}
-				if(intervFlag==GENE_END) {
-					if(strand=='-') end=beg+1;
-					else  			beg=end-1;
-					break;
-				}
-				sx=strtok(0,"\t"); if(sx==0) break;			//======== skip tick1
-				sx=strtok(0,"\t"); if(sx==0) break;			//======== skip tick2
-				sx=strtok(0,"\t"); if(sx==0) break;			//======== skip rgb
-				sx=strtok(0,"\t"); if(sx==0) break;			//======== number of exons
 //======================= read gene structure
-				{
-				int nn=atoi(sx);
-				if(nn<2) break;
-				int lExn[nn];
-				int posExn[nn];
-				bed.chrom=chrom; bed.score=score;
-				for(int i=0; i<nn; i++) {
-					sx=strtok(0,",\t");
-					if(sx==0){beg=-1; break;}
-					lExn[i]=atoi(sx);
-				}
-				for(int i=0; i<nn; i++) {
-					sx=strtok(0,",\t");
-					if(sx==0){beg=-1; break;}
-					posExn[i]=atoi(sx);
-				}
-				int genePos=beg;
-//===== now 'beg' and 'end' are positions relative to gene beg/
-				if((intervFlag&EXON)==EXON){
-					for(int i=0; i<nn; i++){
-						end=(beg=posExn[i])+lExn[i];
-						if(intervFlag==EXON_BEG){
-							if(strand=='-') beg=end-1;
-							else 			end=beg+1;
-						}
-						if(intervFlag==EXON_END){
-							if(strand=='-') end=beg+1;
-							else  			beg=end-1;
-						}
-					bed.beg=genePos+beg; bed.end=genePos+end;
-						addSgm(strand, &bed);
-					}
-					break;
-				}
-				if((intervFlag&IVS)==IVS){
-					for(int i=0; i<nn-1; i++){
-						beg=posExn[i]+lExn[i];
-						end=posExn[i+1];
-						if(intervFlag==IVS_BEG){
-							if(strand=='-') beg=end-1;
-							else 			end=beg+1;
-						}
-						if(intervFlag==IVS_END) {
-							if(strand=='-') end=beg+1;
-							else  			beg=end-1;
-						}
-						bed.beg=genePos+beg; bed.end=genePos+end;
-						addSgm(strand, &bed);
-					}
-					break;
-				}
-				}
 				break;
 			case BED_GRAPH:
 				chrom=readChrom(inputString);		//======== find chrom field
 				beg=readInt();			//======== find beg field
 				end=readInt();			//======== find end field
 				score=readFloat();		//======== find score field
-//if(score > 1000) deb("input=<%s>",testB);
 				break;
 			case WIG_TRACK:
 				if(*inputString=='v'){
@@ -331,10 +266,10 @@ void bTrack::readInputTrack(const char *fname, int cage){
 		}
 		if(dataFg && (chrom==0 || beg < 0  || end < 0)){
 			if(syntax)
-				errorExit("wrong line in input file <%s> line# <%i>\n",fname,i);
+				errorExit("wrong line in input file <%s> line# <%i>\n",fname,iLine);
 			else{
-				writeLog("wrong line in input file <%s> line# <%i>\n",fname,i);
-				verb("wrong line in input file <%s> line# <%i>\n",fname,i);
+				writeLog("wrong line in input file <%s> line# <%i>\n",fname,iLine);
+				verb("wrong line in input file <%s> line# <%i>\n",fname,iLine);
 			}
 			continue;
 		}
@@ -347,6 +282,8 @@ void bTrack::readInputTrack(const char *fname, int cage){
 	}
 	if(nStrand==0) hasCompl=0;
 	fclose(f);
+	verb("\n");
+	deb("total=%f", total);
 }
 //=====================================================================================
 //========================================================================================
@@ -478,12 +415,13 @@ void bTrack::writeProfilePrm(const char *path){
     fprintf(f,"max=%g\n",maxP);
     fprintf(f,"average=%g\n",av);
     fprintf(f,"stdDev=%g\n",sd);
-    fprintf(f,"ivFlag=%i\n",intervFlag0);
     unsigned int chk=getChkSum(bytes, profileLength);
     if(cbytes && hasCompl) chk+=getChkSum(cbytes, profileLength);
     fprintf(f,"chksum=%08x\n",chk);
     fprintf(f,"#=== Scale ===\n");
     fprintf(f,"scale=%f\n",scaleFactor);
+    fprintf(f,"total=%f\n",total);
+
     //==== calculate distribution
 
     int dstr[256];
@@ -526,6 +464,7 @@ void bTrack::makeBinTrack(const char *fname){
 	makeBinTrack();
 }
 
+
 void bTrack::makeBinTrack(){
 	Timer tm;
 	verb ("******   Make binary track <%s>   ******\n", name);
@@ -538,6 +477,7 @@ void bTrack::makeBinTrack(){
 	char pfil[4096];
 	readInputTrack(makeFileName(pfil,trackPath,name));		//============ Read tracks
 	//======================================================================
+
 	verb("Finalize profiles... \n");
 	finProfile(); //============ Calculate min,max,average; convert to bytes
 	verb("Write profiles... \n");
@@ -574,14 +514,17 @@ void prepare(const char * fname){
 				nPrepare++;
 			}
 		}
-		delete tmpModel;
+		del(tmpModel);
 	}
 	else if(!tmp->check(fname)) {
 		tmp->makeBinTrack(fname);
 		nPrepare++;
 	}
-	delete tmp;
+	del(tmp);
 }
+
+
+
 
 void Preparator(){
 	Timer tm;
@@ -594,8 +537,44 @@ void Preparator(){
 	if(pcorProfile){
 		prepare(pcorProfile);
 	}
-	if(fProfile) delete fProfile;
-	if(cProfile) delete cProfile;
+	if(fProfile) del(fProfile);
+	if(cProfile) del(cProfile);
 	fProfile=cProfile=0;
 	if(nPrepare) writeLog("Preparation %i tracks: Time=%s\n",nPrepare,tm.getTime());
+}
+
+
+
+//=================================================================================
+void bTrack::writeBinnedProf(const char *fname){
+	if(fProfile==0) fProfile=new FloatArray();
+	fProfile->init(NA);
+	name=strdup(fname);
+	char pfil[4096];
+	readInputTrack(makeFileName(pfil,trackPath,name));
+
+	//================================================= Normalize
+
+	errStatus="WriteBinnedProfile";
+	//============================ calculate min, max, average, std deviation
+//	for(int i=0; i<profileLength; i++){
+//		float x=fProfile->get(i);
+////		if(trackType==BED_TRACK){
+////			if(x == 0) fProfile->set(i,x=NA);
+////		}
+////		if(x!=NA) fProfile->set(i,x*1000);
+//	}
+
+	char wfil[4096];
+	makeFileName(pfil,trackPath,name);
+
+	char *s=strrchr(pfil,'/'); if(s==0) s=wfil;
+	s=strrchr(s,'.'); if(s) *s=0;
+	sprintf(wfil,"%s_%i.bgr",pfil,binSize);
+
+	FILE *f=gopen(wfil,"w");
+	fprintf(f,"track type=bedGraph name=\"%s\" description=\"Binned track. Binsize=%i\"\n",name, binSize);
+	writeBedGr(f,fProfile, NA,  NA);
+
+	fclose(f);
 }

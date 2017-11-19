@@ -30,6 +30,16 @@ void printMiniHelp(){
 	exit(0);
 }
 
+void printProgDescr(){
+	printf("\n");
+	printf("The StereoGene program compares pairs of tracks and calculates kernel correlations\n");
+	printf("Usage:\n");
+	printf("$ ./StereoGene [-parameters] trackFile_1 trackFile_2 ... trackFile_n\n");
+	printf("\n");
+}
+
+//============================================ Print Help page =========================================
+
 int main(int argc, char **argv) {
 debugFg=DEBUG_LOG|DEBUG_PRINT;
 clearDeb();

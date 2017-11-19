@@ -13,8 +13,7 @@
 
 #include <sys/file.h>
 //#include <dir.h>
-
-const char* version="2.03";
+const char* version="2.12";
 
 int debugFg=0;
 //int debugFg=DEBUG_LOG|DEBUG_PRINT;
@@ -24,7 +23,6 @@ const char *debS=0;
 Chromosome *chrom_list;       // list of chromosomes
 Chromosome *curChrom=chrom_list;
 int  binSize=100;   // frame size fo profile
-int  intervFlag0=GENE;   // Flag: for bed tracks uncovered values=0 otherwise uncovered values=NA
 bool  NAFlag=0;
 
 long long GenomeLength=0;      // TOTAL LENGTH OF THE GENOME
@@ -47,6 +45,7 @@ char *statFileName=(char*)"./statistics";
 char *paramsFileName=(char*)"./params";
 char *inputProfiles=0;
 char *outTrackFile=0; // Filename for write out track
+char *idSuff=(char*)"";
 
 bool  verbose=0;
 bool  silent=0;				// inhibit stdout
@@ -61,10 +60,11 @@ int   outRes=XML|TAB;
 int   inpThreshold=0;		// Testing of binarized input data, % of max
 bool  writePDF=true;
 int   complFg=IGNORE_STRAND;
+int   lcFlag=CENTER;
 int   profileLength;			// size of the profile array
 
 char *pcorProfile=0;    // partial correlation profile file name
-int  binBufSize=10000000;
+int  binBufSize=30000000;
 
 
 int 	kernelType=KERN_NORM;
@@ -80,7 +80,9 @@ double 	scaleFactor=0.2;
 bool 	outLC=0;
 int 	LCScale=LOG_SCALE;
 //int 	LCScale=LIN_SCALE;
-double 	lcFDR=0.5;
+double LlcFDR=0;		// treshold on FDR when write Local Correlation track
+double RlcFDR=0.5;		// treshold on FDR when write Local Correlation track
+
 bool 	outPrjBGr=true;
 
 int 	wProfStep=0;          	// window step   (profile scale)
@@ -109,7 +111,7 @@ int 	corrScale=10;
 double 	prod11=0,prod12=0,prod22=0, eprod1,eprod2;
 int 	nprod=0;
 XYCorrelation XYfgCorrelation;		    // array for correlation picture
-XYCorrelation XYbgcorrelation;		// array for correlation picture
+XYCorrelation XYbgcorrelation;			// array for correlation picture
 Fourier LCorrelation;
 
 double 	totCorr=0, BgTotal=0;
@@ -126,6 +128,10 @@ bool LCExists=false;
 
 double 	BgAvCorr=0;
 double 	FgAvCorr=0;
+int  	pgLevel=2;
+float total=0;						// total count over the track
+
+
 
 unsigned int hashx(unsigned int h,unsigned int x);
 unsigned int hashx(unsigned int h,char c);
@@ -151,8 +157,8 @@ void ScoredRange::printBGraph(FILE *f){
 		else if(xx < 0.1)   fprintf(f,"%.3f\n",score);
 		else                fprintf(f,"%.2f\n",score);
 	}
-	else
-		fprintf(f,"#%s\t%li\t%li\t?\n",chrom,beg, end);
+//	else
+//		fprintf(f,"#%s\t%li\t%li\t?\n",chrom,beg, end);
 }
 
 
@@ -225,7 +231,7 @@ Chromosome::Chromosome(char *chr, long l, int bb){
 void Chromosome::clear(){
     av1=av2=corr=lCorr=count=0; densCount=0;
     if(profWithFlanksLength) {
-    	getMem(distDens,profWithFlanksLength,  "Chromosome::clear #1");
+    	getMem0(distDens,profWithFlanksLength,  "Chromosome::clear #1");
     	zeroMem(distDens,profWithFlanksLength);
     }
 }
@@ -765,7 +771,7 @@ int _makeDir(const char * path){
     struct stat sb;
     if (stat(path, &sb) == 0 && S_ISDIR(sb.st_mode)) return 0;
 #if defined(_WIN32)
-#if __GNUC__ > 4
+#if __GNUC__ > 5
 	return _mkdir(path);
 #else
 	return mkdir(path);
@@ -887,6 +893,17 @@ void *xmalloc(size_t n, const char *err){
 	}
 	return a;
 }
+void *xrealloc(void *a, size_t n, const char * err){
+	a=realloc(a,n);
+	if(a==0){
+		if(err==0)
+			errorExit("can't allocate memory: %li",n);
+		else
+			errorExit("can't allocate memory. %s: %li",err,n);
+	}
+	return a;
+}
+
 //============================================================
 //========================    Random    ======================
 //============================================================
@@ -1058,7 +1075,7 @@ double norm(double *x, int l){
 	double d=0,e=0,dd,ee;
 	for(int i=0; i<l; i++){d+=x[i]*x[i]; e+=x[i];}
 	ee=e/l; d=d*l-e*e; dd=d/((l-1)*l);
-	if(dd<0) dd=0; dd=sqrt(dd);
+	if(dd<0) {dd=0;} dd=sqrt(dd);
 	if(dd <= ee*ee*1.e-5) {
 		return 0;}
 
@@ -1066,22 +1083,6 @@ double norm(double *x, int l){
 	return dd;
 }
 
-//================== Convert the interval flag to text
-const char *getIvFlag(){
-				switch(intervFlag0){
-				case GENE:     return "gene"; break;
-				case EXON:     return "exon"; break;
-				case IVS:      return "ivs" ; break;
-				case GENE_BEG: return "gene_beg"; break;
-				case EXON_BEG: return "exon_beg"; break;
-				case IVS_BEG:  return "ivs_beg" ; break;
-				case GENE_END: return "gene_end"; break;
-				case EXON_END: return "exon_end"; break;
-				case IVS_END:  return "ivs_end" ; break;
-				default: return ""; break;
-				}
-				return "";
-}
 //======================================================================
 int nearPow2(int n, int &i){
 	int nn=1;
@@ -1154,7 +1155,7 @@ void addFile(char* fname){
 		return;
 	}
 	else{
-		addFile(fname, fileId++);
+		addFile(fname, fileId); fileId++;
 	}
 }
 
@@ -1191,7 +1192,6 @@ void makeId(){
 	id=hashx(id,flankSize);
 	id=hashx(id,kernelType);
 	id=hashx(id,binSize);
-	id=hashx(id,intervFlag0);
 	id=hashx(id,nShuffle);
 	id=hashx(id,maxZero);
 	id=hashx(id,maxNA0);
@@ -1209,8 +1209,8 @@ BufFile::~BufFile(){
 }
 
 void BufFile::init(const char *fname){
-	f=fopen(fname,"rb");
-	getMem(buffer,SG_BUFSIZ+SG_BUFEXT,"err");
+	f=fopen(fname,"rb"); buffer=0;
+	getMem0(buffer,SG_BUFSIZ+SG_BUFEXT,"err");
 	int n=fread(buffer,1,SG_BUFSIZ,f);
 	if(n <= 0) {curString=0;}
 	else {curString=buffer; buffer[n]=0;}

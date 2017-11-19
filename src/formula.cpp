@@ -124,9 +124,9 @@ void Formula::init(){
 }
 
 Formula::~Formula(){
-	if(formula) free(formula); formula=0;
+	if(formula!=0) {free(formula);} formula=0;
 	for(int i=0; i<nTracks; i++){
-		if(tracks[i]) delete tracks[i];
+		if(tracks[i]) del(tracks[i]);
 		tracks[i]=0;
 	}
 }
@@ -289,12 +289,12 @@ const char *BFormula::readTrack(const char *s, char*ident){//=== read track
 //===================================================================
 const char *BFormula::readNum(const char *s, char*num){//==== read a number
 	char *t=num;
-	for(;*s && isdigit(*s);) 	*t++=*s++; *t=0;
-	if(*s=='.')              	*t++=*s++; *t=0;
-	for(;*s && isdigit(*s);) 	*t++=*s++; *t=0;
-	if(*s=='e' || *s=='E'){  	*t++=*s++; *t=0;
-		if(*s=='+' || *s=='-')	*t++=*s++; *t=0;
-		for(;*s && isdigit(*s);)*t++=*s++; *t=0;
+	for(;*s!=0 && isdigit(*s);) {*t++=*s++;} *t=0;
+	if(*s=='.')              	{*t++=*s++;} *t=0;
+	for(;*s!=0 && isdigit(*s);) {*t++=*s++;} *t=0;
+	if(*s=='e' || *s=='E'){  	{*t++=*s++;} *t=0;
+		if(*s=='+' || *s=='-')	{*t++=*s++;} *t=0;
+		for(;*s!=0 && isdigit(*s);){*t++=*s++;} *t=0;
 	}
 	return s;
 }
@@ -404,7 +404,7 @@ int BFormula::parse(int from, int to){//============ parse fragment. return: the
 int BFormula::parse(){
 	int from=0, to=len;
 	while(bf[from]=='(' && bf[to-1]==')') {from++; to--;}
-	for(int i=0, j=from; j<to; i++,j++) bf[i]=bf[j]; len=to-from;
+	for(int i=0, j=from; j<to; i++,j++) {bf[i]=bf[j];} len=to-from;
 	for(int i=0; i < len; i++){//========== find brakets
 		if(bf[i]=='('){
 			int j=findBrace(i);
@@ -460,7 +460,7 @@ Formula *frmlInit(const char* txt){
 	f->parse(txt);
 	return f;
 }
-void 	frmlClose	(Formula* f){delete f;}
+void 	frmlClose	(Formula* f){del(f);}
 double 	frmlCalc	(Formula* f, double x){return f->calc(x);}
 void 	frmlSetValue(Formula* f, const char* txt, double val){f->setValue(txt,val);}
 double 	frmlGetValue(Formula* f, const char* txt){return f->getValue(txt);}
@@ -476,12 +476,12 @@ void test_formula(){
 
 char b[256];
 for(int i=0; i<formula.nNodes; i++){
-	printf("%s\n",formula.getNode(i)->print(b));
+	deb(formula.getNode(i)->print(b));
 }
 
 double x=80;
 double y=formula.calc(x);
-printf("f(%f)=%f\n",x,y);
+deb("f(%f)=%f",x,y);
 
 //for(int i=0; i<100; i++){
 //	deb("%i\t%f",i,formula.calc(i));

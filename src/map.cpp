@@ -20,6 +20,11 @@ IVSet::IVSet(){
 	errStatus=0;
 }
 
+IVSet::~IVSet(){
+	xfree(ivs,"~ivs");
+}
+
+
 void IVSet::clear(){
 	nIv=0; totLength=0;
 	errStatus="ivset init";
@@ -27,7 +32,7 @@ void IVSet::clear(){
 }
 //===============================================================================
 void IVSet::addIv(int f, int t){
-	if(f < 0) f = 0;    if(t > profileLength) t = profileLength;
+	if(f < 0) {f = 0;}    if(t > profileLength) {t = profileLength;}
 	if(t <= f) return;
 
 	if(nIv > 0 && f < ivs[nIv-1]->t){//================ Overlaps: collect with previous

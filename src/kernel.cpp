@@ -118,6 +118,7 @@ double *Fourier::getAutoCorr(){
 	zeroMem(tmpDIm,length);
 	calc(tmpDRe, tmpDIm, autocorr, tmpIm);
 
+	xfree(autocorr,"Fourier1"); xfree(tmpDRe,"Fourier2"); xfree(tmpDIm,"Fourier3"); xfree(tmpIm,"Fourier3");
 	return autocorr;
 }
 
@@ -195,13 +196,11 @@ double Kernel::dist(Fourier *f1, Fourier *f2, bool complem){
 	eprod1+=e1;
 	eprod2+=e2;
 	nprod++;
-
 	//================================================ correlation for the window
 	d11-=dd11; d12-=dd12; d22-=dd22;
 	if(d11==0) return -400;
 	if(d22==0) return -500;
 	double cc=d12/sqrt(d11*d22);
-
 
 	return cc;
 }
@@ -290,10 +289,10 @@ void XYCorrelation::initXY(){
 	init(kern->length);
 	fx=&kern->fx; fy=&kern->fy;
 	nCorr=nPlus=nMinus=0; min=max=av=sd=0;
-	getMem(correlation,length, "init correlation #1"); zeroMem(correlation,length);
-	getMem(corrMinus  ,length, "init correlation #2");	zeroMem(corrMinus  ,length);
-	getMem(corrPlus   ,length, "init correlation #3");	zeroMem(corrPlus   ,length);
-	getMem(datRe      ,length, "init correlation #4");	zeroMem(datRe      ,length);
+	getMem0(correlation,length, "init correlation #1"); zeroMem(correlation,length);
+	getMem0(corrMinus  ,length, "init correlation #2");	zeroMem(corrMinus  ,length);
+	getMem0(corrPlus   ,length, "init correlation #3");	zeroMem(corrPlus   ,length);
+	getMem0(datRe      ,length, "init correlation #4");	zeroMem(datRe      ,length);
 	spectrumX=0; spectrumY=0;
 }
 

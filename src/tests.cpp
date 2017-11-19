@@ -500,26 +500,15 @@ verb("================ GENERATE TEST DATA =============\n");
 //===================================================================
 //===================================================================
 //===================================================================
-void test_formula();
-
 const int progType=0;
 void printMiniHelp(){;}
-
-char timerBuffer[256];
-char *dateTime1(){
-	time_t lt=time(NULL);
-	tm *t=localtime(&lt);
-	sprintf(timerBuffer,"%02i.%02i.%02i %02i:%02i:%02i",t->tm_mday, t->tm_mon+1, t->tm_year%100,
-			t->tm_hour, t->tm_min, t->tm_sec);
-	return timerBuffer;
-}
+void printProgDescr(){;}
 
 
 int main(int argc, char **argv) {
 	debugFg=DEBUG_LOG|DEBUG_PRINT;
 	clearDeb();
 	verbose=1;
-	test_formula();
 	return 0;
 
 //	test();

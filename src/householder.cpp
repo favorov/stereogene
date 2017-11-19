@@ -129,7 +129,7 @@ void householder(Matrix *mtx, Matrix **R, Matrix **Q){
 	for (int k = 0; k < mtx->n && k < mtx->n - 1; k++) {
 		double e[mm], x[mm], a;
 		z1 = minorMtx(z, k);
-		if (z != mtx) delete z;
+		if (z != mtx) del(z);
 		z = z1;
 		mcol(z, x, k);
 		a = vecNorm(x, mm);
@@ -142,21 +142,21 @@ void householder(Matrix *mtx, Matrix **R, Matrix **Q){
 
 		q[k] = vmul(e, mm);
 		z1 = mult(q[k], z);
-		if (z != mtx) delete z;
+		if (z != mtx) del(z);
 		z = z1;
 	}
-	if (z != mtx) delete z;
+	if (z != mtx) del(z);
 	*Q = q[0];
 	*R = mult (q[0], mtx);
 	for (int i = 1; i < mtx->n && i < mtx->n - 1; i++) {
 		z1 = mult(q[i], *Q);
-		if (i > 1) delete(*Q);
+		if (i > 1) del(*Q);
 		*Q = z1;
-		delete(q[i]);
+		del(q[i]);
 	}
-	delete q[0];
+	del(q[0]);
 	z = mult(*Q, mtx);
-	delete *R;
+	del(*R);
 	*R = z;
 	(*Q)->transpose();
 }
@@ -174,7 +174,7 @@ Matrix * eigenVectors(Matrix *x, double *EValues, int nIter, double precsision){
 		mult(EVal,R,Q);
 		Matrix *xqz=Vect;
 		Vect=mult(Vect,Q);
-		delete xqz;
+		del(xqz);
 		for(int i=0; i<x->n; i++){
 			for(int j=0; j<x->n; j++){
 				double w=EVal->get(i,j);
@@ -188,9 +188,9 @@ Matrix * eigenVectors(Matrix *x, double *EValues, int nIter, double precsision){
 		for(int i=0; i<EVal->n; i++)
 			EValues[i]=EVal->get(i,i);
 	}
-	delete R;
-	delete Q;
-	delete EVal;
+	del(R);
+	del(Q);
+	del(EVal);
 
 return Vect;
 }
@@ -221,7 +221,7 @@ void hh_test(){
 		printf("%.5f; ",eValues[i]);
 	printf("\n");
  
-	delete(x);
+	del(x);
 	exit(0);
 	}
 

@@ -71,9 +71,6 @@ bool bTrack::check(const char *fname){
 		else if(strcmp(s1,"bpType")==0){
 			if(atoi(s2)!=bpType) {failParam("bpType");  fg=false; break;}
 		}
-		else if(trackType==BED_TRACK &&  strcmp(s1,"ivFlag")==0){
-			if(atoi(s2)!=intervFlag0) {failParam("intervals");  return false;}
-		}
 	}
 	fclose(f);
 	if(chkVersion(bver)){
@@ -99,6 +96,7 @@ bool bTrack::readPrm(){
 		else if(strcmp(s1,"stdDev" )==0) sd0 =atof(s2);
 		else if(strcmp(s1,"strand" )==0) hasCompl=atoi(s2);
 		else if(strcmp(s1,"scale" )==0)  scaleFactor  =atof(s2);
+		else if(strcmp(s1,"total" )==0)  total  =atof(s2);
 	}
 	if(sd==NAN) sd=1;
 	fclose(f);
@@ -111,7 +109,7 @@ void BuffArray::init(Track *bbt, bool cmpl, bool wrr){		// Prepare
 	bufBeg=bufEnd=-1; offset=0; wr=false; f=0;
 	bt=bbt;
 
-	getMem(bval,binBufSize+2*wProfSize, "Read bTrack");
+	getMem0(bval,binBufSize+2*wProfSize, "Read bTrack");
 	char binFile[4096];
 	makeFileName(binFile,profPath, bt->name, BPROF_EXT);
 	if(wrr){													// Track for write
@@ -146,7 +144,7 @@ void BuffArray::readBuff(int pos){
 }
 
 BINVAL BuffArray::get(int pos){
-	if(pos < bufBeg || pos >= bufEnd)  readBuff(pos);
+	if(pos < bufBeg || pos >= bufEnd)  {readBuff(pos);}
 	BINVAL x=bval[pos-bufBeg];
 	return x;
 }
@@ -173,7 +171,7 @@ BuffArray::BuffArray(){
 }
 
 void BuffArray::close(){
-	if(f) fclose(f); f=0;
+	if(f!=0) {fclose(f);} f=0;
 }
 
 BuffArray::~BuffArray(){
@@ -206,9 +204,9 @@ FloatArray::~FloatArray(){
 FloatArray::FloatArray(){
 	bufBeg=bufEnd=-1; wr=false; f=0; val=0;
 	if(binBufSize>=profileLength){
-		getMem(val,profileLength, "Read bTrack"); return;
+		getMem0(val,profileLength, "Read bTrack"); return;
 	}
-	getMem(val,binBufSize+2*wProfSize, "Read bTrack");
+	getMem0(val,binBufSize+2*wProfSize, "Read bTrack");
 	char binFile[4096];
 	unsigned int tt=mtime()+rand();	// generate filename
 	sprintf(binFile,"%x.tmp",tt);
@@ -289,9 +287,9 @@ bool bTrack::readBin(){
 
 bool Track::openTrack(const char *fname){
 	if(!readTrack(fname)) return false;
-	getMem(profWindow,(profWithFlanksLength+10), "bTrack read #2");
+	getMem0(profWindow,(profWithFlanksLength+10), "bTrack read #2");
 	if(doAutoCorr) {
-		getMem(autoCorr,(profWithFlanksLength+10), "bTrack read #2");
+		getMem0(autoCorr,(profWithFlanksLength+10), "bTrack read #2");
 		zeroMem(autoCorr, profWithFlanksLength+10);
 	}
 	return true;
@@ -370,7 +368,6 @@ void Track::makeIntervals(bool cmpl, IVSet *iv){
 bool Track::makeIntervals(){
 	makeIntervals(0, ivs);
 	if(hasCompl) makeIntervals(1, ivsC);
-
 	if(ivs->nIv+ivsC->nIv == 0) {
 		writeLog("Track <%s>: no nonZero windows",name);
 		fprintf(stderr,"Track <%s>: no nonZero windows",name);
@@ -392,6 +389,7 @@ int Track::getRnd(bool cmpl){
 	pos=cmpl ? ivsC->randPos() : ivs->randPos();         // get random position in the interval
 	return pos;
 }
+
 
 //========================================================================
 void Track::clear(){
@@ -451,7 +449,7 @@ void Track::init(){
 	ivs =new IVSet();
 	ivsC=new IVSet();
 	av=sd=minP=maxP=nObs=0;
-	av0=sd0=0;
+	av0=sd0=total=0;
 	deriv=0;
 	trackType=0;
 	projCoeff=0;
@@ -478,12 +476,12 @@ Track::~Track(){
 	if(profWindow) xfree(profWindow,"~Track 1");
 	if(autoCorr)   xfree(autoCorr,"~Track 2");
 	if(name)       xfree(name,"~Track 3");
-	if(ivs ) delete ivs;
-	if(ivsC) delete ivsC;
+	if(ivs ) del(ivs);
+	if(ivsC) del(ivsC);
 }
 bTrack::~bTrack(){
-	if( bytes) delete bytes;
-	if(cbytes) delete cbytes;
+	if( bytes) del(bytes);
+	if(cbytes) del(cbytes);
 }
 //======================================= decode binary value to real value
 double bTrack::getVal(BINVAL b){
@@ -495,7 +493,7 @@ double bTrack::getVal(BINVAL b){
 		}
 		else return 0;
 	}
-	if(b < threshold  && b > - threshold) return 0;
+	if(b <= threshold  && b >= - threshold) return 0;
 	double x=b < 0 ? 1-exp(-b/scaleFactor): exp(b/scaleFactor)-1;
 	return x;
 }
@@ -520,7 +518,7 @@ double bTrack::getValue(int pos, int cmpl){
 		}
 		else return 0;
 	}
-	if(b < threshold  && b > - threshold) return 0;
+	if(b <= threshold  && b >= - threshold) return 0;
 	double x=exp(b/scaleFactor)-1;
 	return x;
 }
@@ -548,6 +546,7 @@ void Track::ortProject(){
 double Track::getProjValue(int pos, bool cmpl){
 	if(pos >= profileLength) return 0;
 	double x=getValue(pos,cmpl);
+//if(projCoeff) x/=(projTrack->getValue(pos,cmpl)+1);
 	if(projCoeff) x-=projCoeff*projTrack->getValue(pos,cmpl);
 	return x;
 }
@@ -579,23 +578,20 @@ double * Track::getProfile(int pos, bool cmpl){ //====== pos - profile position;
 	//======================================== fill flanks
 	int x0=wProfSize+LFlankProfSize;
 	int x1=x0+LFlankProfSize+RFlankProfSize;
+//=========================================	fill flanks
 	for(int x=x0; x<x1; x++){
 		double xq=rGauss(avWindow,sdWindow);
 		profWindow[x%profWithFlanksLength]=xq;
 	}
+//========================================= Constant window => add noise
+//	if(sdWindow==0){
+//		for(int i=0; i < wProfSize; i++){
+//
+//		}
+//	}
 	return profWindow;
 }
 //======================================================
-//======================================================
-void Track::writeWig(){
-	FILE *f=xopen(name,"wt");
-	verb("write track <%s>\n",name);
-	fprintf(f,"track type=wiggle_0 description=\"%s\"\n",name);
-	for(int i=0; i<n_chrom; i++){
-		writeWig(f,chrom_list+i);
-	}
-	fclose(f);
-}
 //======================================================
 void Track::writeWig(FILE* f, Chromosome *ch){
 	int pos1=ch->base;
@@ -611,6 +607,16 @@ void Track::writeWig(FILE* f, Chromosome *ch){
 		}
 		fprintf(f,"%.0f\n",x); fg=1;
 	}
+}
+//======================================================
+void Track::writeWig(){
+	FILE *f=xopen(name,"wt");
+	verb("write track <%s>\n",name);
+	fprintf(f,"track type=wiggle_0 description=\"%s\"\n",name);
+	for(int i=0; i<n_chrom; i++){
+		writeWig(f,chrom_list+i);
+	}
+	fclose(f);
 }
 
 //================================================================================
@@ -675,7 +681,7 @@ void  Model::clear(){
 //================================================================================
 Model::~Model(){
 	if(definition) xfree(definition,"definition");
-	delete form;
+	del(form);
 }
 
 //================================================================================

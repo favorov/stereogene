@@ -133,7 +133,7 @@ void printStat(){
 		char nm1[1024], nm2[1024];
 		alTable.convert(track1->name, nm1);
 		alTable.convert(track2->name, nm2);
-		fprintf(f,"%08lx\t%6s\t%-10s\t%-10s\t%-10s",id,dateTime(),version,nm1, nm2);
+		fprintf(f,"%08lx%s\t%6s\t%-10s\t%-10s\t%-10s",id,idSuff,dateTime(),version,nm1, nm2);
 		fprintf(f,"\t%-6i\t\"%-6s\"\t%6i\t%6i",wSize,getKernelType(),nFg, nBkg);
 		fprintf(f,"\t%8.4f\t%8.4f\t%8.4f",totCorr, avFg,sdFg);
 		fprintf(f,"\t%8.4f\t%8.4f\t%8.4f",BgTotal, avBg, sdBg);
@@ -170,7 +170,7 @@ void printStat(){
 			fseek(xml,-7,SEEK_END);
 		}
 		flockFile(xml);
-		fprintf(xml,"<run id=\"%08lx\" date=\"%s\" ver=\"%s\">\n", id, dateTime(), version);
+		fprintf(xml,"<run id=\"%08lx%s\" date=\"%s\" ver=\"%s\">\n", id, idSuff, dateTime(), version);
 		fprintf(xml,"\t<input track1=\"%s\" track2=\"%s\"/>\n",track1->name,track2->name);
 		fprintf(xml,"\t<output out=\"%s\"/>\n",outFile);
 		fprintf(xml,"\t<prm ");
@@ -196,7 +196,7 @@ void printStat(){
 	}
 	if(customKern){
 		FILE*cust=gopen("kernels","a+");
-		fprintf(cust,"%08lx\t\"%s\"", id, customKern);
+		fprintf(cust,"%08lx%s\t\"%s\"\n", id, idSuff, customKern);
 		fclose(cust);
 	}
 	writeLog("Write Statistics -> Done\n");

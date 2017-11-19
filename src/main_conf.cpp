@@ -1,12 +1,20 @@
 #include "track_util.h"
 
-const char * progName="StereoGene";
+const char * progName="Confounder";
 const int progType=SG;
+
+void printProgDescr(){
+	printf("\n");
+	printf("The Confounder program creates a confounder track using set of the tracks\n");
+	printf("Usage:\n");
+	printf("$ ./parse_genes [-parameters] [RefSeq or GENECODE file]\n");
+	printf("\n");
+}
 
 
 void printMiniHelp(){
 	printf("\n");
-	printf("The %s program compares pairs of tracks and calculates kernel correlations\n",progName);
+	printf("The Confounder program creates a confounder track using set of the tracks\n");
 	printf("===========  version %s ========\n",version);
 	printf("Usage:\n");
 	printf("$ ./%s [-parameters] trackFile_1 trackFile_2 ... trackFile_n\n",progName);

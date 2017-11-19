@@ -21,9 +21,10 @@
 #define TRACK_UTIL_H_
 
 extern const int progType;	//type of the program
-const int SG=1;
+const int SG =1;
 const int PRJ=2;
 const int CNF=4;
+const int PG =8;
 
 const  int DEBUG_PRINT=1;
 const  int DEBUG_LOG=2;
@@ -73,6 +74,9 @@ const  int KERN_CUSTOM=0x80;
 
 const  int COLLINEAR=1;
 const  int COMPLEMENT=2;
+const  int BASE=0;
+const  int CENTER=2;
+
 const  int IGNORE_STRAND=COLLINEAR|COMPLEMENT;
 const  int MAX_SCORE=1;
 const  int AV_SCORE=2;
@@ -93,10 +97,13 @@ const int MAX_GENES=100000;
 
 //============================================ Memory operations
 void *xmalloc(size_t n, const char * err);
+void *xrealloc(void *a, size_t n, const char * err);
 void zfree(void *a, const char* b);
 //============================================ MACROS
-//#define getMem0(a,n,err) {if(a==0) a=(typeof a)xmalloc((n+100)*sizeof(*a),err);}
+#define getMem0(a,n,err) {if(a==0) a=(typeof a)xmalloc((n+100)*sizeof(*a),err);}
 #define getMem(a,n,err)  {a=(typeof a)xmalloc((n+100)*sizeof(*a),err);}
+#define del(a)  {delete a; a=0;}
+#define realocMem(a,n,err)  {a=(typeof a)xrealloc(a,(n+100)*sizeof(*a),err);}
 #define xfree(a,b) 		 {zfree(a,b); a=0;}
 #define zeroMem(a,n) 	 {memset(a,0,n*sizeof(*a));}
 #define xmemcpy(dest,pds, src, psrc, n) {memcpy(dest+(pds)*sizeof(*dest), src+(psrc)*sizeof(*src),(n)*sizeof(*src));}
@@ -129,7 +136,9 @@ extern char *outFile;		// output filename
 extern char *logFileName;	// output filename
 extern char *statFileName;	// File name for cummulative statistics
 extern char *paramsFileName; // Filename for save parameters of runs
+extern char *idSuff;
 extern unsigned long id;
+extern int nHelpLines;
 
 extern int inputErr;		// flag: if input track has errors
 extern int inputErrLine;	// Error line in the input
@@ -137,14 +146,16 @@ extern char curFname[4048];	// current input file
 
 extern int inpThreshold;		// Testing of binarized input data, % of max
 //============================ Track parameters ===============================
+extern int   lcFlag;		// LC flag: BASE or CENTER
 extern int   complFg;		// Flag: IGNORE_STRAND - ignore strand; COLLINEAR - compare collinear strands; COMPLEMENT - compare complement strands
-extern int   intervFlag0;	// Flag: for bed tracks take intervals with score 1.
 extern bool  NAFlag;		// Flag: 0 -> uncovered_values=0; otherwise uncovered values=NA
 extern int   profileLength;	// size of the profile array
 //extern float *profile;		// uncompressed profile array
 //extern float *profilec;		// uncompressed profile array
 
 extern double scaleFactor;
+extern float total;			// total count over the track
+
 
 extern char *pcorProfile;    	// partial correlation profile file name
 extern float *outTrackProfile;  // correlation track
@@ -196,7 +207,8 @@ extern int cage;
 extern bool clearProfile; //Force profile recalculation
 extern int scoreType;
 extern bool writePDF;
-extern double lcFDR;		// treshold on FDR when write Local Correlation track
+extern double LlcFDR;		// treshold on FDR when write Local Correlation track
+extern double RlcFDR;		// treshold on FDR when write Local Correlation track
 
 extern int profWithFlanksLength; // size of profWindow array (including random flanks)
 //===================================================    results
@@ -206,6 +218,7 @@ extern double totCorr,BgTotal;
 extern int nBkg, nFg;					// size of background and foreground sets of data
 extern double *BkgSet, *FgSet;			// background and foreground sets of the correlations
 extern bool LCExists;
+extern int  pgLevel;
 
 //=================================================== debug and error
 extern const char *errStatus;
@@ -282,8 +295,8 @@ double frmlCalc(Formula* f, double x);	// calculate formula
 void   frmlSetValue(Formula* f, const char* txt, double val);	// set value to the variable
 double frmlGetValue(Formula* f, const char* txt);				// get the variable value
 //====================================================================
-const int SG_BUFSIZ=0x100000;
-const int SG_BUFEXT=0x10000;		// Max string length
+const int SG_BUFSIZ=0x1000000;
+const int SG_BUFEXT=0x100000;		// Max string length
 struct BufFile{
 	FILE *f;
 	char *buffer;
@@ -339,6 +352,7 @@ struct IVSet{
 	int totLength;
 	int ivNo;
 	IVSet();
+	~IVSet();
 	void addIv(int f, int t);
 	int randPos();
 	void fin();
@@ -349,16 +363,11 @@ struct IVSet{
 };
 
 //===================================================================
-class Exon{
-public:
-	long from;
-	long to;
-};
 
-class Exons{
-public:
-	Exon *list;
-	int n;
+struct Name_Value{			// symbolic name for a value
+	const char* name;		// name for the value
+	int value;				// value
+	Name_Value(const char *nm, int val){name=nm; value=val;}
 };
 
 //===============================================================
@@ -374,7 +383,8 @@ struct Track{		        // Binary track
 			minP, 			// min score value
 			maxP, 			// max score value
 			av0,
-			sd0;
+			sd0,
+			total;			// total count
 	int		nObs;
 	double avWindow, sdWindow;// mean and stdDev in current window
 	float scaleFactor;
@@ -410,9 +420,8 @@ struct Track{		        // Binary track
 	bool makeIntervals();
 	void makeIntervals(bool cmpl, IVSet *iv);
 	int  getRnd(bool cmpl1);
-	void writeWig();
 	void writeWig(FILE* f, Chromosome *ch);
-
+	void writeWig();
 
 };
 //============================== Model =======================================
@@ -436,6 +445,7 @@ struct bTrack:Track{
 	bool readBin();
 	void makeBinTrack(const char *fname);
 	void makeBinTrack();
+	void writeBinnedProf(const char *fname);
 	void writeByteProfile();
 	void writeProfilePrm();
 	void writeProfilePrm(const char *path);
@@ -591,7 +601,7 @@ public:
 	Fourier cft;			// Fourier transformation for the complement kernel
 	Fourier fx,fy;			// Fourier transformation for the input data
 	bool hasCompl;			// for symmetrical Kernel flag=false; otherwise flag=1;
-	virtual ~Kernel(){;}
+	virtual ~Kernel(){xfree(kern,"~kern1"); xfree(ckern, "~ckern");}
 	void init(int l);
 	void fft();
 	void fftx(double* , int deriv);		// do transform for given data
@@ -784,7 +794,8 @@ extern int nPairs;						// number of foreground observations
 extern double BgAvCorr;					// average Background correlation
 extern double FgAvCorr;					// average Foreground correlation
 extern double LCmin, LCmax;
-extern FloatArray *fProfile, *cProfile;
+extern FloatArray *fProfile, *cProfile, *lcProfile;
+
 extern Timer debTimer;
 
 
@@ -814,6 +825,7 @@ int  getFlag(char*s);
 
 
 //=============================== File names ===========================
+void parseArgs(int argc, char **argv);
 void makeDir(const char *path);
 char *makeFileName(char *b, const char *path, const char*fname);	// make filename using path and name
 char *makeFileName(char *b, const char *path, const char*fname, const char*ext);	// make filename using path, name and extension
@@ -837,13 +849,14 @@ void addFile(char* fname);			// Add filename to file list
 void writeBedGr(const char *fname, FloatArray *array, float lTreshold, float rTreshold);
 void writeBedGr(FILE* f, FloatArray *array);
 void writeBedGr(FILE* f, FloatArray *array, float lTreshold, float rTreshold);
-
+void printHelp();
 //============================================== read config file
 const char*getKernelType();
 const char*getPC();//partial correlation
 void  makeId();
 const char *getIvFlag();
-
+int xpause();
+void printProgDescr();
 //============================================== random & statistics
 double rGauss();							// standard normal random
 double rGauss(double e, double sigma);		// normal random with given mean and sigma
@@ -906,9 +919,13 @@ void helpPage();
 void test();
 
 //============================================= Calculations =============
+void calcSmoothProfile(Fourier *fx, int k, bool cmpl);
+void calcSmoothProfile(int k, bool cmpl);
+void addLCProf(double *f, int pos);
 void printMiniHelp();
 void initSG(int argc, char **argv);
 int  Correlator();
+void PrepareParams();
 //int  Preparator(const char *fname);
 void  Preparator();
 void Covariator();

@@ -41,11 +41,6 @@ const int PRM_PATH=7;
 
 const int PRM_UNKNOWN=-0XFFFFFFF;
 
-struct Name_Value{			// symbolic name for a value
-	const char* name;		// name for the value
-	int value;				// value
-	Name_Value(const char *nm, int val){name=nm; value=val;}
-};
 
 struct Param{
 	const char* name;			// command line (cfg) argument name
@@ -84,26 +79,12 @@ const char* getNamebyVal(Name_Value **nval, int val){
 
 //===================================================================================================
 Param *findParam(const char * name);
-void parseArgs(int argc, char **argv);
 void readPrm(char *s);
 void readPrm(char *key, char *val);
 void printHelp();
 
 
 //==============================================================================
-Name_Value* intervalTypes[]={
-		new Name_Value("NONE",NONE),
-		new Name_Value("GENE",GENE),
-		new Name_Value("EXON",EXON),
-		new Name_Value("IVS",IVS),
-		new Name_Value("GENE_BEG",GENE_BEG),
-		new Name_Value("EXON_BEG",EXON_BEG),
-		new Name_Value("IVS_BEG",IVS_BEG),
-		new Name_Value("GENE_END",GENE_END),
-		new Name_Value("EXON_END",EXON_END),
-		new Name_Value("IVS_END",IVS_END),
-		0
-};
 Name_Value* bpTypes[]= {
 		new Name_Value("SCORE",BP_SCORE),
 		new Name_Value("SIGNAL" ,BP_SIGNAL),
@@ -121,6 +102,11 @@ Name_Value* complFlags[]={
 		new Name_Value("IGNORE_STRAND",IGNORE_STRAND),
 		new Name_Value("COLLINEAR",COLLINEAR),
 		new Name_Value("COMPLEMENT",COMPLEMENT),
+		0
+};
+Name_Value* LCFlags[]={
+		new Name_Value("BASE",BASE),
+		new Name_Value("CENTER",CENTER),
 		0
 };
 Name_Value* outWigTypes[]={
@@ -173,20 +159,11 @@ Param *pparams[]={
 		new Param(SG,"params" 		,0, &paramsFileName	,"cumulative file with parameters"),
 		new Param( 7,"log" 		,0, &logFileName	,"cumulative log-file"),
 		new Param( 7,"aliases" 	,0, &aliaseFil		,0),
+		new Param( 7,"id_suff" 	,0, &idSuff		,0),
 //======================== =====================================================================================
 		new Param( 7, "input parameters"),
 		new Param( 7, "chrom"		,0, &chromFile	,"chromosome file"),
 		new Param( 7, "BufSize"	,0, &binBufSize	,"Buffer Size"),
-		new Param(SG, "intervals"	,1, &intervFlag0	,intervalTypes,"interval type in BED file"),
-		new Param(SG, "gene"		,0, &intervFlag0	,GENE		,"consider entire gene"),
-		new Param(SG, "exon"		,0, &intervFlag0	,EXON		,"consider exons"),
-		new Param(SG, "ivs"			,0, &intervFlag0	,IVS 	 	,"consider introns"),
-		new Param(SG, "gene_beg"	,0, &intervFlag0	,GENE_BEG	,"gene starts"),
-		new Param(SG, "exon_beg"	,0, &intervFlag0	,EXON_BEG	,"exons starts"),
-		new Param(SG, "ivs_beg"		,0, &intervFlag0	,IVS_BEG	,"introns starts"),
-		new Param(SG, "gene_end"	,0, &intervFlag0	,GENE_END	,"gene ends"),
-		new Param(SG, "exon_end"	,0, &intervFlag0	,EXON_END	,"exons ends"),
-		new Param(SG, "ivs_end"		,0, &intervFlag0	,IVS_END	,"introns ends"),
 		new Param( 7, "bpType" 		,1, &bpType  		,bpTypes	,"The value used as a score for BroadPeak input file"),
 		new Param(SG|PRJ,"pcorProfile" ,1, &pcorProfile	,"Track for partial correlation"),
 		new Param(PRJ,"outPrjBGr"   ,0, &outPrjBGr		,"Write BedGraph for projections"),
@@ -207,6 +184,7 @@ Param *pparams[]={
 		new Param(SG, "nShuffle"	,1, &nShuffle  	,"Number of shuffles for background calculation"),
 		new Param(SG, "noiseLevel"	,1, &noiseLevel ,0),
 		new Param(SG, "complFg"		,1, &complFg	,complFlags,0),
+		new Param(SG, "LCFg"		,1, &lcFlag		,LCFlags,0),
 //======================== =====================================================================================
 		new Param(SG, "Output parameters"),
 		new Param(SG, "outSpectr" 	,1, &outSpectr    ,"write fourier spectrums"),
@@ -219,14 +197,17 @@ Param *pparams[]={
 		new Param(SG, "outLC"		,1, &outLC		  ,"parameters for local correlation file"),
 		new Param(SG, "lc"			,0, &outLC		  ,1,"produce profile correlation"),
 		new Param(SG, "LCScale"		,0, &LCScale	  ,LCScaleTypes,"Local correlation scale: LOG | LIN"),
-		new Param(SG, "LC_FDR"		,1, &lcFDR	      ,"threshold on FDR when write the local correlation"),
+		new Param(SG, "L_FDR"		,1, &LlcFDR	      ,"threshold on left FDR when write the local correlation"),
+		new Param(SG, "R_FDR"		,1, &RlcFDR	      ,"threshold on right FDR when write the local correlation"),
 		new Param(SG, "outRes" 		,0, &outRes 	  ,outResTypes,"format for results in statistics file"),
 		new Param(SG, "AutoCorr"  	,1, &doAutoCorr   ,0),
 //======================== =================== Additional parameters (see Undocumented) ===============================
 		new Param(SG, "inpThreshold",0, &inpThreshold ,0),	//input binarization testing, %of max
 		new Param(7 , "debug"		,0, &debugFg   	  ,0),	//debug mode
 		new Param(7 , "d"			,0, &debugFg   	  ,1, 0),	//debug mode
-		new Param(SG, "pdf"			,0, &writePDF  	  ,1, 0),	//write R plots to pdf
+		new Param(SG, "pdf"			,1, &writePDF  	  ,1, 0),	//write R plots to pdf
+
+		new Param(PG, "pgLevel"		,1, &pgLevel  	  ,1, 0),	//minimal level in ENCODE to be taken into account
 
 		new Param(7, "Happy correlations!"),
 		0,
@@ -378,26 +359,6 @@ Param *findParam(const char * name){
 	return 0;
 }
 
-//============================================ Print Help page =========================================
-void printHelp(){
-	printf("\n");
-	printf("The StereoGene program compares pairs of tracks and calculates kernel correlations\n");
-	printf("Usage:\n");
-	printf("$ ./StereoGene [-parameters] trackFile_1 trackFile_2 ... trackFile_n\n");
-	printf("\n");
-	for(int i=0, j=0; pparams[i]!=0; i++){
-		if(!(pparams[i]->prog & progType)) continue;
-		pparams[i]->printDescr();
-		if(j%nHelpLines==0 && j>0) {
-			printf("Press q or Esc to exit or any key to go on");
-			fflush(stdout);
-			int c=xpause();
-			printf("\n");
-			if(c=='q' || c=='Q' || c==27) {break;}
-		}
-		 j++;
-	}
-}
 //============================================ Read Config =========================================
 void readConfig(char * cfg){
 	FILE *f=gopen(cfg,"rt");
@@ -472,7 +433,7 @@ void parseArgs(int argc, char **argv){
 	if(wStep==0)   wStep=wSize;
 	if(RScriptFg) {writeDistCorr=1; writeDistr=1;}
 	if(complFg==0){complFg=IGNORE_STRAND;}
-	if(threshold < 1) threshold=1;
+//	if(threshold < 1) threshold=1;
 	if(customKern) kernelType=KERN_CUSTOM;
 	profPath =makePath(profPath);
 	trackPath=makePath(trackPath);
@@ -523,6 +484,21 @@ void printXMLparams(FILE *f){
 }
 
 
+void printHelp(){
+	printProgDescr();
+	for(int i=0, j=0; pparams[i]!=0; i++){
+		if(!(pparams[i]->prog & progType)) continue;
+		pparams[i]->printDescr();
+		if(j%nHelpLines==0 && j>0) {
+			printf("Press q or Esc to exit or any key to go on");
+			fflush(stdout);
+			int c=xpause();
+			printf("\n");
+			if(c=='q' || c=='Q' || c==27) {break;}
+		}
+		 j++;
+	}
+}
 
 
 void initSG(int argc, char **argv){

@@ -67,7 +67,6 @@ double calcCorelations(int pos1, int pos2, bool cmpl1, bool cmpl2, bool rnd){
 	double *pr1=track1->getProfile(pos1,cmpl1);		// decode the first profile. Decoder uses hasCompl and complFg flags and combines profiles
 	double *pr2=track2->getProfile(pos2,cmpl2);		// decode the second profile
 	kern->fftx(pr1,track1->deriv);					// do fft for the profiles
-
 	kern->ffty(pr2,track2->deriv);
 	double corr=kern->dist(cmpl1);					// Kernel strand is selected by the first profile
 	double lCorr=0, av1, av2;
@@ -86,7 +85,10 @@ double calcCorelations(int pos1, int pos2, bool cmpl1, bool cmpl2, bool rnd){
 			if(doAutoCorr){calcAutoCorr();}
 		}
 		else{
-			if(writeDistCorr) XYbgcorrelation.calcXYCorr(-1,cmpl1, cmpl2,corr); //Do background correlation function
+			if(writeDistCorr)
+				{
+				XYbgcorrelation.calcXYCorr(-1,cmpl1, cmpl2,corr); //Do background correlation function
+				}
 		}
 	}
 	return corr;
@@ -145,11 +147,16 @@ void distrBkg(){
 	BgAvCorr=0;
 	strcat(strcpy(b,outFile),".bkg");					// open file for background observations
 	if(writeDistr) fbkg=xopen(b,"wt");
-	getMem(posPairs,nShuffle,"init randomPairs");
-	getMem(BkgSet,nShuffle, "bkg Distr"); nBkg=0; 	// allocate array for background observations
+	getMem0(posPairs,nShuffle,"init randomPairs");
+	getMem0(BkgSet,nShuffle, "bkg Distr"); nBkg=0; 	// allocate array for background observations
 	int n=nShuffle;
+	int tst=0;
 	do{
 		distrBkg(n); n=nShuffle-nBkg;
+		if(tst++ > 100) {
+			writeLog("Too few non-zero windows. Only %i shuffles done", nBkg);
+			break;
+		}
 	}while(n);
 
 	double cc=calcCC();
@@ -172,7 +179,6 @@ int distrBkg(int nSh){
 		bool cmpl1=posPairs[i].cmpl1, cmpl2=posPairs[i].cmpl2;
 
 		double d=calcCorelations(p1,p2, cmpl1, cmpl2, true);		// calculate correlation
-
 		if(d<=-10) {							// invalid windows (too many NA's of Zeros)
 			if(tst++ > 10000){					// too many attempt to get a background correlations
 				errorExit("too many empty/zero windows\n");
@@ -180,8 +186,8 @@ int distrBkg(int nSh){
 			continue;
 		}
 		BgAvCorr+=d;
-		if(i%10000 ==0) verb("\nShuffling: %i/%li",i,nShuffle);
-		else if(i%1000 ==0) verb(".");
+		if(i%1000 ==0) verb("\nShuffling: %i/%li",i,nShuffle);
+		else if(i%100 ==0) verb(".");
 		tst=0;
 		BkgSet[nBkg++]=d;						// store in distribution
 		if(writeDistr) fprintf(fbkg,"%f\n",d);		// write to distribution
@@ -209,8 +215,8 @@ void distrCorr(){
 	maxPairs*=nTrkPair;
 
 	int siz=(maxPairs+100);
-	getMem(FgSet, siz, "Corr #1");	zeroMem(FgSet, siz);		//== array for foreground distribution
-	getMem(pairs, siz, "Corr #2");	zeroMem(pairs, siz);		//== array for pairs
+	getMem0(FgSet, siz, "Corr #1");	zeroMem(FgSet, siz);		//== array for foreground distribution
+	getMem0(pairs, siz, "Corr #2");	zeroMem(pairs, siz);		//== array for pairs
 	cleanCummulative();
 
 	//=================== calculate correlations
@@ -318,9 +324,7 @@ int addPair(char *f1, char *f2){
 //
 //}
 
-int Correlator(){
-	Timer timer;
-	id=0;	// id is undefined yet
+void PrepareParams(){
 	wProfSize=wSize/binSize;       		// size of widow (profile scale)
 	wProfStep=wStep/binSize;       		// window step   (profile scale)
 	wProfSize=wSize/binSize;
@@ -329,20 +333,11 @@ int Correlator(){
 	LFlankProfSize=(ll-wProfSize)/2;
 	profWithFlanksLength=ll;
 	RFlankProfSize=ll-wProfSize-LFlankProfSize;
-	//================================================================== print parameters
-	verb("========== Parameters ===========\n");
-	if (pcorProfile != 0) verb("==         pcorProfile=<%s>\n", pcorProfile);
-	verb("===        bin=%i\n",binSize);
-	verb("==         wSize=%i\n",wSize);
-	verb("==         kernelSigma=%.0f\n",kernelSigma);
-	verb("==         nShuffle=%i\n",nShuffle);
-
 	//====================================================================== Prepare parameters
 	kernelProfSigma=kernelSigma/binSize;   // kernel width ((profile scale)
 	kernelProfShift=kernelShift/binSize;   // kernel shift ((profile scale)
 	maxNA   =(int)(maxNA0  *wProfSize/100);			// rescale maxNA
 	maxZero =(int)(maxZero0*wProfSize/100);			// rescale maxZero
-
 	if(maxZero>=wProfSize) maxZero=wProfSize-1;
 	if(maxNA  >=wProfSize) maxNA  =wProfSize-1;
 	//===================================================================== generate Kernels
@@ -357,6 +352,22 @@ int Correlator(){
 		kern=new CustKernel(kernelProfShift, kernelProfSigma, profWithFlanksLength); break;
 	default: errorExit("Kernel not defined"); break;
 	}
+}
+
+//========================================================================================
+
+int Correlator(){
+	Timer timer;
+	id=0;	// id is undefined yet
+	//================================================================== print parameters
+	verb("========== Parameters ===========\n");
+	if (pcorProfile != 0) verb("==         pcorProfile=<%s>\n", pcorProfile);
+	verb("===        bin=%i\n",binSize);
+	verb("==         wSize=%i\n",wSize);
+	verb("==         kernelSigma=%.0f\n",kernelSigma);
+	verb("==         nShuffle=%i\n",nShuffle);
+
+	PrepareParams();
 	//============ Read Map File
 
 	if(pcorProfile) {
@@ -367,7 +378,7 @@ int Correlator(){
 	int n_cmp=0;
 	int nnf=nfiles; if(nnf>1) nnf--;
 	LCorrelation.init(profWithFlanksLength);
-	getMem(LCorrelation.datRe,profWithFlanksLength, "Correlator");
+	getMem0(LCorrelation.datRe,profWithFlanksLength, "Correlator");
 
 	//============================================= Make Profile Pairs
 	for(int i=0; i< nfiles; i++){
@@ -380,13 +391,12 @@ int Correlator(){
 
 	//============================================== Do comparison
 	char *fil1=0, *fil2=0;
-
 	for(int i=0; i<nFPairs; i++){
 		id=(unsigned int)time(0);					// id is undefined yet
 		if(fPairs[i]->fil1 != fil1){
 			profile1=fPairs[i]->fil1;
 			verb("read profile1 <%s>\n", profile1);
-			if(track1) {delete track1; track1=0;}
+			if(track1) {del(track1); track1=0;}
 			track1=trackFactory(profile1);
 			if(pcorProfile) track1->ortProject();
 			if(!track1->makeIntervals()) continue;
@@ -395,7 +405,7 @@ int Correlator(){
 		if(fPairs[i]->fil2 != fil2){
 			profile2=fPairs[i]->fil2;
 			verb("read profile2 <%s>\n", profile2);
-			if(track2) {delete track2; track2=0;}
+			if(track2) {del(track2); track2=0;}
 			track2=trackFactory(profile2);
 			if(pcorProfile) track2->ortProject();
 			if(!track2->makeIntervals()) continue;
@@ -427,8 +437,10 @@ int Correlator(){
 		printStat();					// write report
 		if(RScriptFg) {
 			printR();
-			printRreport();
-			printRmd();
+			if(writePDF){
+				printRreport();
+				printRmd();
+			}
 		}
 		n_cmp++;
 		clear();

@@ -144,8 +144,8 @@ void Confounder(){
 
 	confdr->writeProfilePrm();
 	confdr->writeByteProfile();
-	delete fProfile; fProfile=0;
-	delete confdr;
+	del(fProfile); fProfile=0;
+	del(confdr);
 }
 
 //===================================================================
@@ -249,7 +249,7 @@ void calcCovar(){
 		fprintf(f,"%.5f; ",eValues[i]);
 	fprintf(f,"\n");
 	fclose(f);
-	delete(x);
+	del(x);
 }
 
 //================================================================================
@@ -268,7 +268,7 @@ void Covariator(){
 	calcCovar();
 	Confounder();
 
-	for(int i=0; i<nfiles; i++) delete tracks[i];
+	for(int i=0; i<nfiles; i++) del(tracks[i]);
 	xfree(eValues,"covariator: free eValues");
 	xfree(tracks,"covariator: free tracks");
 	exit(0);

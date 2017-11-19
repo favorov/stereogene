@@ -51,11 +51,11 @@ void renormDistrib(){	// Produce a NormWHist distribution using dHist
 	//================================== Calculate thresholds ==========================
 	L_lcTreshold=NormWHist.getValue(0); R_lcTreshold=NormWHist.getValue(NormWHist.l-1);
 	for(int i=0; i<NormWHist.l; i++){
-		if(NormWHist.rFDR[i] >= lcFDR)  R_lcTreshold=NormWHist.getValue(i);
+		if(NormWHist.rFDR[i] >= RlcFDR)  R_lcTreshold=NormWHist.getValue(i);
 		else break;
 	}
 	for(int i=NormWHist.l-1; i>=0; i--){
-		if(NormWHist.lFDR[i] >= lcFDR)  L_lcTreshold=NormWHist.getValue(i);
+		if(NormWHist.lFDR[i] >= LlcFDR)  L_lcTreshold=NormWHist.getValue(i);
 		else break;
 	}
 }
@@ -174,17 +174,15 @@ void finOutLC(){
 }
 
 void freeLC(){
-	if(lcProfile) delete lcProfile;
+	if(lcProfile) del(lcProfile);
 	if(smoothProf1) xfree(smoothProf1,"free LC 1");
 	if(lcTmp)    	xfree(lcTmp,      "free LC 2");
 
 	lcProfile=0;
 }
 //===================================================================
-//============= calculate smoothed profile  c=\int f*\rho
-void calcSmoothProfile(int k, bool cmpl){
+void calcSmoothProfile(Fourier *fx, int k, bool cmpl){
 	for(int i=0; i<profWithFlanksLength; i++){
-		Fourier *fx= (k==1) ? &kern->fy: &kern->fx;
 		double  ReX=fx->re[i],
 				ImX=fx->im[i],
 				ReY=kern->ft.re[i],
@@ -193,15 +191,21 @@ void calcSmoothProfile(int k, bool cmpl){
 		LCorrelation.datRe[i]= (ReX*ReY+ImX*ImY);
 		LCorrelation.datIm[i]= (ReX*ImY-ImX*ReY);
 	}
-	LCorrelation.datRe[0]=0;
-	LCorrelation.datIm[0]=0;
+	if(lcFlag == CENTER){
+		LCorrelation.datRe[0]=0;
+		LCorrelation.datIm[0]=0;
+	}
 
 	LCorrelation.calc(0);				//reverse transformation
+}
+//============= calculate smoothed profile  c=\int f*\rho
+void calcSmoothProfile(int k, bool cmpl){
+	Fourier *fx= (k==1) ? &kern->fy: &kern->fx;
+	calcSmoothProfile(fx,k,cmpl);
 }
 //==================== Make correlation track
 
 double LocalCorrTrack(int pos1, int pos2, bool cmpl1, bool cmpl2, bool rnd){
-//deb(50);
 	if(!outLC) return 0;
 	if(smoothProf1==0) getMem(smoothProf1,profWithFlanksLength+10, "storeCorrTrack");
 	if(lcTmp==0)       getMem(lcTmp,profWithFlanksLength+10, "storeCorrTrack");
@@ -209,8 +213,8 @@ double LocalCorrTrack(int pos1, int pos2, bool cmpl1, bool cmpl2, bool rnd){
 	memcpy(smoothProf1,LCorrelation.re,profWithFlanksLength*sizeof(double));
 	calcSmoothProfile(1, cmpl2);	// calculate smooth profile for the first profile (x)
 	smoothProf2=LCorrelation.re;
-//deb(51,"pos=%i %i",pos1,pos2);
 	double av=0;
+
 	double sd=track1->sd0*track2->sd0;
 	for(int i=LFlankProfSize; i<profWithFlanksLength-RFlankProfSize; i++){
 		double x=smoothProf1[i]	/profWithFlanksLength;					//the smoothed profile for x
@@ -221,6 +225,7 @@ double LocalCorrTrack(int pos1, int pos2, bool cmpl1, bool cmpl2, bool rnd){
 //		if(ax==NA || ay==NA) {lcTmp[i]=NA; continue;}
 //		double x0=(ax==NA)?0: bTrack1.getVal(ax), y0=(ay==NA)?0: bTrack2.getVal(ay);
 //		lc=0.5*(x0*y+y0*x);
+
 		lc=x*y/sd;
 		lc=normLC(lc);
 		lcTmp[i]=lc; av+=lc;	    // We use wCorrelation.im as a tmp buffer
@@ -239,13 +244,13 @@ void writeBedGr(FILE* f, FloatArray *array){
 
 void writeBedGr(const char *fname, FloatArray *array, float lTreshold, float rTreshold){
 	char b[1024];
-	makeFileName(b,resPath,fname);
+	strcpy(b,fname);
 	strcat(strcat(b,"."),BGR_EXT);
 	FILE *f=fopen(b,"w");
 	char bname[1024];
 	strcpy(bname,outFile);
 	char *s=strrchr(bname,'/'); s= s==0 ? bname : s+1;
-	fprintf(f,"track type=bedGraph name=\"%s\" description=\"Local correlation. FDR=%.1f%%\"\n", s, lcFDR*100);
+	fprintf(f,"track type=bedGraph name=\"%s\" description=\"Local correlation. FDR=%.1f%%\"\n", s, RlcFDR*100);
 	writeBedGr(f,array, lTreshold,  rTreshold);
 	fclose(f);
 }
