@@ -489,10 +489,10 @@ void parseGTF(){
 //============================================ Print Help page =========================================
 void printMiniHelp(){
 	printf("\n");
-	printf("The %s program compares pairs of tracks and calculates kernel correlations\n",progName);
+	printf("The parse_genes program creates bed files for genes/exons/introns starts/bodies/ends\n");
 	printf("===========  version %s ========\n",version);
 	printf("Usage:\n");
-	printf("$ ./%s [-parameters] trackFile_1 trackFile_2 ... trackFile_n\n",progName);
+	printf("$ ./parse_genes [-parameters] [RefSeq or GENECODE file]\n");
 	printf("\n");
 	printf("Say %s -h for more information\n",progName);
 	printf("\n");

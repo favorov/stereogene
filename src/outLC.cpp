@@ -129,7 +129,8 @@ void ProfileHist::print(FILE* f){						// print the histogram
 //=== The method takes into account possible window overlapping
 void addLCProf(double *f, int pos){
 	int d=wProfSize-wProfStep;
-	for(int i=0, j=pos; i<wProfSize && j < profileLength; i++,j++){
+	for(int i=0, j=pos-LFlankProfSize; i<profWithFlanksLength && j < profileLength; i++,j++){
+		if(j<0) continue;
 		float x=f[i];
 		if(pos > 0 && i < d) x/=2;
 		if(pos+wSize < profileLength && (i > wStep)) x/=2;
@@ -232,7 +233,7 @@ double LocalCorrTrack(int pos1, int pos2, bool cmpl1, bool cmpl2, bool rnd){
 		dHist.add(lc,rnd ? 1:0);
 	}
 	av/=profileLength;
-	if(!rnd) addLCProf(lcTmp+LFlankProfSize,pos1);
+	if(!rnd) addLCProf(lcTmp,pos1);
 	return av;
 }
 
@@ -260,11 +261,11 @@ void writeBedGr(FILE* f, FloatArray *array, float lTreshold, float rTreshold){
 	if(lTreshold == NA) lTreshold= 1.e+8;
 	if(rTreshold == NA) rTreshold=-1.e+8;
 	for(int i=0; i<profileLength; i++){
-		if(i%1000000 ==0) verb("%5.1f%%\r",1.*i/profileLength*100);
+		if(i%1000000 ==0) {verb("%5.1f%%\r",1.*i/profileLength*100);}
 		float x=array->get(i);
-
 		if(x <= rTreshold && x >= lTreshold) x=NA;
 		filePos2Pos(i,&pos,binSize); pos.score=x;
+//		filePos2Pos(i,&pos,binSize); pos.score=x;
 		if(pos.chrom == pos0.chrom && abs(pos.score - pos0.score) < 0.000001){
 			pos0.end=pos.end;
 			continue;

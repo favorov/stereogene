@@ -100,6 +100,9 @@ void printStat(){
 	writeLog("Write statistics\n");
 	char b[2048];
 	MannW=MannWhitney(FgSet, nFg, BkgSet, nBkg);	// do Mann-Whitney test
+	mannW_Z=MannW->z;
+	mannW_p=MannW->pVal;
+	if(MannW ==0) return;
 	xverb("p-val=%e\nnWindows=%i\n=================================\n",
 		MannW->pVal, nFg);
 
@@ -107,10 +110,10 @@ void printStat(){
 	getStat(BkgSet,nBkg,avBg,sdBg);
 
 	FILE *f=0;
-	const char *pcname = "-";
-	if (pcorProfile!=0){
-		pcname = pcorProfile;
-	}
+//	const char *pcname = "-";
+//	if (pcorProfile!=0){
+//		pcname = pcorProfile;
+//	}
 
 	bool fg=fileExists(statFileName);
 	if((outRes & TAB)!=0) {
@@ -120,25 +123,27 @@ void printStat(){
 			writeLogErr("Can not open file %s\n",statFileName);
 		}
 	}
-	if(!fg && f){								//================ write the header
-		fprintf(f,"%-6s\t%-6s\t%-20s\t%-20s\t%-20s","id","Date","version","name1","name2");
-		fprintf(f,"\t%-6s\t%-6s\t%-6s\t%-6s","wSize","kernelType","nFgr","nBkg");
-		fprintf(f,"\t%-8s\t%-8s\t\%-8s","Fg_Corr","Fg_av_Corr","FgCorr_sd");
-		fprintf(f,"\t%-8s\t%-8s\t\%-8s","Bg_Corr","Bg_av_Corr","BgCorr_sd");
-		fprintf(f,"\t%-8s\t%-7s", "Mann-Z","p-value");
-		fprintf(f,"\t%-6s\n", "pcorProfile");
+	if(!fg && f){	//================ write the header
+		printStatHeader(f);
+//		fprintf(f,"%-6s\t%-6s\t%-20s\t%-20s\t%-20s","id","Date","version","name1","name2");
+//		fprintf(f,"\t%-6s\t%-6s\t%-6s\t%-6s","wSize","kernelType","nFgr","nBkg");
+//		fprintf(f,"\t%-8s\t%-8s\t\%-8s","Fg_Corr","Fg_av_Corr","FgCorr_sd");
+//		fprintf(f,"\t%-8s\t%-8s\t\%-8s","Bg_Corr","Bg_av_Corr","BgCorr_sd");
+//		fprintf(f,"\t%-8s\t%-7s", "Mann-Z","p-value");
+//		fprintf(f,"\t%-6s\n", "pcorProfile");
 	}
 	//==================================================== write the statistics
 	if(f){
-		char nm1[1024], nm2[1024];
-		alTable.convert(track1->name, nm1);
-		alTable.convert(track2->name, nm2);
-		fprintf(f,"%08lx%s\t%6s\t%-10s\t%-10s\t%-10s",id,idSuff,dateTime(),version,nm1, nm2);
-		fprintf(f,"\t%-6i\t\"%-6s\"\t%6i\t%6i",wSize,getKernelType(),nFg, nBkg);
-		fprintf(f,"\t%8.4f\t%8.4f\t%8.4f",totCorr, avFg,sdFg);
-		fprintf(f,"\t%8.4f\t%8.4f\t%8.4f",BgTotal, avBg, sdBg);
-		fprintf(f,"\t%8.4f\t%-7.2e\t%-6s\n",MannW->z,MannW->pVal, pcname);
-		funlockFile(f);
+		printStat(f);
+//		char nm1[1024], nm2[1024];
+//		alTable.convert(track1->name, nm1);
+//		alTable.convert(track2->name, nm2);
+//		fprintf(f,"%08lx%s\t%6s\t%-10s\t%-10s\t%-10s",id,idSuff,dateTime(),version,nm1, nm2);
+//		fprintf(f,"\t%-6i\t\"%-6s\"\t%6i\t%6i",wSize,getKernelType(),nFg, nBkg);
+//		fprintf(f,"\t%8.4f\t%8.4f\t%8.4f",totCorr, avFg,sdFg);
+//		fprintf(f,"\t%8.4f\t%8.4f\t%8.4f",BgTotal, avBg, sdBg);
+//		fprintf(f,"\t%8.4f\t%-7.2e\t%-6s\n",MannW->z,MannW->pVal, pcname);
+//		funlockFile(f);
 		fclose(f);
 	}
 
@@ -170,33 +175,34 @@ void printStat(){
 			fseek(xml,-7,SEEK_END);
 		}
 		flockFile(xml);
-		fprintf(xml,"<run id=\"%08lx%s\" date=\"%s\" ver=\"%s\">\n", id, idSuff, dateTime(), version);
-		fprintf(xml,"\t<input track1=\"%s\" track2=\"%s\"/>\n",track1->name,track2->name);
-		fprintf(xml,"\t<output out=\"%s\"/>\n",outFile);
-		fprintf(xml,"\t<prm ");
-		printXMLparams(xml);
-		fprintf(xml,"/>\n");
-
-		fprintf(xml,"\t<res ");
-		fprintf(xml,"nFg=\"%i\" ",nFg);
-		fprintf(xml,"nBkg=\"%i\" ", nBkg);
-		fprintf(xml,"totCorr=\"%.4f\" ", totCorr);
-		fprintf(xml,"FgAvCorr=\"%.4f\" ", FgAvCorr);
-		fprintf(xml,"BgAvCorr=\"%.4f\" ", BgAvCorr);
-		fprintf(xml,"MannZ=\"%.4f\" ",MannW->z);
-		fprintf(xml,"pVal=\"%.2e\" ",MannW->pVal);
-
-		fprintf(xml,"sdBg=\"%.4f\" ",sdBg);
-		fprintf(xml,"sdFg=\"%.4f\" ",sdFg);
-		fprintf(xml,"/>\n");
-		fprintf(xml,"</run>\n");
+		printXML(xml);
+//		fprintf(xml,"<run id=\"%08lx%s\" date=\"%s\" ver=\"%s\">\n", id, idSuff, dateTime(), version);
+//		fprintf(xml,"\t<input track1=\"%s\" track2=\"%s\"/>\n",track1->name,track2->name);
+//		fprintf(xml,"\t<output out=\"%s\"/>\n",outFile);
+//		fprintf(xml,"\t<prm ");
+//		printXMLparams(xml);
+//		fprintf(xml,"/>\n");
+//
+//		fprintf(xml,"\t<res ");
+//		fprintf(xml,"nFg=\"%i\" ",nFg);
+//		fprintf(xml,"nBkg=\"%i\" ", nBkg);
+//		fprintf(xml,"totCorr=\"%.4f\" ", totCorr);
+//		fprintf(xml,"FgAvCorr=\"%.4f\" ", FgAvCorr);
+//		fprintf(xml,"BgAvCorr=\"%.4f\" ", BgAvCorr);
+//		fprintf(xml,"MannZ=\"%.4f\" ",MannW->z);
+//		fprintf(xml,"pVal=\"%.2e\" ",MannW->pVal);
+//
+//		fprintf(xml,"sdBg=\"%.4f\" ",sdBg);
+//		fprintf(xml,"sdFg=\"%.4f\" ",sdFg);
+//		fprintf(xml,"/>\n");
+//		fprintf(xml,"</run>\n");
 		fprintf(xml,"</xml>\n");
 		funlockFile(xml);
 		fclose(xml);
 	}
 	if(customKern){
 		FILE*cust=gopen("kernels","a+");
-		fprintf(cust,"%08lx%s\t\"%s\"\n", id, idSuff, customKern);
+		fprintf(cust,"%s\t\"%s\"\n", printId(), customKern);
 		fclose(cust);
 	}
 	writeLog("Write Statistics -> Done\n");
@@ -363,7 +369,6 @@ void printRmd(){
 }
 void printRreport(){
 	char *s,b[2048], fname[1024], fn[1024];
-	alTable.convert(outFile,fn);
 
 	if(sdFg==0) getStat(FgSet,nFg,avFg,sdFg);
 	if(sdBg==0) getStat(BkgSet,nBkg,avBg,sdBg);
@@ -421,7 +426,6 @@ void printRreport(){
 
 void printR(){
 	char fn[1024], *s, b[2048], fname[1024];
-	alTable.convert(outFile, fn);
 
 	strcat(strcpy(b,fn),".r");
 	FILE *f=xopen(b,"wt");

@@ -40,7 +40,56 @@ const int PRM_FG=5;
 const int PRM_PATH=7;
 
 const int PRM_UNKNOWN=-0XFFFFFFF;
+//===================================================================
 
+struct Name_Value{			// symbolic name for a value
+	const char* name;		// name for the value
+	int value;				// value
+	Name_Value(const char *nm, int val){name=nm; value=val;}
+};
+
+struct NamedRes{
+	const char *name;
+	void *value;
+	int type;					// parameter type
+	char* (*f)();
+	NamedRes(const char *nm, double *v);
+	NamedRes(const char *nm, int *v);
+	NamedRes(const char *nm, char **v);
+	NamedRes(const char *nm, char* (*ff)());
+	NamedRes(const char *nm);
+	char* printValue(char *buf);
+};
+
+NamedRes::NamedRes(const char *nm, double *v){name=nm; value=v; type=PRM_DOUBLE; f=0;}
+NamedRes::NamedRes(const char *nm, int *v){name=nm; value=v; type=PRM_INT; f=0;}
+NamedRes::NamedRes(const char *nm, char **v){name=nm; value=(void*) v; type=PRM_STRING; f=0;}
+NamedRes::NamedRes(const char *nm, char* (*ff)()){name=nm; value=0; type=PRM_STRING; f=ff;}
+NamedRes::NamedRes(const char *nm){name=nm; value=0; type=0; f=0;}
+
+char zfdsgfdsID[50];
+char * printId(){sprintf(zfdsgfdsID,"%08lx%s",id,idSuff); return zfdsgfdsID;}
+	char* NamedRes::printValue(char *buf){
+		if(type==0) return strcpy(buf,name);
+		if(f) return f();
+		switch(type){
+		case PRM_STRING:{
+			char *s=*((char**)value);
+			if(s) sprintf(buf,"%s",s); else buf[0]=0;
+			break;}
+		case PRM_DOUBLE:
+			{double *d=(double *)value;
+			if(*d > 0.1) sprintf(buf,"%.3f",*d);
+			else if(*d > 0.01) sprintf(buf,"%.4f",*d);
+			else sprintf(buf,"%.2e",*d);
+			break;}
+		case PRM_INT:
+			{int *k=(int *)value;
+			sprintf(buf,"%i",*k);
+			break;}
+		}
+		return buf;
+	};
 
 struct Param{
 	const char* name;			// command line (cfg) argument name
@@ -48,7 +97,7 @@ struct Param{
 	Name_Value **enums;			// array of aviable values
 	void *prm;					// pointer to the argument value
 	int value;					// a value that should be set if -prm is used in a command line
-	int printFg;				// the param should be printed to PRM file
+	int printFg;				// the param should be printed to PRM file (1) or in statistics (3)
 	int prog;					// the parameter relevant to the program of given type
 	const char *description;
 	Param(int prg, const char* descr);
@@ -158,11 +207,10 @@ Param *pparams[]={
 		new Param(SG,"statistics"	,0, &statFileName	,"cumulative file with statistics"),
 		new Param(SG,"params" 		,0, &paramsFileName	,"cumulative file with parameters"),
 		new Param( 7,"log" 		,0, &logFileName	,"cumulative log-file"),
-		new Param( 7,"aliases" 	,0, &aliaseFil		,0),
 		new Param( 7,"id_suff" 	,0, &idSuff		,0),
 //======================== =====================================================================================
 		new Param( 7, "input parameters"),
-		new Param( 7, "chrom"		,0, &chromFile	,"chromosome file"),
+		new Param( 7, "chrom"		,1, &chromFile	,"chromosome file"),
 		new Param( 7, "BufSize"	,0, &binBufSize	,"Buffer Size"),
 		new Param( 7, "bpType" 		,1, &bpType  		,bpTypes	,"The value used as a score for BroadPeak input file"),
 		new Param(SG|PRJ,"pcorProfile" ,1, &pcorProfile	,"Track for partial correlation"),
@@ -173,9 +221,9 @@ Param *pparams[]={
 		new Param(SG, "Analysis parameters"),
 		new Param(SG, "kernelType"	,1, &kernelType	,kernelTypes,0),
 		new Param(SG, "customKern"	,1, &customKern	,0),
-		new Param(SG, "kernelSigma"	,1, &kernelSigma,"Kernel width"),
+		new Param(SG, "kernelSigma"	,3, &kernelSigma,"Kernel width"),
 		new Param(SG, "kernelShift"	,1, &kernelShift,0),
-		new Param(SG, "wSize" 	  	,1, &wSize  	,"Window size"),
+		new Param(SG, "wSize" 	  	,3, &wSize  	,"Window size"),
 		new Param(SG, "wStep" 	  	,1, &wStep  	,0),
 		new Param(SG, "kernelNS"	,0, &kernelNS  	,0),
 		new Param(SG, "flankSize"	,1, &flankSize  ,0),
@@ -206,7 +254,6 @@ Param *pparams[]={
 		new Param(7 , "debug"		,0, &debugFg   	  ,0),	//debug mode
 		new Param(7 , "d"			,0, &debugFg   	  ,1, 0),	//debug mode
 		new Param(SG, "pdf"			,1, &writePDF  	  ,1, 0),	//write R plots to pdf
-
 		new Param(PG, "pgLevel"		,1, &pgLevel  	  ,1, 0),	//minimal level in ENCODE to be taken into account
 
 		new Param(7, "Happy correlations!"),
@@ -439,6 +486,8 @@ void parseArgs(int argc, char **argv){
 	trackPath=makePath(trackPath);
 	resPath	 =makePath(resPath);
 	if(verbose) silent=false;
+
+	PrepareParams();
 }
 
 //==============================================================================
@@ -464,22 +513,91 @@ void parseArgs(int argc, char **argv){
 void printParamNames(FILE* f){
 	fprintf(f,"id\tversion");
 	for(int i=0; pparams[i] ; i++){
-		if(pparams[i]->printFg) fprintf(f,"\t%s",pparams[i]->name);
+		if(pparams[i]->printFg && (pparams[i]->prog&progType)) fprintf(f,"\t%s",pparams[i]->name);
 	}
 	fprintf(f,"\n");
 }
+NamedRes *results[]={
+		new NamedRes("id",printId),
+		new NamedRes("Date",dateTime),
+		new NamedRes("version", (char**)&version),
+
+		new NamedRes("input"),
+		new NamedRes("name1",&trackName1),
+		new NamedRes("name2",&trackName2),
+
+		new NamedRes("res"),
+		new NamedRes("nFgr",&nFg),
+		new NamedRes("nBkg",&nBkg),
+		new NamedRes("Fg_Corr",&totCorr),
+		new NamedRes("Fg_av_Corr",&avFg),
+		new NamedRes("FgCorr_sd",&sdFg),
+		new NamedRes("Bg_Corr",&BgTotal),
+		new NamedRes("Bg_av_Corr",&avBg),
+		new NamedRes("BgCorr_sd",&sdBg),
+		new NamedRes("Mann-Z",&mannW_Z),
+		new NamedRes("p-value",&mannW_p),
+		0
+};
+void printXML(FILE *f){
+	char b[1024];
+	fprintf(f,"<run ");
+	int kk=0;
+	for(int i=0; results[i]; i++){
+		if(results[i]->type==0) {
+			if(kk) fprintf(f,"/>\n\t");
+			else fprintf(f,">\n\t");
+			kk++;
+			fprintf(f,"<%s ",results[i]->name); continue;
+		}
+		fprintf(f," %s=\"%s\"",results[i]->name,results[i]->printValue(b));
+	}
+	fprintf(f,"/>\n\t<prm ");
+	for(int i=0; pparams[i] ; i++){
+		if(pparams[i]->printFg && (pparams[i]->prog&progType))
+			fprintf(f,"%s=\"%s\" ",pparams[i]->name, pparams[i]->printParamValue(b));
+	}
+	fprintf(f,"/>\n</run>\n");
+}
+
+void printStatHeader(FILE *f){
+	for(int i=0; results[i]; i++){
+		if(results[i]->type==0) continue;
+		if(i)fprintf(f,"\t");
+		fprintf(f,"%s",results[i]->name);
+	}
+	for(int i=0; pparams[i] ; i++){
+		if((pparams[i]->printFg&2)==2) fprintf(f,"\t%s",pparams[i]->name);
+	}
+	fprintf(f,"\n");
+}
+
+void printStat(FILE *f){
+	char b[1024];
+	for(int i=0; results[i]; i++){
+		if(results[i]->type==0) continue;
+		if(i)fprintf(f,"\t");
+		fprintf(f,"%s",results[i]->printValue(b));
+	}
+	for(int i=0; pparams[i] ; i++){
+		if((pparams[i]->printFg&2)==2) fprintf(f,"\t%s",pparams[i]->printParamValue(b));
+	}
+	fprintf(f,"\n");
+}
+
 void printParams(FILE* f){
 	char b[256];
 	fprintf(f,"%08lx\t%s",id,version);
+deb("prog=%i",progType);
 	for(int i=0; pparams[i] ; i++){
-		if(pparams[i]->printFg) fprintf(f,"\t%s",pparams[i]->printParamValue(b));
+		if(pparams[i]->printFg && (pparams[i]->prog&progType)) fprintf(f,"\t%s",pparams[i]->printParamValue(b));
 	}
 	fprintf(f,"\n");
 }
 void printXMLparams(FILE *f){
 	char b[256];
 	for(int i=0; pparams[i] ; i++){
-		if(pparams[i]->printFg) fprintf(f,"%s=\"%s\" ",pparams[i]->name,pparams[i]->printParamValue(b));
+		if(pparams[i]->printFg && (pparams[i]->prog&progType)) fprintf(f,"%s=\"%s\" ",pparams[i]->name,pparams[i]->printParamValue(b));
 	}
 }
 
@@ -511,8 +629,37 @@ void initSG(int argc, char **argv){
 	makeDirs();
 	if(strcmp(logFileName,"null")==0 || strcmp(logFileName,"NULL")==0) logFileName=0;
 	if(nfiles==0) printMiniHelp();
-	if(aliaseFil!=0)  alTable.readTable(aliaseFil);		// read aliases
 	readChromSizes(chromFile);							// read chromosomes
+}
+
+void PrepareParams(){
+	wProfSize=wSize/binSize;       		// size of widow (profile scale)
+	wProfStep=wStep/binSize;       		// window step   (profile scale)
+	wProfSize=wSize/binSize;
+	LFlankProfSize=flankSize/binSize;
+	int ll=nearFactor(2*LFlankProfSize+wProfSize);
+	LFlankProfSize=(ll-wProfSize)/2;
+	profWithFlanksLength=ll;
+	RFlankProfSize=ll-wProfSize-LFlankProfSize;
+	//====================================================================== Prepare parameters
+	kernelProfSigma=kernelSigma/binSize;   // kernel width ((profile scale)
+	kernelProfShift=kernelShift/binSize;   // kernel shift ((profile scale)
+	maxNA   =(int)(maxNA0  *wProfSize/100);			// rescale maxNA
+	maxZero =(int)(maxZero0*wProfSize/100);			// rescale maxZero
+	if(maxZero>=wProfSize) maxZero=wProfSize-1;
+	if(maxNA  >=wProfSize) maxNA  =wProfSize-1;
+	//===================================================================== generate Kernels
+	switch(kernelType){
+	case KERN_NORM:
+		kern=new NormKernel    (kernelProfShift, kernelProfSigma, profWithFlanksLength); break;
+	case KERN_LEFT_EXP:
+		kern=new LeftExpKernel (kernelProfShift, kernelProfSigma, profWithFlanksLength); break;
+	case KERN_RIGHT_EXP:
+		kern=new RightExpKernel(kernelProfShift, kernelProfSigma, profWithFlanksLength); break;
+	case KERN_CUSTOM:
+		kern=new CustKernel(kernelProfShift, kernelProfSigma, profWithFlanksLength); break;
+	default: errorExit("Kernel not defined"); break;
+	}
 }
 
 

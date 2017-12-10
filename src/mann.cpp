@@ -99,8 +99,8 @@ statTest *MannWhitney( double *set1, int nSet1, double *set2,int nSet2){
 	return MannWhitney0(set1,nSet1,set2,nSet2);
 }
 statTest *MannWhitney0( double *set1, int nSet1, double *set2,int nSet2){
-	if(nSet1==0) errorExit("No background data");
-	if(nSet2==0) errorExit("No foreground data");
+	if(nSet1==0) {writeLog("No background data"); return 0;}
+	if(nSet2==0) {writeLog("No foreground data"); return 0;}
 	qsort((void *)set1,nSet1,sizeof(double),doubleCmp);
 	qsort((void *)set2,nSet2,sizeof(double),doubleCmp);
 

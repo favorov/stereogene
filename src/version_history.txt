@@ -149,11 +149,15 @@
 3. A possibility to add a suffix to the ID introduced
 4. For very sparse tracks a number of shuffles reduced. 
 ========== Version 2.10 ====================
-1. A module parse_genes introduced The modeule takes bed (refseq) or gtf (GENCODE) files. This module creates a bed tracks for gene/exons/introns starts/bodies/ends
+1. A module parse_genes introduced The module takes bed (refseq) or gtf (GENCODE) files. This module creates a bed tracks for gene/exons/introns starts/bodies/ends
 2. The interval parameters such as gene_beg, gene_end, etc. removed.  
 ========== Version 2.11 ====================
 1. Two new program added: binning -- binning of the input track and smoother -- smooth the input track with given kernel.
 2. A New parameter introduced: LCFg=<BASE | CENTER>. The parameter regulates the mean subtraction on the local correlation calculation.
 ========== Version 2.12 ====================
 1. Fixed a problem with memory leak
-2. Two FDR thresholds introduced for the local correlations -- for unexpected high values (R_FDR) and for unexpected low value (L_FDR)  
+2. Two FDR thresholds introduced for the local correlations -- for unexpected high values (R_FDR) and for unexpected low value (L_FDR)
+3. Fixed bug with flanks  
+========== Version 2.13 ====================
+1. Fixed bug with smoother (normalization)
+2. Changed statistics table and statistics.xml 

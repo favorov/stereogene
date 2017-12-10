@@ -49,7 +49,7 @@ void smooth(const char *fname){
 		if(smTmp==0)      getMem(smTmp,profWithFlanksLength+10, "storeCorrTrack");
 		kern->fftx(pr1,0);
 		calcSmoothProfile(&(kern->fx),0, 0);	// calculate smooth ptrofile c=\int f*\rho
-		addLCProf(LCorrelation.re+LFlankProfSize,i);
+		addLCProf(LCorrelation.re,i);
 	}
 	char pfil[4096],wfil[4096];
 	makeFileName(pfil,trackPath,fname);
@@ -62,16 +62,16 @@ void smooth(const char *fname){
 	double tt=0;
 	for(int i=0; i<l; i++) tt+=lcProfile->get(i);
 	for(int i=0; i<l; i++) {
-		double x=lcProfile->get(i)*tr->total/tt;
-//		if(x<0.5) x=0;
-		int xx=x*50;
-		x=xx/50.;
+		double x=lcProfile->get(i)*tr->total/tt/binSize;
 		lcProfile->set(i,x);
 	}
 
 
 	FILE *f=gopen(wfil,"w");
-	fprintf(f,"track type=bedGraph name=\"%s_Smooth\" description=\"Smoothed track. Width=%.0f\"\n",fname, kernelSigma);
+	char b[4096]; strcpy(b,fname);
+	s=strrchr(b,'.'); if(s) *s=0;
+	s=strchr(b,'/'); if(s==0) s=b;
+	fprintf(f,"track type=bedGraph name=\"%s_Sm\" description=\"Smoothed track. Width=%.0f\"\n",s, kernelSigma);
 	verb("\n Write Smooth profile...\n");
 	writeBedGr(f,lcProfile, NA,  NA);
 	verb("   Done\n");
@@ -79,7 +79,6 @@ void smooth(const char *fname){
 
 //=====================================================================
 void Smoother(){
-	PrepareParams();
 	LCorrelation.init(profWithFlanksLength);
 	lcFlag=BASE;
 	getMem(LCorrelation.datRe,profWithFlanksLength, "Correlator");
@@ -94,9 +93,10 @@ void Smoother(){
 
 //=====================================================================
 int main(int argc, char **argv) {
+	debugFg=DEBUG_LOG|DEBUG_PRINT; clearDeb();
+//deb(0);
 	initSG(argc, argv);
-	if(debugFg) {clearDeb(); debugFg=DEBUG_LOG|DEBUG_PRINT;}
-
+//	if(debugFg) {debugFg=DEBUG_LOG|DEBUG_PRINT; clearDeb(); }
 	Preparator();
 
 	Smoother();

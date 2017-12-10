@@ -505,7 +505,8 @@ int    bTrack::getBVal(int pos, int cmpl){
 		if(hasCompl) return cbytes->get(pos);
 		else return bytes->get(pos);
 	}
-	return bytes->get(pos);
+	int bv=bytes->get(pos);
+	return bv;
 }
 
 double bTrack::getValue(int pos, int cmpl){
@@ -553,20 +554,20 @@ double Track::getProjValue(int pos, bool cmpl){
 
 //================================================= decode the values to an array
 double * Track::getProfile(int pos, bool cmpl){ //====== pos - profile position; cmpl=true <=> +strand
-	double *a=profWindow;
+	double *a=profWindow+LFlankProfSize;
 	avWindow=sdWindow=0;
 	//======================================================= fill window
 	for(int i=0; i < wProfSize; i++, a++){
 		double x=0;
 		if(complFg==IGNORE_STRAND){				// ignore strand
-			x += getProjValue(pos+i+LFlankProfSize,false);		// profile
+			x += getProjValue(pos+i,false);		// profile
 			if(hasCompl)
-				x += getProjValue(pos+i+LFlankProfSize,true);				// + complement profile
+				x += getProjValue(pos+i,true);				// + complement profile
 		}
 		else if(cmpl)                          // colinear or profile do not know the orient
-			x += getProjValue(pos+i+LFlankProfSize,hasCompl);
+			x += getProjValue(pos+i,hasCompl);
 		else
-			x += getProjValue(pos+i+LFlankProfSize,false);
+			x += getProjValue(pos+i,false);
 		*a=x;
 		avWindow+=x; sdWindow+=x*x;
 	}
@@ -580,7 +581,7 @@ double * Track::getProfile(int pos, bool cmpl){ //====== pos - profile position;
 	int x1=x0+LFlankProfSize+RFlankProfSize;
 //=========================================	fill flanks
 	for(int x=x0; x<x1; x++){
-		double xq=rGauss(avWindow,sdWindow);
+		double xq=rGauss(avWindow,sdWindow)*noiseLevel;
 		profWindow[x%profWithFlanksLength]=xq;
 	}
 //========================================= Constant window => add noise

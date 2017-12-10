@@ -41,7 +41,6 @@ void makeProj(char *fname){
 	}
 	double z=xa/aa, e=0; int nn=0;
 	double pMin=1.e+100, pMax=-1.e+100;
-
 	for(int i=0; i<profileLength; i++){
 		if(curTrack->isNA(i,false) || confBTrack->isNA(i,false)) continue;
 		double a=confBTrack->getValue(i,false);
@@ -80,7 +79,7 @@ void makeProj(char *fname){
 
 char currFname[4096];
 void Projector(){
-	confBTrack	=new bTrack()	;
+	confBTrack	=new bTrack();
 	curTrack	=new bTrack();
 	projT	=new bTrack();
 
@@ -95,15 +94,15 @@ void Projector(){
 	makeConfDir(confTrackPath,trackPath, "trackPath", cfg);
 	makeConfDir(confProfPath ,profPath , "profPath" , cfg);
 	makeConfDir(confResPath  ,resPath  , "resPath"  , cfg);
-
 	sprintf(b,"%s.bgraph",confFile);
-	confBTrack->openTrack(b);
+	prepare(b);
+//	int cxcx=confBTrack->openTrack(b);
 	prjLog=fopen("projections","w");
 	fprintf(prjLog,"confounder=<%s>\n",confFile);
 	fprintf(prjLog,"track\tminVal\tmaxVal\te\tproj_coef\n");
-
 	for(int i=0; i<nfiles; i++){
 		strcpy(currFname, files[i].fname);
+		prepare(files[i].fname);
 		curTrack->openTrack(files[i].fname);
 		makeProj(files[i].fname);
 		curTrack->clear();

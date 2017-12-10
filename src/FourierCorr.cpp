@@ -181,7 +181,7 @@ int distrBkg(int nSh){
 		double d=calcCorelations(p1,p2, cmpl1, cmpl2, true);		// calculate correlation
 		if(d<=-10) {							// invalid windows (too many NA's of Zeros)
 			if(tst++ > 10000){					// too many attempt to get a background correlations
-				errorExit("too many empty/zero windows\n");
+				writeLog("too many empty/zero windows\n"); return tst;
 			}
 			continue;
 		}
@@ -324,36 +324,6 @@ int addPair(char *f1, char *f2){
 //
 //}
 
-void PrepareParams(){
-	wProfSize=wSize/binSize;       		// size of widow (profile scale)
-	wProfStep=wStep/binSize;       		// window step   (profile scale)
-	wProfSize=wSize/binSize;
-	LFlankProfSize=flankSize/binSize;
-	int ll=nearFactor(2*LFlankProfSize+wProfSize);
-	LFlankProfSize=(ll-wProfSize)/2;
-	profWithFlanksLength=ll;
-	RFlankProfSize=ll-wProfSize-LFlankProfSize;
-	//====================================================================== Prepare parameters
-	kernelProfSigma=kernelSigma/binSize;   // kernel width ((profile scale)
-	kernelProfShift=kernelShift/binSize;   // kernel shift ((profile scale)
-	maxNA   =(int)(maxNA0  *wProfSize/100);			// rescale maxNA
-	maxZero =(int)(maxZero0*wProfSize/100);			// rescale maxZero
-	if(maxZero>=wProfSize) maxZero=wProfSize-1;
-	if(maxNA  >=wProfSize) maxNA  =wProfSize-1;
-	//===================================================================== generate Kernels
-	switch(kernelType){
-	case KERN_NORM:
-		kern=new NormKernel    (kernelProfShift, kernelProfSigma, profWithFlanksLength); break;
-	case KERN_LEFT_EXP:
-		kern=new LeftExpKernel (kernelProfShift, kernelProfSigma, profWithFlanksLength); break;
-	case KERN_RIGHT_EXP:
-		kern=new RightExpKernel(kernelProfShift, kernelProfSigma, profWithFlanksLength); break;
-	case KERN_CUSTOM:
-		kern=new CustKernel(kernelProfShift, kernelProfSigma, profWithFlanksLength); break;
-	default: errorExit("Kernel not defined"); break;
-	}
-}
-
 //========================================================================================
 
 int Correlator(){
@@ -397,7 +367,7 @@ int Correlator(){
 			profile1=fPairs[i]->fil1;
 			verb("read profile1 <%s>\n", profile1);
 			if(track1) {del(track1); track1=0;}
-			track1=trackFactory(profile1);
+			track1=trackFactory(profile1); trackName1=strdup(track1->name);
 			if(pcorProfile) track1->ortProject();
 			if(!track1->makeIntervals()) continue;
 			fil1=fPairs[i]->fil1;
@@ -406,7 +376,7 @@ int Correlator(){
 			profile2=fPairs[i]->fil2;
 			verb("read profile2 <%s>\n", profile2);
 			if(track2) {del(track2); track2=0;}
-			track2=trackFactory(profile2);
+			track2=trackFactory(profile2); trackName2=strdup(track2->name);
 			if(pcorProfile) track2->ortProject();
 			if(!track2->makeIntervals()) continue;
 			fil2=fPairs[i]->fil2;

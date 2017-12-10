@@ -4,7 +4,6 @@
  *  Created on: 17.02.2013
  *      Author: 1
  */
-
 #include "track_util.h"
 #include <time.h>
 #include <stdarg.h>
@@ -12,350 +11,22 @@
 #include <unistd.h>
 
 #include <sys/file.h>
-//#include <dir.h>
-const char* version="2.12";
 
-int debugFg=0;
-//int debugFg=DEBUG_LOG|DEBUG_PRINT;
-
-const char *debS=0;
-
-Chromosome *chrom_list;       // list of chromosomes
-Chromosome *curChrom=chrom_list;
-int  binSize=100;   // frame size fo profile
-bool  NAFlag=0;
-
-long long GenomeLength=0;      // TOTAL LENGTH OF THE GENOME
-int n_chrom;
-char trackName[4096];       // current track name
-char *chromFile=0;
-char *confFile=0;		// confounder file name
-char *cfgFile=0;		// config file name
-char *profPath=0;
-char *trackPath=0;
-
-char *trackFil=0;		// Track file
-char *aliaseFil=0;
 char *logFileName=(char*)"./stereogene.log";
+unsigned long id;
 char *outFile=0;
-char *profile1=0;		// first profile file file name
-char *profile2=0;		// second profile file file name
-char *resPath=0;
-char *statFileName=(char*)"./statistics";
-char *paramsFileName=(char*)"./params";
-char *inputProfiles=0;
-char *outTrackFile=0; // Filename for write out track
-char *idSuff=(char*)"";
-
 bool  verbose=0;
 bool  silent=0;				// inhibit stdout
-bool  syntax=1;				// Strong syntax control
-
-bool  writeDistr=1;
-bool  writeDistCorr=1;		    // write BroadPeak
-int   crossWidth=10000;
-bool  outSpectr=0;
-bool  outChrom=0;
-int   outRes=XML|TAB;
-int   inpThreshold=0;		// Testing of binarized input data, % of max
-bool  writePDF=true;
-int   complFg=IGNORE_STRAND;
-int   lcFlag=CENTER;
-int   profileLength;			// size of the profile array
-
-char *pcorProfile=0;    // partial correlation profile file name
-int  binBufSize=30000000;
-
-
-int 	kernelType=KERN_NORM;
-char* 	customKern=0;
-double 	noiseLevel=0.2;
-int 	wSize=100000;        // size of widow (nucleotides)
-int 	wStep=0;             // window step   (nucleotides)
-int 	flankSize=0;
-double 	kernelSigma=1000.;    	// kernel width (nucleotides)
-double 	kernelShift=0;      	    // Kernel mean (for Gauss) or Kernel start for exponent
-int 	intervFg0;
-double 	scaleFactor=0.2;
-bool 	outLC=0;
-int 	LCScale=LOG_SCALE;
-//int 	LCScale=LIN_SCALE;
-double LlcFDR=0;		// treshold on FDR when write Local Correlation track
-double RlcFDR=0.5;		// treshold on FDR when write Local Correlation track
-
-bool 	outPrjBGr=true;
-
-int 	wProfStep=0;          	// window step   (profile scale)
-int 	wProfSize=0;          	// size of widow (profile scale)
-int 	LFlankProfSize=0;         // size of flank (profile scale)
-int 	RFlankProfSize=0;         // size of flank (profile scale)
-int 	profWithFlanksLength=0; 	// size of profWindow array (including random flanks)
-double 	kernelProfSigma=1000;     // kernel width ((profile scale)
-double 	kernelProfShift=0;
-double 	kernelNS=0;			// Correction for non-specifisity
-Track 	*track1=0, *track2=0, *projTrack=0;
-Kernel 	*kern=0;
-double 	maxNA0=95;
-double 	maxZero0=95;
-double 	maxNA=100;
-double 	maxZero=100;
-int 	nShuffle=10000;
-Model 	*model;
-
-int 	threshold=0;
-
-FILE 	*logFile=0;
-bool 	doAutoCorr=0;
-
-int 	corrScale=10;
-double 	prod11=0,prod12=0,prod22=0, eprod1,eprod2;
-int 	nprod=0;
-XYCorrelation XYfgCorrelation;		    // array for correlation picture
-XYCorrelation XYbgcorrelation;			// array for correlation picture
-Fourier LCorrelation;
-
-double 	totCorr=0, BgTotal=0;
-unsigned long id;
-bool 	RScriptFg=0;
-int 	bpType=BP_SIGNAL;
-int 	cage=0;
-bool 	clearProfile=false;
-int 	scoreType=AV_SCORE;
-AliasTable alTable;
-FileListEntry files[256];
-int   	nfiles;
-bool LCExists=false;
-
-double 	BgAvCorr=0;
-double 	FgAvCorr=0;
-int  	pgLevel=2;
-float total=0;						// total count over the track
-
-
-
-unsigned int hashx(unsigned int h,unsigned int x);
-unsigned int hashx(unsigned int h,char c);
-unsigned int hashx(unsigned int h,int x);
-unsigned int hashx(unsigned int h,long x);
-unsigned int hashx(unsigned int h,const char *s);
-unsigned int hashx(unsigned int h,float c);
-unsigned int hashx(unsigned int h,double c);
-
-//====================================================================================
-ScoredRange::ScoredRange(){
-	chr=0; chrom=0;	beg=end=0;	score=0;
-}
-//==================================== print a range to a BED GRAPH
-void ScoredRange::printBGraph(FILE *f){
-	if(score!=NA){
-		fprintf(f,"%s\t%li\t%li\t",chrom,beg, end);
-		double xx=abs(score);
-		if(xx < 0.000001) 	fprintf(f,"0.0\n");
-		else if(xx < 0.0001) 	fprintf(f,"%.6f\n",score);
-		else if(xx < 0.001) fprintf(f,"%.5f\n",score);
-		else if(xx < 0.01)  fprintf(f,"%.4f\n",score);
-		else if(xx < 0.1)   fprintf(f,"%.3f\n",score);
-		else                fprintf(f,"%.2f\n",score);
-	}
-//	else
-//		fprintf(f,"#%s\t%li\t%li\t?\n",chrom,beg, end);
-}
-
-
-//====================================================================================
-char *AliasTable::convert(char*oldName, char *newName){
-	char b0[1024],b1[1024];
-	strcpy(b0,oldName);
-
-	for(int i=0; i<nAls; i++){
-		while(1){
-			char* sx=strstr(b0,als[i].oldName);
-			if(sx!=0){
-				int k=sx-b0;
-				char *s0=b0,*s1=b1;
-				memcpy(s1,s0,k); s0+=k; s1+=k;
-				memcpy(s1,als[i].newName,als[i].lnew);
-				s0+=als[i].lold; s1+=als[i].lnew;
-				strcpy(s1,s0);
-				strcpy(b0,b1);
-			}
-			else break;
-		}
-	}
-	return strcpy(newName, b0);
-}
-
-void AliasTable::readTable(const char* fname){
-	FILE *f=gopen(fname,"rt");
-	if(f==0) return;
-	nAls=0;
-	int capacity=100;
-	getMem(als,capacity, "AliaseTable::readTable");
-	char b[1024],*s;
-
-	for(;(s=fgets(b,sizeof(b),f))!=0;){
-		strtok(b,"\r\n");
-		s=skipSpace(b);
-		if(*s=='#') continue;
-
-		char *s1=strtok(s,"=");
-		char *s2=strtok(0," \t");
-		s1=strtok(s1," \t");
-		if(s1==0 || strlen(s1)==0) continue;
-		if(s2!=0) s2=skipSpace(s2);
-		else s2=(char*)"";
-		als[nAls].oldName=strdup(s1);
-		als[nAls].newName=strdup(s2);
-		als[nAls].lnew=strlen(s2);
-		als[nAls].lold=strlen(s1);
-		nAls++;
-		if(nAls >= capacity){
-			capacity+=100;
-			als=(Alias*)realloc(als,capacity*sizeof(Alias));
-		}
-	}
-	fclose(f);
-}
-
-//====================================================================================
-//===============================================  Chromosomes
-Chromosome::Chromosome(char *chr, long l, int bb){
-    chrom=chr;		//Chromosome name
-    length=l;		//Chromosome length
-    base=bb;		//Start position in the binary profile
-    av1=av2=corr=lCorr=count=0;
-    densCount=0;
-    distDens=0;
-}
-
-void Chromosome::clear(){
-    av1=av2=corr=lCorr=count=0; densCount=0;
-    if(profWithFlanksLength) {
-    	getMem0(distDens,profWithFlanksLength,  "Chromosome::clear #1");
-    	zeroMem(distDens,profWithFlanksLength);
-    }
-}
-
-void clearChromosomes(){
-	for(int i=0; i<n_chrom; i++){
-		chrom_list[i].clear();
-	}
-}
-
-
-int CHROM_BUFF=300;
-
-int readChromSizes(char *fname){
-
-	if(fname==0) errorExit("Chromosome file undefined");
-	FILE *f=xopen(fname,"rt");
-	if(f==0)return 0;
-	char buff[2048];
-	n_chrom=0;
-	int max_chrom=CHROM_BUFF;
-	chrom_list=(Chromosome *)malloc(max_chrom*sizeof(Chromosome));
-	char *s1,*s2;
-
-	for(char *s; (s=fgets(buff,2048,f))!=0;){
-		s=trim(buff);
-		if(*s==0 || *s=='#') 	continue;
-
-		if(n_chrom>=max_chrom) {
-			max_chrom+=CHROM_BUFF;
-			chrom_list=(Chromosome *)realloc(chrom_list,max_chrom*sizeof(Chromosome));
-		}
-	    if((s1=strtok(s," \t\r\n"))==NULL) continue;
-	    if((s2=strtok(0," \t\r\n"))==NULL) continue;
-
-	    chrom_list[n_chrom]=Chromosome(strdup(s1), atol(s2), profileLength);
-
-		int filLen=(chrom_list[n_chrom].length+binSize-1)/binSize;
-		profileLength+=filLen;
-
-		GenomeLength+=chrom_list[n_chrom].length;
-	    n_chrom++;
-
-	}
-	curChrom=chrom_list;
-	return 1;
-};
-
-Chromosome* findChrom(char *ch){
-	if(strcmp(curChrom->chrom, ch) ==0) return curChrom;
-	for(int i=0; i<n_chrom; i++){
-		curChrom=chrom_list+i;
-		if(strcmp(curChrom->chrom, ch) ==0) return curChrom;
-	}
-	fprintf(stderr,"Chromosome %s not found\n",ch);
-	return 0;
-}
-//========================================================================================
-long pos2filePos(char*chrom,long pos){
-	Chromosome *ch=findChrom(chrom);
-	if(ch==0) return 0;
-	curChrom=ch;
-	long p=pos/binSize+curChrom->base;
-	return p;
-}
-
-//========================================================================================
-Chromosome *getChromByPos(int pos){
-	Chromosome *ch0=chrom_list;
-	for(int i=0; i<n_chrom; i++){
-		if(pos < chrom_list[i].base) return ch0;
-		ch0=chrom_list+i;
-	}
-	return ch0;
-}
-
-//========================================================================================
-void filePos2Pos(int pos, ScoredRange *gr, int length){
-	Chromosome *ch0=getChromByPos(pos);
-
-	if(ch0==0) return;
-	pos-=ch0->base;
-	long p1=binSize*long(pos);
-	gr->chr=ch0;
-	gr->chrom=ch0->chrom;
-	gr->end=(gr->beg=p1)+length;
-	if(gr->end >= ch0->length) gr->end = ch0->length-1;
-	return;
-}
-
-//========================================================================================
-int inputErr;		// flag: if input track has errors
-int inputErrLine;	// Error line in the input
-char curFname[4048];	// current input file
-
-//========================================================================================
-Chromosome *checkRange(ScoredRange *gr){
-	Chromosome* chr=findChrom(gr->chrom);
-	if(chr==0) return 0;
-
-	if(gr->beg < 0){
-		if(inputErr == 0){ inputErr=1;
-			writeLogErr(
-					"File <%s> line #%d: incorrect segment start: chrom=%s  beg=%ld.  Ignored\n",curFname, inputErrLine,gr->chrom, gr->beg);
-		}
-		return 0;
-	}
-	if(gr->end  >= chr->length){
-		if(inputErr == 0){ inputErr=1;
-			writeLogErr(
-					"File <%s> line #%d: incorrect segment end: chrom=%s  end=%ld.  Ignored\n",curFname, inputErrLine,gr->chrom, gr->end);
-		}
-		return 0;
-	}
-	if(gr->end < gr->beg) return 0;
-	return chr;
-}
+//int debugFg=0;
+int debugFg=DEBUG_LOG|DEBUG_PRINT;
+const char *debS=0;
 
 //======================================================================================
 //============================    String  Parsing ======================================
 //======================================================================================
 char *skipSpace(char *s)  {while(*s!=0 &&  isspace(*s)) s++; return s;}
 char *skipNoSpace(char *s){while(*s!=0 && !isspace(*s)) s++; return s;}
-int EmptyString(const char*buff){
+int isEmpty(const char*buff){
 	for(const char*s=buff; *s!=0; s++)
 		if(!isspace(*s)) return 0;
 	return 1;
@@ -411,15 +82,6 @@ char *strtoupper(char*s){
 	return s;
 }
 
-// get major version number (1.64.2 -> 1.64)
-char * getMajorVer(const char *ver, char *buf){
-	char b[1024];
-	strcpy(b,ver);
-	strcpy(buf,strtok(b,"."));
-	strcat(buf,".");
-	strcat(buf,strtok(0,"."));
-	return buf;
-}
 //===================== check if given string contains given key: 0 -- contains; 1 -- does not
 int keyCmp(const char *str, const char *key){
 	for(;;str++, key++){
@@ -446,28 +108,6 @@ char *trim(char *s){
 }
 
 
-//========== Convert kernel type to a string
-char kernType[1024];
-const char*getKernelType(){
-	const char *type;
-	if(kernelType==KERN_NORM	 ) type="N";
-	else if(kernelType==KERN_LEFT_EXP ) type="L";
-	else if(kernelType==KERN_RIGHT_EXP) type="R";
-	else if(kernelType==KERN_CUSTOM) type=customKern;
-	else return "X";
-	char b[80];
-	if(kernelShift >0){
-		sprintf(b,"%s_%.1fR",type,kernelShift/1000);
-		return strcpy(kernType,b);
-	}
-	else if(kernelShift <0){
-		sprintf(b,"%s_%.1fL",type,-kernelShift/1000);
-		return strcpy(kernType,b);
-	}
-	else return type;
-}
-
-
 //============================================================
 //=======================    Logging    ======================
 //============================================================
@@ -475,7 +115,6 @@ const char *errStatus=0;
 void clearLog(){
 	if(logFileName) fclose(gopen(logFileName,"wt"));
 }
-
 
 FILE *openLog(){
 	if(logFileName) {
@@ -795,15 +434,6 @@ void makeDir(const char *path){
 	}
 	_makeDir(b);
 }
-//================== make path - add '/' if necessary
-char* makePath(char* pt){
-	if(pt==0) return pt;
-	char b[2048];
-	char *s=pt+strlen(pt)-1;
-	if(*s=='/') *s=0;
-	return strdup(strcat(strcpy(b,pt),"/"));
-}
-
 //====================== Lock file in platform - independent manner
 void flockFile(FILE *f){
 #if defined(_WIN32)
@@ -864,17 +494,6 @@ char *getFnameWithoutExt(char *buf, char *fname){
 	s=strrchr(buf,'.'); if(s) *s=0;
 	return buf;
 }
-
-//================= Create directories
-void makeDirs(){
-	if(profPath!=0) makeDir(profPath);
-	else profPath=strdup("./");
-	if(resPath!=0) makeDir(resPath);
-	else resPath=strdup("./");
-	if(trackPath!=0) makeDir(trackPath);
-	else trackPath=strdup("./");
-}
-
 
 
 //============================================================
@@ -1076,165 +695,11 @@ double norm(double *x, int l){
 	for(int i=0; i<l; i++){d+=x[i]*x[i]; e+=x[i];}
 	ee=e/l; d=d*l-e*e; dd=d/((l-1)*l);
 	if(dd<0) {dd=0;} dd=sqrt(dd);
-	if(dd <= ee*ee*1.e-5) {
-		return 0;}
-
+	if(dd <= ee*ee*1.e-5) {return 0;}
 	for(int i=0; i<l; i++) x[i]=(x[i]-ee)/dd;
 	return dd;
 }
 
-//======================================================================
-int nearPow2(int n, int &i){
-	int nn=1;
-	for(i=0; i<30; i++){
-		if(nn >= n) return nn;
-		nn*=2;
-	}
-	return nn;
-}
-int nearPow2(int n){
-	int z;
-	return nearPow2(n,z);
-}
-
-int nearFactor(int n){
-	int qMin;
-	int pow2=nearPow2(n);
-	qMin=pow2;
-	int k3=1,k35=1;
-	for(k3=1; k3<pow2; k3*=3){
-		for(k35=k3; k35 < pow2; k35*=5){
-				int p2=nearPow2(k35);
-				int qq=pow2*k35/p2;
-				if(qq>=n && qq<qMin) qMin=qq;
-		}
-	}
-return qMin;
-}
-
-//===================== convert text flag to a binary
-int getFlag(char*s){
-	int fg=0;
-	if(		keyCmp(s,"1")==0 || keyCmp(s,"YES")==0 || keyCmp(s,"ON" )==0) {fg=1;}
-	else if(keyCmp(s,"0")==0 || keyCmp(s,"NO")==0  || keyCmp(s,"OFF")==0) {fg=0;}
-	else fg=-1;
-	return fg;
-}
-//=================================================================
-//============================= File list =========================
-//=================================================================
-int   fileId=0;
-
-void addFile(char* fname, int id){
-	fname=trim(fname);
-	if(strlen(fname)==0) return;
-
-	files[nfiles].fname=strdup(fname);
-	files[nfiles].id=fileId;
-	nfiles++;
-}
-
-void addFile(char* fname){
-	if(nfiles > 256) errorExit("too many input files\n");
-	char b[4096], *s;
-	strcpy(b,fname); s=strrchr(b,'.'); if(s) s++;
-	if(s && (keyCmp(s,"lst")==0 || keyCmp(s,"list")==0)){
-		FILE *f=0;
-		if(fileExists(fname)) f=xopen(fname,"rt");
-		else{
-			makeFileName(b,trackPath,fname);
-			f=xopen(b,"rt");
-		}
-		for(;(s=fgets(b,sizeof(b),f))!=0;){
-			strtok(b,"\r\n#");
-			s=trim(b);
-			if(strlen(s)==0 || *s=='#') continue;
-			addFile(s, fileId);
-		}
-		fclose(f); fileId++;
-		return;
-	}
-	else{
-		addFile(fname, fileId); fileId++;
-	}
-}
-
-
-unsigned int hashx(unsigned int h,char c){
-	return h+(c-32)+1234;
-}
-unsigned int hashx(unsigned int h,const char *s){
-	if(s==0) return h;
-	for(;*s;s++) h=hashx(h,*s);
-	return h;
-}
-unsigned int hashx(unsigned int h,unsigned int x){
-	return h*3+x;
-}
-unsigned int hashx(unsigned int h,int x){
-	return h*3+x;
-}
-unsigned int hashx(unsigned int h,long x){
-	return h*3+x;
-}
-unsigned int hashx(unsigned int h,float c){
-	unsigned int f; memcpy(&f,&c,sizeof(float));
-	return hashx(h,f);
-}
-unsigned int hashx(unsigned int h,double c){
-	float f=(float) c;
-	return hashx(h,f);
-}
-
-void makeId(){
-	id=0;
-	id=hashx(id,chromFile);
-	id=hashx(id,flankSize);
-	id=hashx(id,kernelType);
-	id=hashx(id,binSize);
-	id=hashx(id,nShuffle);
-	id=hashx(id,maxZero);
-	id=hashx(id,maxNA0);
-	id=hashx(id,kernelSigma);
-	id=hashx(id,wSize);
-	id=hashx(id,wStep);
-	id=hashx(id,threshold);
-	id=hashx(id,outFile);
-	id=hashx(id,mtime());
-}
-//======================================================================
-BufFile::~BufFile(){
-	if(f!=0) fclose(f);
-	if(buffer) xfree(buffer,"buff file");
-}
-
-void BufFile::init(const char *fname){
-	f=fopen(fname,"rb"); buffer=0;
-	getMem0(buffer,SG_BUFSIZ+SG_BUFEXT,"err");
-	int n=fread(buffer,1,SG_BUFSIZ,f);
-	if(n <= 0) {curString=0;}
-	else {curString=buffer; buffer[n]=0;}
-}
-
-
-char *BufFile::getString(){
-	if(curString==0) return 0;
-	char *s0=curString;
-	while(isspace(*s0)) s0++;
-	char *ss=strchr(curString,'\n');
-	if(ss==0){
-		strcpy(buffer,curString);
-		char *bb=buffer+strlen(curString);
-		int n=fread(bb,1,SG_BUFSIZ,f);
-		if(n <= 0) {curString=0; return s0;}
-		else {curString=buffer; bb[n]=0;}
-		return(getString());
-	}
-	curString=ss+1;
-	while(isspace(*ss)) *ss--=0;
-//	*ss=0;
-	return s0;
-}
 //======================================================================
 
 

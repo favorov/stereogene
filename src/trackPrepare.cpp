@@ -36,7 +36,7 @@ void addProfVal(FloatArray *p, int pos, float v){
 
 
 int bTrack::addSgm(ScoredRange *bed, FloatArray *prof){
-	total+=bed->score;
+	total+=bed->score*(bed->end-bed->beg+1);
 	if(!checkRange(bed)) return 0;
 	double noise=0.001;
 	int p1=pos2filePos(bed->chrom, bed->beg);
@@ -283,7 +283,6 @@ void bTrack::readInputTrack(const char *fname, int cage){
 	if(nStrand==0) hasCompl=0;
 	fclose(f);
 	verb("\n");
-	deb("total=%f", total);
 }
 //=====================================================================================
 //========================================================================================
@@ -325,6 +324,7 @@ void bTrack::finProfile(){
 	int nn=0;
 	for(int i=0; i<profileLength; i++){
 		float z=fProfile->getLog(i);
+//		float q=fProfile->get(i);
 		if(z != NA){
 			// we take into account only valid profile values
 			av+=z; x2+=z*z; nn++;
