@@ -7,6 +7,14 @@
 
 #ifndef SG_UTIL_H_
 #define SG_UTIL_H_
+
+struct Track;
+struct bTrack;
+struct Formula;
+class  FloatArray;
+struct Model;
+struct BuffArray;
+
 extern const int progType;	//type of the program
 const int SG =1;
 const int PRJ=2;
@@ -72,7 +80,6 @@ extern int binBufSize;
 const int MAX_GENES=100000;
 
 
-struct Model;
 //========================= Common parameters ================================
 extern int  binSize;          // frame size of profile
 extern long long GenomeLength;      // TOTAL LENGTH OF THE GENOME
@@ -173,10 +180,6 @@ extern int nBkg, nFg;					// size of background and foreground sets of data
 extern double *BkgSet, *FgSet;			// background and foreground sets of the correlations
 extern bool LCExists;
 extern int  pgLevel;
-struct Track;
-struct bTrack;
-struct Formula;
-class  FloatArray;
 
 //================================================== Formula function
 struct Identifier{
@@ -238,7 +241,6 @@ struct Formula{
 	void setArg(double x) ;
 };
 
-
 Formula *frmlInit(const char* txt);		// initiate Formula
 void   frmlClose(Formula* f);			// free formula
 double frmlCalc(Formula* f, double x);	// calculate formula
@@ -247,6 +249,7 @@ double frmlGetValue(Formula* f, const char* txt);				// get the variable value
 //====================================================================
 const int SG_BUFSIZ=0x1000000;
 const int SG_BUFEXT=0x100000;		// Max string length
+
 struct BufFile{
 	FILE *f;
 	char *buffer;
@@ -309,10 +312,6 @@ struct IVSet{
 	void print(int f, int t);
 //	void inspect(const char*msg, int i);
 };
-
-struct Track;
-struct BuffArray;
-struct FloatArray;
 
 struct Track{		        // Binary track
 	double *profWindow;		// decoded profile with flanks
@@ -715,6 +714,7 @@ void writeBedGr(FILE* f, FloatArray *array);
 void writeBedGr(FILE* f, FloatArray *array, float lTreshold, float rTreshold);
 //============================================== random & statistics
 double rGauss();							// standard normal random
+double rExp();								// exp random value
 double rGauss(double e, double sigma);		// normal random with given mean and sigma
 unsigned long randInt(unsigned long n);		// uniform random int
 double drand();								// uniform random double [0,1]
@@ -724,6 +724,7 @@ statTest *MannWhitney( double *set1, int nSet1, double *set2,int nSet2);	//Mann-
 int nearPow2(int n, int &i);
 int nearPow2(int n);
 int nearFactor(int n);
+
 void printFactors(int l);
 extern "C" void fftl(int n,double are[],double aim[],double bre[],double bim[]);
 extern "C" void fft(double xRe[], double xIm[],double yRe[], double yIm[]);
@@ -771,18 +772,11 @@ void printMiniHelp();
 void initSG(int argc, char **argv);
 int  Correlator();
 void PrepareParams();
-//int  Preparator(const char *fname);
-void  Preparator();
+void Preparator();
 void Covariator();
 void Projector();
 void prepare(const char * fname);
 
-
-
-
 void normChromDist();	// normalize distance distribution
-
-
-
 
 #endif /* SG_UTIL_H_ */

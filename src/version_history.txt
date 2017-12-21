@@ -161,3 +161,4 @@
 ========== Version 2.13 ====================
 1. Fixed bug with smoother (normalization)
 2. Changed statistics table and statistics.xml 
+3. Changed noise formula: noise=sd*rgauss()*noiselevel+av replaced with noise=sd*rExp()*noiselevel;
