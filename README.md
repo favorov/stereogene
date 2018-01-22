@@ -3,10 +3,10 @@ Stereogene v2.13
 Folders:
 
 src is the source code of the program. To build, in command-line shell, say:
-
+```
 cd src
-
 make
+```
 
 www is a local copy of the http://stereogene.bioinf.fbb.msu.ru/ project's webpage.
 
