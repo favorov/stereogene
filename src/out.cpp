@@ -16,7 +16,10 @@ void printCorrelations(){
 
 	errStatus="printCorrelations";
 	//============================================================= Write the foreground distribution
-	if(writeDistr) printFgDistr();
+	if(writeDistr) {
+		printFgDistr();
+		printBgDistr();
+	}
 	if(writeDistCorr)
 		printChrDistances(strcat(strcpy(b,outFile),".dist"));
 	if(outSpectr) XYfgCorrelation.printSpect(strcat(strcpy(b,outFile),".spect"));
@@ -46,8 +49,8 @@ void printChrDistances(char *fname){
 	}
 	fprintf(f,"\n");
 	for(int j=0; j<profWithFlanksLength; j++){
-		int k=(j+profWithFlanksLength/2)%profWithFlanksLength;
-		fprintf(f,"%i",(j-profWithFlanksLength/2)*binSize);
+		int k=(j + profWithFlanksLength / 2 ) % profWithFlanksLength;
+		fprintf(f,"%i",(j - profWithFlanksLength / 2) * binSize);
 		if(doAutoCorr) fprintf(f,"\t%9.5f\t%9.5f",autoCorrX[k],autoCorrY[k]);
 		fprintf(f,"\t%9.5f\t%9.5f\t%9.5f\t%9.5f", XYbgcorrelation.correlation[k]*XYCorrScale,
 				XYfgCorrelation.correlation[k]*XYCorrScale, XYfgCorrelation.corrPlus[k]*XYCorrScale, XYfgCorrelation.corrMinus[k]*XYCorrScale);
@@ -105,100 +108,65 @@ void printStat(){
 	if(MannW ==0) return;
 	xverb("p-val=%e\nnWindows=%i\n=================================\n",
 		MannW->pVal, nFg);
-
 	getStat(FgSet, nFg, avFg,sdFg);
 	getStat(BkgSet,nBkg,avBg,sdBg);
-
 	FILE *f=0;
-//	const char *pcname = "-";
-//	if (pcorProfile!=0){
-//		pcname = pcorProfile;
-//	}
-
-	bool fg=fileExists(statFileName);
-	if((outRes & TAB)!=0) {
-		f=gopen(statFileName,"a+t");
-		if(f!=0) flockFile(f);
-		else {
-			writeLogErr("Can not open file %s\n",statFileName);
+	bool fg=true;
+	if(statFileName){
+		fg=fileExists(statFileName);
+		if((outRes & TAB)!=0) {
+			f=gopen(statFileName,"a+t");
+			if(f!=0) flockFile(f);
+			else {
+				writeLogErr("Can not open file %s\n",statFileName);
+			}
 		}
-	}
-	if(!fg && f){	//================ write the header
-		printStatHeader(f);
-//		fprintf(f,"%-6s\t%-6s\t%-20s\t%-20s\t%-20s","id","Date","version","name1","name2");
-//		fprintf(f,"\t%-6s\t%-6s\t%-6s\t%-6s","wSize","kernelType","nFgr","nBkg");
-//		fprintf(f,"\t%-8s\t%-8s\t\%-8s","Fg_Corr","Fg_av_Corr","FgCorr_sd");
-//		fprintf(f,"\t%-8s\t%-8s\t\%-8s","Bg_Corr","Bg_av_Corr","BgCorr_sd");
-//		fprintf(f,"\t%-8s\t%-7s", "Mann-Z","p-value");
-//		fprintf(f,"\t%-6s\n", "pcorProfile");
-	}
-	//==================================================== write the statistics
-	if(f){
-		printStat(f);
-//		char nm1[1024], nm2[1024];
-//		alTable.convert(track1->name, nm1);
-//		alTable.convert(track2->name, nm2);
-//		fprintf(f,"%08lx%s\t%6s\t%-10s\t%-10s\t%-10s",id,idSuff,dateTime(),version,nm1, nm2);
-//		fprintf(f,"\t%-6i\t\"%-6s\"\t%6i\t%6i",wSize,getKernelType(),nFg, nBkg);
-//		fprintf(f,"\t%8.4f\t%8.4f\t%8.4f",totCorr, avFg,sdFg);
-//		fprintf(f,"\t%8.4f\t%8.4f\t%8.4f",BgTotal, avBg, sdBg);
-//		fprintf(f,"\t%8.4f\t%-7.2e\t%-6s\n",MannW->z,MannW->pVal, pcname);
-//		funlockFile(f);
-		fclose(f);
+		if(!fg && f){	//================ write the header
+			printStatHeader(f);
+		}
+		//==================================================== write the statistics
+		if(f){
+			printStat(f);
+			fclose(f);
+		}
 	}
 
 	//================================================== write parameters
-	fg=fileExists(paramsFileName);
-	if((outRes&TAB)!=0){
-		f=gopen(paramsFileName,"a+t");
-		if(f) flockFile(f);
-		else {
-			writeLogErr("Can not open file %s\n",paramsFileName);
+	if(paramsFileName){
+		fg=fileExists(paramsFileName);
+		if((outRes&TAB)!=0){
+			f=gopen(paramsFileName,"a+t");
+			if(f) flockFile(f);
+			else {
+				writeLogErr("Can not open file %s\n",paramsFileName);
+			}
+		}
+		if(!fg && f){								//================ write the header
+			printParamNames(f);
+		}
+		//==================================================== write the parameters
+		if(f){
+			printParams(f);
+			funlockFile(f);
+			fclose(f);
 		}
 	}
-	if(!fg && f){								//================ write the header
-		printParamNames(f);
-	}
-	//==================================================== write the parameters
-	if(f){
-		printParams(f);
-		funlockFile(f);
-		fclose(f);
-	}
-	if((outRes & XML)!=0) {
-		sprintf(b,"%s.xml",statFileName);
-		fg=fileExists(b);
-		FILE *xml=0;
-		if(!fg) {xml=xopen(b,"wb"); fprintf(xml,"<xml>\n");}
-		else{
-			xml=xopen(b,"r+b");
-			fseek(xml,-7,SEEK_END);
+	if(statFileName){
+		if((outRes & XML)!=0) {
+			sprintf(b,"%s.xml",statFileName);
+			fg=fileExists(b);
+			FILE *xml=0;
+			if(!fg) {xml=xopen(b,"wb"); fprintf(xml,"<xml>\n");}
+			else{
+				xml=xopen(b,"r+b");
+				fseek(xml,-7,SEEK_END);
+			}
+			flockFile(xml);
+			printXML(xml);
+			fprintf(xml,"</xml>\n");
+			funlockFile(xml);
+			fclose(xml);
 		}
-		flockFile(xml);
-		printXML(xml);
-//		fprintf(xml,"<run id=\"%08lx%s\" date=\"%s\" ver=\"%s\">\n", id, idSuff, dateTime(), version);
-//		fprintf(xml,"\t<input track1=\"%s\" track2=\"%s\"/>\n",track1->name,track2->name);
-//		fprintf(xml,"\t<output out=\"%s\"/>\n",outFile);
-//		fprintf(xml,"\t<prm ");
-//		printXMLparams(xml);
-//		fprintf(xml,"/>\n");
-//
-//		fprintf(xml,"\t<res ");
-//		fprintf(xml,"nFg=\"%i\" ",nFg);
-//		fprintf(xml,"nBkg=\"%i\" ", nBkg);
-//		fprintf(xml,"totCorr=\"%.4f\" ", totCorr);
-//		fprintf(xml,"FgAvCorr=\"%.4f\" ", FgAvCorr);
-//		fprintf(xml,"BgAvCorr=\"%.4f\" ", BgAvCorr);
-//		fprintf(xml,"MannZ=\"%.4f\" ",MannW->z);
-//		fprintf(xml,"pVal=\"%.2e\" ",MannW->pVal);
-//
-//		fprintf(xml,"sdBg=\"%.4f\" ",sdBg);
-//		fprintf(xml,"sdFg=\"%.4f\" ",sdFg);
-//		fprintf(xml,"/>\n");
-//		fprintf(xml,"</run>\n");
-		fprintf(xml,"</xml>\n");
-		funlockFile(xml);
-		fclose(xml);
 	}
 	if(customKern){
 		FILE*cust=gopen("kernels","a+");
@@ -230,16 +198,28 @@ void XYCorrelation::printSpect(char *fname){
 }
 
 //============================================== write the foreground distribution of the correlations
+void printBgDistr(){
+	char b[1024];
+	strcat(strcpy(b,outFile),".bkg");					// open file for background observations
+	FILE* fbkg=xopen(b,"wt");
+	for(int i=0; i<nBkg; i++) fprintf(fbkg,"%f\n",BkgSet[i]);
+	fclose(fbkg);
+}
+
 void printFgDistr(){
 	char b[1024];
 	FILE *fFgDistr=0;
 	strcat(strcpy(b,outFile),".fg");
-	fFgDistr=xopen(b,"wt");
+	fFgDistr=xopen(b,"w");
 	ScoredRange gp;
-
-	for(int i=0; i<nPairs; i++){
-		filePos2Pos(pairs[i].profPos,&gp,wSize);
-		fprintf(fFgDistr,"%s\t%ld\t%ld\t%f\n",gp.chrom, gp.beg,gp.end, pairs[i].d);			// write the distribution: correlation, p-value, q-value
+	if(writeDistr==DISTR_DETAIL){
+		for(int i=0; i<nPairs; i++){
+			filePos2Pos(pairs[i].profPos,&gp,wSize);
+			fprintf(fFgDistr,"%s\t%ld\t%ld\t%f\n",gp.chrom, gp.beg,gp.end, pairs[i].d);			// write the distribution: correlation, p-value, q-value
+		}
+	}
+	else{
+		for(int i=0; i<nFg; i++) fprintf(fFgDistr,"%f\n",FgSet[i]);
 	}
 	fclose(fFgDistr);
 }
@@ -252,7 +232,7 @@ void printRmd(){
 	char b[2048];
 	sprintf(b,"%sreport_r_template.Rmd",resPath);
 	
-	if(!fileExists(b))
+//	if(!fileExists(b))
 	{
 		FILE *f=xopen(b,"wt");
 		fprintf(f, "---	\n");
@@ -323,7 +303,11 @@ void printRmd(){
 		fprintf(f, "dist <- read.table(paste(name, \'.dist\', sep = \'\'), header=TRUE)	\n");
 		fprintf(f, "#  Define plot limits	\n");
 		fprintf(f, "\n");
-		fprintf(f, "y_lim1 <- max(max(density(bkg[,1])$y),max(density(fg[,4])$y))	\n");
+		if(writeDistr==DISTR_SHORT){
+			fprintf(f, "y_lim1 <- max(max(density(bkg[,1])$y),max(density(fg[,1])$y))	\n");
+		}
+		else
+			fprintf(f, "y_lim1 <- max(max(density(bkg[,1])$y),max(density(fg[,4])$y))	\n");
 		fprintf(f, "y_lim2 <- c(min(min(dist$Fg),min(dist$Fg)),max(max(dist$Fg),max(dist$Fg)))	\n");
 		fprintf(f, "\n");
 		fprintf(f, "x_lim2 <- c(-10000,10000)	\n");
@@ -331,12 +315,14 @@ void printRmd(){
 		fprintf(f, "# set x scale to kilobases	\n");
 		fprintf(f, "x_lim2 <- x_lim2/1000	\n");
 		fprintf(f, "\n");
-		fprintf(f, "#get chromosome data for plots, example for chr1. 	\n");
-		fprintf(f, "#Some times you should also reset y_lim for plots	\n");
-		fprintf(f, "#fg_chrom <- fg[fg[,1]==\"chr1\",]	\n");
-		fprintf(f, "#dist_chrom <- dist$chr1	\n");
-		fprintf(f, "\n");
-		fprintf(f, "\n");
+		if(writeDistr==DISTR_DETAIL){
+			fprintf(f, "#get chromosome data for plots, example for chr1. 	\n");
+			fprintf(f, "#Some times you should also reset y_lim for plots	\n");
+			fprintf(f, "#fg_chrom <- fg[fg[,1]==\"chr1\",]	\n");
+			fprintf(f, "#dist_chrom <- dist$chr1	\n");
+			fprintf(f, "\n");
+			fprintf(f, "\n");
+		}
 		fprintf(f, "# save plot to pdf	\n");
 		fprintf(f, "#  create the plot	\n");
 		fprintf(f, "old.par <- par( no.readonly = TRUE )	\n");
@@ -348,10 +334,16 @@ void printRmd(){
 		fprintf(f, "plot(density(bkg[[1]]), xlim=c(-1,1), ylim=c(0, y_lim1), xlab=\'correlation coefficient\',ylab=\'%s\',	\n",b);
 		fprintf(f, "col=\'red\', main=\'Distribution of correlations\',	\n");
 		fprintf(f, "cex.axis = 0.8,  cex.lab = 1,  cex.main = 1,lwd=2)	\n");
-		fprintf(f, "lines(density(fg[,4]), col=\'blue\', lwd=2)	\n");
+		if(writeDistr==DISTR_SHORT)
+			fprintf(f, "lines(density(fg[,1]), col=\'blue\', lwd=2)	\n");
+		else
+			fprintf(f, "lines(density(fg[,4]), col=\'blue\', lwd=2)	\n");
 		fprintf(f, "\n");
 		fprintf(f, "#plot line for chomosome	\n");
-		fprintf(f, "#lines(density(fg[,4]), col=\'green\', lwd=2)	\n");
+		if(writeDistr==DISTR_SHORT)
+			fprintf(f, "#lines(density(fg[,1]), col=\'green\', lwd=2)	\n");
+		else
+			fprintf(f, "#lines(density(fg[,4]), col=\'green\', lwd=2)	\n");
 		fprintf(f, "\n");
 		fprintf(f, "\n");
 		fprintf(f, "plot(dist$x/1000, dist$Fg, type=\'l\',col=\'blue\', ylim=y_lim2, xlim=x_lim2,	\n");
@@ -368,12 +360,12 @@ void printRmd(){
 	
 }
 void printRreport(){
-	char *s,b[2048], fname[1024], fn[1024];
+	char *s,b[2048], fname[1024];
 
 	if(sdFg==0) getStat(FgSet,nFg,avFg,sdFg);
 	if(sdBg==0) getStat(BkgSet,nBkg,avBg,sdBg);
 
-	strcat(strcpy(b,fn),"_report.r");
+	strcat(strcpy(b,outFile),"_report.r");
 	FILE *f=xopen(b,"wt");
 
 	strcpy(b,outFile);
@@ -411,8 +403,8 @@ void printRreport(){
   	fprintf(f, "kernel=\"%s\",\n", getKernelType());
   	fprintf(f, "nFgr=\"%i\",\n", nFg);
   	fprintf(f, "nBkg=\"%i\",\n", nBkg);
-  	fprintf(f, "Bkg_av=\"%.4f\",\n", BgAvCorr);
-  	fprintf(f, "Fg_av=\"%.4f\",\n", FgAvCorr);
+  	fprintf(f, "Bkg_av=\"%.4f\",\n", avBg);
+  	fprintf(f, "Fg_av=\"%.4f\",\n", avFg);
   	fprintf(f, "Bkg_sd=\"%.4f\", \n", sdBg);
   	fprintf(f, "Fg_sd=\"%.4f\",\n", sdFg);
   	fprintf(f, "tot_cor=\"%.4f\",\n", totCorr);
@@ -425,9 +417,9 @@ void printRreport(){
 }
 
 void printR(){
-	char fn[1024], *s, b[2048], fname[1024];
+	char *s, b[2048], fname[1024];
 
-	strcat(strcpy(b,fn),".r");
+	strcat(strcpy(b,outFile),".r");
 	FILE *f=xopen(b,"wt");
 
 	strcpy(b,outFile);
@@ -437,111 +429,68 @@ void printR(){
 	fprintf(f," name <-  \'%s\'  \n\n",fname);
 	fprintf(f," fg <- read.table(paste(name, '.fg', sep = '')) \n");
 	fprintf(f," bkg<- read.table(paste(name, '.bkg', sep = '')) \n");
-	fprintf(f," dist <- read.table(paste(name, '.dist', sep = ''), header=TRUE) \n\n");
+	if(writeDistCorr)
+		fprintf(f," dist <- read.table(paste(name, '.dist', sep = ''), header=TRUE) \n\n");
 	fprintf(f," #  Define plot limits \n\n");
-	fprintf(f," y_lim1 <- max(max(density(bkg[,1])$y),max(density(fg[,4])$y)) \n");
+	if(writeDistr==DISTR_SHORT)
+		fprintf(f," y_lim1 <- max(max(density(bkg[,1])$y),max(density(fg[,1])$y)) \n");
+	if(writeDistr==DISTR_DETAIL)
+		fprintf(f," y_lim1 <- max(max(density(bkg[,1])$y),max(density(fg[,4])$y)) \n");
 	fprintf(f," x_lim2 <- c(-%i,%i) \n\n",crossWidth,crossWidth);
 	fprintf(f," # set x scale to kilobases \n");
 	fprintf(f," x_lim2 <- x_lim2/1000 \n\n");
-	fprintf(f," #get chromosome data for plots, example for chr1.  \n");
-	fprintf(f," #Some times you should also reset y_lim for plots \n");
-	fprintf(f," #fg_chrom <- fg[fg[,1]==\"chr1\",] \n");
-	fprintf(f," #dist_chrom <- dist$chr1 \n\n\n");
+	if(writeDistr==DISTR_DETAIL){
+		fprintf(f," #get chromosome data for plots, example for chr1.  \n");
+		fprintf(f," #Some times you should also reset y_lim for plots \n");
+		fprintf(f," #fg_chrom <- fg[fg[,1]==\"chr1\",] \n");
+		fprintf(f," #dist_chrom <- dist$chr1 \n\n\n");
+	}
 	fprintf(f," # save plot to pdf \n");
 	if(writePDF) fprintf(f," pdf(paste(name,'.pdf', sep=''), height = 9, width = 5) \n\n");
 	fprintf(f," #  create the plot \n");
 	fprintf(f," old.par <- par( no.readonly = TRUE ) \n");
+	int nPar=1; if(writeDistCorr) nPar++; if(LCExists) nPar++;
 	fprintf(f," par( mfrow = c( %i, 1 ), oma = c( 0, 0, 0, 0 ),mar=c(3,3,3,1),mgp=c(1.6,0.45,0)) \n\n",
-			LCExists?3:2);
+			nPar);
 	char sub[1024]; if(writePDF) sub[0]=0; else sprintf(sub,"\\n%s",fname);
 	fprintf(f," plot(density(bkg[[1]]), xlim=c(-1,1), ylim=c(0, y_lim1), xlab='correlation coefficient',ylab='density', \n");
 	fprintf(f," col='red', main='Distribution of correlations%s', \n",sub);
 	fprintf(f," cex.axis = 0.8,  cex.lab = 1,  cex.main = 1,lwd=2) \n");
-	fprintf(f," lines(density(fg[,4]), col='blue', lwd=2) \n");
+	if(writeDistr==DISTR_SHORT)
+		fprintf(f," lines(density(fg[[1]]), col='blue', lwd=2) \n");
+	else{
+		fprintf(f," lines(density(fg[,4]), col='blue', lwd=2) \n");
+	}
 	fprintf(f," #plot line for chomosome \n");
 	fprintf(f," #lines(density(fg[,4]), col='green', lwd=2) \n\n\n");
-	fprintf(f," plot(dist$x/1000, dist$Fg, type='l',col='blue', xlim=x_lim2, \n");
-	const char*dens="density";
-	if(XYCorrScale!=1) sprintf(b,"%s*%i",dens,XYCorrScale); else strcpy(b,dens);
-	fprintf(f," main='Cross-correlation function',xlab='Distance (kb)',ylab='%s',cex.axis = 0.8,  cex.lab = 1,  cex.main = 1,lwd=2) \n",b);
-	fprintf(f," lines(dist$x/1000,dist$Bkg , col='red',lwd=2) \n");
-	fprintf(f," #plot line for chomosome \n");
-	fprintf(f," #lines(dist$x/1000, dist_chrom , col='green',lwd=2) \n\n");
+
+	if(writeDistCorr){
+		fprintf(f," plot(dist$x/1000, dist$Fg, type='l',col='blue', xlim=x_lim2, \n");
+		const char*dens="density";
+		if(XYCorrScale!=1) sprintf(b,"%s*%i",dens,XYCorrScale); else strcpy(b,dens);
+		fprintf(f," main='Cross-correlation function',xlab='Distance (kb)',ylab='%s',cex.axis = 0.8,  cex.lab = 1,  cex.main = 1,lwd=2) \n",b);
+		fprintf(f," lines(dist$x/1000,dist$Bkg , col='red',lwd=2) \n");
+		fprintf(f," #plot line for chomosome \n");
+		fprintf(f," #lines(dist$x/1000, dist_chrom , col='green',lwd=2) \n\n");
+	}
 	if(LCExists){
 		const char *ss="";
 		if(LCScale==LOG_SCALE) ss="(log)";
 		fprintf(f,"\nlc=read.table(paste(name, \'.LChist\', sep = \'\'),header=TRUE)\n");
 		fprintf(f,"xmax=%.0f; xmin=%.0f; x0=xmax-150; x1=x0+20; y0=90; dy=7;\n",1000.,0.);
-//		fprintf(f,"xmax=%.0f; xmin=%.0f; x0=xmax-150; x1=x0+20; y0=90; dy=7;\n",LCmax,LCmin);
 		fprintf(f,"plot(lc$val, lc$r_CDF_obs*1000, col=\'blue\', lwd=2, \n");
 		fprintf(f,"type=\'l\',ylim=c(0,100), ylab=\'FDR\',");
 		fprintf(f,"xlab=\'normalized LC-values %s\',\n",ss);
 		fprintf(f,"main=\'Local correlation distributions\');\n");
 		fprintf(f,"lines(lc$val, lc$l_CDF_obs*1000, col=\'blue\', lwd=2);\n");
-
-
-		fprintf(f,"lines(lc$val, lc$r_CDF_exp*1000, col=\'red\', lwd=2);\n");
+//		fprintf(f,"lines(lc$val, lc$r_CDF_exp*1000, col=\'red\', lwd=2);\n");
 		fprintf(f,"lines(lc$val, lc$l_CDF_exp*1000, col=\'red\', lwd=2);\n");
-
 		fprintf(f,"lines(lc$val, pmin(lc$L_FDR, lc$R_FDR), col='black', lwd=2);\n");
-//		fprintf(f,"lines(lc$val, lc$R_FDR, col='black', lwd=3);\n");
-
-//		fprintf(f," text(x0, y0+7,name,pos=4); y0=y0-5\n");
-//		fprintf(f,"segments(x0,y0,x1,y0,col='red',lwd=2); text(x1+5,y0,'expected (1 - cdf) * 100000',pos=4)\n");
-//		fprintf(f,"y0=y0-dy;\n");
-//		fprintf(f,"segments(x0,y0,x1,y0,col='blue',lwd=2); text(x1+5,y0,'observed (1 - cdf) * 100000',pos=4)\n");
-//		fprintf(f,"y0=y0-dy;\n");
-//		fprintf(f,"segments(x0,y0,x1,y0,col='black',lwd=3); text(x1+5,y0,'FDR',pos=4)\n");
-//		fprintf(f,"y0=y0-dy;\n");
-//		fprintf(f,"segments(x0,y0,x1,y0,col='gray',lwd=3); text(x1+5,y0,'FDR=5%%',pos=4)\n");
 
 		fprintf(f,"segments(-1000,5,1000,5,col='gray',lwd=1);");
-//		fprintf(f,"text(x1+5,y0,'FDR',pos=4)\n");
 	}
 	fprintf(f," par( old.par ) \n\n");
 	if(writePDF) fprintf(f," dev.off() \n");
-
-//===========================   OLD Version ==============================
-//	fprintf(f,"#  Read the data \n\n");
-//
-//	fprintf(f,"fg <- read.table(\'%s.fg\')\n",fname);
-//	fprintf(f,"bkg<- read.table(\'%s.bkg\')\n",fname);
-//
-//	fprintf(f,"dist <- read.table(\'%s.dist\', header=TRUE)\n",fname);
-//	fprintf(f,"\n#  Define plot limits\n\n");
-//
-//	fprintf(f,"y_lim1 <- max(max(density(bkg[,1])$y),max(density(fg[,4])$y))\n");
-//	fprintf(f,"y_lim2 <- c(%.2f,%.2f)\n",y0,y1);
-//
-//	fprintf(f,"x_lim2 <- c(%i,%i)\n\n",x0,x1);
-//
-//	fprintf(f,"# set x scale to kilobases\n");
-//	fprintf(f,"x_lim2 <- x_lim2/1000\n");
-//
-//	fprintf(f,"\n#  create the plot\n\n");
-//
-//	fprintf(f,"old.par <- par( no.readonly = TRUE )\n");
-//	fprintf(f,"par( mfrow = c( 2, 1 ), oma = c( 0.5, 0, 2, 0 ),mar=c(2.5,3,1.5,1),mgp=c(1,0.3,0))\n\n");
-//
-//	fprintf(f,"plot(density(bkg[[1]]), xlim=c(-1,1), ylim=c(0, y_lim1), %s,\n",lab);
-//	fprintf(f,"col=\'red\', main=\'Distribution of correlations, p-value=%.1e\',\n",MannW->pVal );
-//	fprintf(f,"%s,%s)\n\n",cex,lwd);
-//	fprintf(f,"lines(density(fg[,4]), col=\'blue\', %s)\n\n",lwd);
-//
-//	fprintf(f,"plot(dist$x/1000, dist$Fg, type=\'l\',col=\'blue\', ylim=y_lim2, xlim=x_lim2,\n");
-//	fprintf(f,"main=\'Cross-correlation function\',xlab=\'Distance (kb)\',ylab=\'density,%%\',%s,%s)\n",cex,lwd);
-//	fprintf(f,"#lines(dist$x/1000,dist$FgPlus, col=\'cyan\',%s)\n",lwd);
-//	fprintf(f,"#lines(dist$x/1000,dist$FgMinus, col=\'brown\',%s)\n",lwd);
-//	fprintf(f,"lines(dist$x/1000,dist$Bkg , col=\'red\',%s)\n",lwd);
-//
-//	char fn1[1024], fn2[1024];
-//	strcpy(fn1,fname);
-//	s=strchr(fn1,'~');
-//	if(s){*s=0; s++; strcpy(fn2,s);}
-//	else {*fn2=0;}
-//
-//	fprintf(f,"title(\'%s\\n%s\',cex.main = 0.8, outer = TRUE)\n\n", fn1,fn2);
-//	fprintf(f,"par( old.par )\n");
 
 	fclose(f);
 }

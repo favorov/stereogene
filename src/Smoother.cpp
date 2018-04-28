@@ -6,8 +6,8 @@
  */
 #include "track_util.h"
 
-const char * progName="Projection";
-const int progType=SG;
+const char * progName="Smoother";
+const int progType=SM;
 
 
 void printProgDescr(){
@@ -59,13 +59,19 @@ void smooth(const char *fname){
 	sprintf(wfil,"%s_sm.bgr",pfil);
 
 	//================ normalize
-	double tt=0;
-	for(int i=0; i<l; i++) tt+=lcProfile->get(i);
+	double tt=0,ee=0,dd=0,nn=0;
 	for(int i=0; i<l; i++) {
-		double x=lcProfile->get(i)*tr->total/tt/binSize;
+		double x=lcProfile->get(i);
+		ee+=x; nn++; dd+=x*x;
+	}
+	tt=ee; ee/=nn; dd=dd/nn-ee*ee; dd=sqrt(dd);
+
+	for(int i=0; i<l; i++) {
+		double x=lcProfile->get(i);
+		if(smoothZ){if((x-ee)/dd < smoothZ) x=0;}
+		else	   {x=x*tr->total/tt/binSize;}
 		lcProfile->set(i,x);
 	}
-
 
 	FILE *f=gopen(wfil,"w");
 	char b[4096]; strcpy(b,fname);

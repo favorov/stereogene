@@ -333,7 +333,7 @@ void addFile(char* fname, int id){
 	if(strlen(fname)==0) return;
 
 	files[nfiles].fname=strdup(fname);
-	files[nfiles].id=fileId;
+	files[nfiles].listId=fileId;
 	nfiles++;
 }
 

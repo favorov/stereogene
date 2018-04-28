@@ -545,6 +545,9 @@ double rGauss(){
 	return rr;
 }
 
+double rExp(){
+	return -log(drand());
+}
 // random gaussian variable with given mean anf std deviation
 double rGauss(double e, double sigma){
 	return rGauss()*sigma+e;

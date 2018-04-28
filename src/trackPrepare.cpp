@@ -331,6 +331,7 @@ void bTrack::finProfile(){
 			lprof+=1;
 			if(z < minP) minP=z;
 			if(z > maxP) maxP=z;
+//if(z!=0) deb(0,"%i\t%f\tmin=%f\tmax=%f",i,z,minP, maxP);
 		}
 
 		if(cbytes && (z=cProfile->getLog(i)) != NA){

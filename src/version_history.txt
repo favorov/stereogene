@@ -162,3 +162,10 @@
 1. Fixed bug with smoother (normalization)
 2. Changed statistics table and statistics.xml 
 3. Changed noise formula: noise=sd*rgauss()*noiselevel+av replaced with noise=sd*rExp()*noiselevel;
+4. Smoother: a z-score threshold for output introduced (parameter smoothZ)
+5. Order of the input files processing changed: first file is from the first list, second from the second one.
+========== Version 2.20 ====================
+1. Sparse data processing introduced
+2. The parameter writeDistr now has 3 values that define type of foreground distribution file (see the Documentation)
+3. Fixed bug with report file
+4. User may set 'null' for statistics, params, and log filenames 

@@ -79,8 +79,9 @@ char * printId(){sprintf(zfdsgfdsID,"%08lx%s",id,idSuff); return zfdsgfdsID;}
 			break;}
 		case PRM_DOUBLE:
 			{double *d=(double *)value;
-			if(*d > 0.1) sprintf(buf,"%.3f",*d);
-			else if(*d > 0.01) sprintf(buf,"%.4f",*d);
+			if(abs(*d) > 0.1) sprintf(buf,"%.3f",*d);
+			else if(abs(*d) > 0.01) sprintf(buf,"%.4f",*d);
+			else if(abs(*d) > 0.001) sprintf(buf,"%.5f",*d);
 			else sprintf(buf,"%.2e",*d);
 			break;}
 		case PRM_INT:
@@ -147,6 +148,13 @@ Name_Value* kernelTypes[]= {
 		0
 };
 
+Name_Value* distrTypes[]= {
+		new Name_Value("NONE",DISTR_NONE),
+		new Name_Value("SHORT",DISTR_SHORT),
+		new Name_Value("DETAIL",DISTR_DETAIL),
+		0
+};
+
 Name_Value* complFlags[]={
 		new Name_Value("IGNORE_STRAND",IGNORE_STRAND),
 		new Name_Value("COLLINEAR",COLLINEAR),
@@ -185,34 +193,35 @@ Name_Value* outResTypes[]={
 //===================================================================================================
 Param *pparams[]={
 //================================================== Common parameters
-		new Param( 7,"common parameters"),
-		new Param( 7,"v"		    ,0, &verbose	,1, "verbose"),
-		new Param( 7,"syntax"		,0, &syntax		,1, "strong syntax control in input files"),
-		new Param( 7,"verbose"		,0, &verbose	,   "verbose"),
-		new Param( 7,"s"		    ,0, &silent		,1, "no output to stdout"),
-		new Param( 7,"silent"		,0, &silent		,	"no output to stdout"),
+		new Param(AP,"common parameters"),
+		new Param(AP,"v"		    ,0, &verbose	,1, "verbose"),
+		new Param(AP,"syntax"		,0, &syntax		,1, "strong syntax control in input files"),
+		new Param(AP,"verbose"		,0, &verbose	,   "verbose"),
+		new Param(AP,"s"		    ,0, &silent		,1, "no output to stdout"),
+		new Param(AP,"silent"		,0, &silent		,	"no output to stdout"),
 //======================== =====================================================================================
-		new Param( 7,"preparation parameters"),
-		new Param( 7,"bin" 	 	,1, &binSize  		,"bin size for input averaging"),
-		new Param( 7,"clear" 	,0, &clearProfile 	,"force binary profile preparation"),
-		new Param( 7,"c" 	  	,0, &clearProfile 	, 1,"force  binary profile preparation"),
+		new Param(AP,"preparation parameters"),
+		new Param(AP,"bin" 	 	,1, &binSize  		,"bin size for input averaging"),
+		new Param(AP,"clear" 	,0, &clearProfile 	,"force binary profile preparation"),
+		new Param(AP,"c" 	  	,0, &clearProfile 	, 1,"force  binary profile preparation"),
+		new Param(SM,"smoothZ" 	,0, &smoothZ 		, "Z-Score for smoothed profile"),
 //======================== =====================================================================================
-		new Param( 7,"paths and files"),
-		new Param( 7,"cfg" 			,0, &cfgFile 		,"config file"),
-		new Param( 7,"profPath" 	,1, &profPath 		,"path for binary profiles", true),
-		new Param( 7,"trackPath" 	,1, &trackPath 		,"path for tracks", true),
+		new Param(AP,"paths and files"),
+		new Param(AP,"cfg" 			,0, &cfgFile 		,"config file"),
+		new Param(AP,"profPath" 	,1, &profPath 		,"path for binary profiles", true),
+		new Param(AP,"trackPath" 	,1, &trackPath 		,"path for tracks", true),
 		new Param(SG,"resPath" 		,1, &resPath 		,"path for results", true),
-		new Param( 7,"confounder"	,0, &confFile 		,"confounder filename"),
+		new Param(AP,"confounder"	,0, &confFile 		,"confounder filename"),
 
 		new Param(SG,"statistics"	,0, &statFileName	,"cumulative file with statistics"),
 		new Param(SG,"params" 		,0, &paramsFileName	,"cumulative file with parameters"),
-		new Param( 7,"log" 		,0, &logFileName	,"cumulative log-file"),
-		new Param( 7,"id_suff" 	,0, &idSuff		,0),
+		new Param(AP,"log" 		,0, &logFileName	,"cumulative log-file"),
+		new Param(AP,"id_suff" 	,0, &idSuff		,0),
 //======================== =====================================================================================
-		new Param( 7, "input parameters"),
-		new Param( 7, "chrom"		,1, &chromFile	,"chromosome file"),
-		new Param( 7, "BufSize"	,0, &binBufSize	,"Buffer Size"),
-		new Param( 7, "bpType" 		,1, &bpType  		,bpTypes	,"The value used as a score for BroadPeak input file"),
+		new Param(AP, "input parameters"),
+		new Param(AP, "chrom"		,1, &chromFile	,"chromosome file"),
+		new Param(AP, "BufSize"	,0, &binBufSize	,"Buffer Size"),
+		new Param(AP, "bpType" 		,1, &bpType  		,bpTypes	,"The value used as a score for BroadPeak input file"),
 		new Param(SG|PRJ,"pcorProfile" ,1, &pcorProfile	,"Track for partial correlation"),
 		new Param(PRJ,"outPrjBGr"   ,0, &outPrjBGr		,"Write BedGraph for projections"),
 		new Param(SG, "NA"       	,1, &NAFlag     	,1 , "use NA values as unknown and fill them by noise"),
@@ -233,16 +242,18 @@ Param *pparams[]={
 		new Param(SG, "noiseLevel"	,1, &noiseLevel ,0),
 		new Param(SG, "complFg"		,1, &complFg	,complFlags,0),
 		new Param(SG, "LCFg"		,1, &lcFlag		,LCFlags,0),
+		new Param(SG, "sparse"		,1, &sparse		,0),
+		new Param(SG, "sp"			,1, &sparse		,1,"the data is sparce"),
 //======================== =====================================================================================
 		new Param(SG, "Output parameters"),
 		new Param(SG, "outSpectr" 	,1, &outSpectr    ,"write fourier spectrums"),
 		new Param(SG, "outChrom" 	,1, &outChrom     ,"write statistics by chromosomes"),
-		new Param(SG, "writeDistr" 	,1, &writeDistr   ,"write foreground and background distributions"),
+		new Param(SG, "writeDistr" 	,1, &writeDistr, distrTypes   ,"write foreground and background distributions"),
 		new Param(SG, "Rscript" 	,1, &RScriptFg    ,0),
 		new Param(SG, "r" 			,0, &RScriptFg    ,1,"write R script for the result presentation"),
 		new Param(SG, "crossWidth" 	,0, &crossWidth   ,0,"Width of cross-correlation plot"),
 		new Param(SG, "Distances" 	,1, &writeDistCorr,1,"Write distance correlations"),
-		new Param(SG, "outLC"		,1, &outLC		  ,"parameters for local correlation file"),
+		new Param(SG, "outLC"		,1, &outLC		  ,0),
 		new Param(SG, "lc"			,0, &outLC		  ,1,"produce profile correlation"),
 		new Param(SG, "LCScale"		,0, &LCScale	  ,LCScaleTypes,"Local correlation scale: LOG | LIN"),
 		new Param(SG, "L_FDR"		,1, &LlcFDR	      ,"threshold on left FDR when write the local correlation"),
@@ -251,12 +262,12 @@ Param *pparams[]={
 		new Param(SG, "AutoCorr"  	,1, &doAutoCorr   ,0),
 //======================== =================== Additional parameters (see Undocumented) ===============================
 		new Param(SG, "inpThreshold",0, &inpThreshold ,0),	//input binarization testing, %of max
-		new Param(7 , "debug"		,0, &debugFg   	  ,0),	//debug mode
-		new Param(7 , "d"			,0, &debugFg   	  ,1, 0),	//debug mode
+		new Param(AP, "debug"		,0, &debugFg   	  ,0),	//debug mode
+		new Param(AP, "d"			,0, &debugFg   	  ,1, 0),	//debug mode
 		new Param(SG, "pdf"			,1, &writePDF  	  ,1, 0),	//write R plots to pdf
 		new Param(PG, "pgLevel"		,1, &pgLevel  	  ,1, 0),	//minimal level in ENCODE to be taken into account
 
-		new Param(7, "Happy correlations!"),
+		new Param(AP, "Happy correlations!"),
 		0,
 };
 
@@ -478,7 +489,7 @@ void parseArgs(int argc, char **argv){
 		}
 	}
 	if(wStep==0)   wStep=wSize;
-	if(RScriptFg) {writeDistCorr=1; writeDistr=1;}
+	if(RScriptFg) {writeDistCorr=1; if(writeDistr==0) writeDistr=1;}
 	if(complFg==0){complFg=IGNORE_STRAND;}
 //	if(threshold < 1) threshold=1;
 	if(customKern) kernelType=KERN_CUSTOM;
@@ -588,7 +599,6 @@ void printStat(FILE *f){
 void printParams(FILE* f){
 	char b[256];
 	fprintf(f,"%08lx\t%s",id,version);
-deb("prog=%i",progType);
 	for(int i=0; pparams[i] ; i++){
 		if(pparams[i]->printFg && (pparams[i]->prog&progType)) fprintf(f,"\t%s",pparams[i]->printParamValue(b));
 	}
@@ -627,39 +637,45 @@ void initSG(int argc, char **argv){
 	unsigned long t=time(0);	id=(unsigned int)t;	// define run id
 	parseArgs(argc, argv);
 	makeDirs();
-	if(strcmp(logFileName,"null")==0 || strcmp(logFileName,"NULL")==0) logFileName=0;
+//	if(strcmp(logFileName,"null")==0 || strcmp(logFileName,"NULL")==0) logFileName=0;
+	if(strlen(logFileName)==0 || keyCmp(logFileName, "null")==0) logFileName=0;
+	if(strlen(statFileName)==0 || keyCmp(statFileName, "null")==0) statFileName=0;
+	if(strlen(paramsFileName)==0 || keyCmp(paramsFileName, "null")==0) paramsFileName=0;
 	if(nfiles==0) printMiniHelp();
 	readChromSizes(chromFile);							// read chromosomes
 }
 
+void defFlanks(int l){
+	LFlankProfSize=flankSize/binSize;
+	int ll=nearFactor(2*LFlankProfSize+l);
+	LFlankProfSize=(ll-l)/2;
+	profWithFlanksLength=ll;
+	RFlankProfSize=ll-l-LFlankProfSize;
+	kern=MakeKernel(profWithFlanksLength);
+}
+
 void PrepareParams(){
+
 	wProfSize=wSize/binSize;       		// size of widow (profile scale)
 	wProfStep=wStep/binSize;       		// window step   (profile scale)
-	wProfSize=wSize/binSize;
-	LFlankProfSize=flankSize/binSize;
-	int ll=nearFactor(2*LFlankProfSize+wProfSize);
-	LFlankProfSize=(ll-wProfSize)/2;
-	profWithFlanksLength=ll;
-	RFlankProfSize=ll-wProfSize-LFlankProfSize;
+
 	//====================================================================== Prepare parameters
 	kernelProfSigma=kernelSigma/binSize;   // kernel width ((profile scale)
 	kernelProfShift=kernelShift/binSize;   // kernel shift ((profile scale)
-	maxNA   =(int)(maxNA0  *wProfSize/100);			// rescale maxNA
-	maxZero =(int)(maxZero0*wProfSize/100);			// rescale maxZero
+	if(sparse){
+		flankSize=(flankSize==0) ? kernelSigma*3 : flankSize;
+		writeDistCorr=0; outSpectr=0; outChrom=0; outLC=0;
+		wProfSize=1; writeDistr=DISTR_SHORT;
+		maxNA0=100; maxZero0=100;
+	}
+	maxNA   =(int)(maxNA0  * wProfSize/100);			// rescale maxNA
+//deb("==>> %f %f %i %f", maxNA0, maxZero0, wProfSize, maxNA);
+	maxZero =(int)(maxZero0* wProfSize/100);			// rescale maxZero
 	if(maxZero>=wProfSize) maxZero=wProfSize-1;
 	if(maxNA  >=wProfSize) maxNA  =wProfSize-1;
+	defFlanks(wProfSize);
 	//===================================================================== generate Kernels
-	switch(kernelType){
-	case KERN_NORM:
-		kern=new NormKernel    (kernelProfShift, kernelProfSigma, profWithFlanksLength); break;
-	case KERN_LEFT_EXP:
-		kern=new LeftExpKernel (kernelProfShift, kernelProfSigma, profWithFlanksLength); break;
-	case KERN_RIGHT_EXP:
-		kern=new RightExpKernel(kernelProfShift, kernelProfSigma, profWithFlanksLength); break;
-	case KERN_CUSTOM:
-		kern=new CustKernel(kernelProfShift, kernelProfSigma, profWithFlanksLength); break;
-	default: errorExit("Kernel not defined"); break;
-	}
+
 }
 
 

@@ -14,13 +14,14 @@
 
 //===============================================================================
 IVSet::IVSet(){
-	capacity=1000; nIv=0; totLength=0; ivNo=0;
+	capacity=1000; nIv=0; totLength=0;
 	errStatus="ivset init";
 	getMem(ivs,capacity, "ivset init #1");
 	errStatus=0;
 }
 
 IVSet::~IVSet(){
+	for(int i=0; i<nIv; i++) delete ivs[i];
 	xfree(ivs,"~ivs");
 }
 
@@ -60,7 +61,7 @@ void IVSet::fin(){
 		totLength += l;
 		ivs[i]->cumLength=totLength;
 	}
-verb("Mapping:  lprofile=%i  totL=%i niv=%i\n",profileLength, totLength, nIv);
+	verb("Mapping:  lprofile=%i  totL=%i niv=%i\n",profileLength, totLength, nIv);
 }
 //===============================================================================
 
@@ -77,7 +78,7 @@ int IVSet::randPos(){		// get a random position in the intervals
 	int ivT=ivs[i1]->cumLength;
 	int ivF=ivT-(ivs[i1]->t-ivs[i1]->f);
 	if(ivF <= p && ivT >= p){
-		ivNo=i1;
+//		ivNo=i1;
 		int pp=p-ivF; 		// position of rnd point in the interval
 		pp=ivs[i1]->f+pp;	// position of rnd on the genome
 		return pp;
@@ -88,7 +89,7 @@ int IVSet::randPos(){		// get a random position in the intervals
 		ivT=ivs[i]->cumLength;
 		ivF=ivT-(ivs[i]->t-ivs[i]->f);
 		if(ivF <= p && ivT >= p){
-			ivNo=i;
+//			ivNo=i;
 			int pp=p-ivF; 		// position of rnd point in the interval
 			pp=ivs[i]->f+pp;	// position of rnd on the genome
 			return pp;

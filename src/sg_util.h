@@ -20,6 +20,8 @@ const int SG =1;
 const int PRJ=2;
 const int CNF=4;
 const int PG =8;
+const int SM =8;
+const int AP=SG|PRJ|CNF|PG|SM;
 
 #define PRM_EXT "prm"
 #define BPROF_EXT "bprof"
@@ -56,6 +58,11 @@ const  int KERN_LEFT_EXP =2;
 const  int KERN_RIGHT_EXP=3;
 const  int KERN_CUSTOM=0x80;
 
+const  int DISTR_NONE=0;
+const  int DISTR_SHORT=1;
+const  int DISTR_DETAIL=3;
+
+
 const  int COLLINEAR=1;
 const  int COMPLEMENT=2;
 const  int BASE=0;
@@ -84,13 +91,10 @@ const int MAX_GENES=100000;
 extern int  binSize;          // frame size of profile
 extern long long GenomeLength;      // TOTAL LENGTH OF THE GENOME
 extern char *chromFile;		   // Chromosomes file name
-extern char *profile1;		   // first profile file file name
-extern char *profile2;		   // second profile file file name
-extern char *trackFil;		   // input track
 extern char *inputProfiles;    // input formula for track combination
 extern int 	bpType;			   // type of the input data in BroadPeak file
 
-extern bool  writeDistr;		// flag: write distributions
+extern int  writeDistr;		// flag: write distributions
 
 extern char trackName[4096];   	// current track name
 extern char *profPath;		// path to binary profiles
@@ -139,6 +143,7 @@ extern double kernelNS;			// Correction for non-specifisity
 extern double kernelProfSigma;  // kernel width (profile scale)
 extern double kernelProfShift;  // Kernel shift (profile scale)
 
+extern int debbfg;
 
 extern int kernelType;   		// kernel type
 extern char* customKern;		// formula for the custom kernel
@@ -158,6 +163,8 @@ extern bool syntax;				// Strong syntax control
 extern bool outPrjBGr;
 extern bool writeDistCorr;		// write BroadPeak
 extern bool outLC;
+extern bool sparse;				// the data is sparce
+
 extern int LCScale;
 extern int crossWidth;
 extern bool RScriptFg;
@@ -170,6 +177,7 @@ extern int scoreType;
 extern bool writePDF;
 extern double LlcFDR;		// treshold on FDR when write Local Correlation track
 extern double RlcFDR;		// treshold on FDR when write Local Correlation track
+extern double smoothZ;
 
 extern int profWithFlanksLength; // size of profWindow array (including random flanks)
 //===================================================    results
@@ -299,9 +307,9 @@ struct MapRange{
 struct IVSet{
 	MapRange **ivs;
 	int capacity;
-	int nIv;
+	int nIv;			// number of the intervals
 	int totLength;
-	int ivNo;
+//	int ivNo;
 	IVSet();
 	~IVSet();
 	void addIv(int f, int t);
@@ -346,7 +354,8 @@ struct Track{		        // Binary track
 	virtual void 	trackDef(char *s);
 	virtual void 	clear();
 
-	double *getProfile(int pos, bool cmpl);	// decode profile starting with given position
+	double *getProfile(int pos, bool cmpl);				// decode profile starting with given position to a profile array
+	double *getProfile(double *a, int pos, int l, bool cmpl);	// decode profile starting with given position to given array
 	void allocTrack();
 	double getProjValue(int pos, bool cmpl);
 	double addStatistics();
@@ -526,7 +535,9 @@ public:
 	Fourier ft;				// Fourier transformation for the kernel
 	Fourier cft;			// Fourier transformation for the complement kernel
 	Fourier fx,fy;			// Fourier transformation for the input data
+	double dx11, dx12, dx22, ex1, ex2;
 	bool hasCompl;			// for symmetrical Kernel flag=false; otherwise flag=1;
+	Kernel(){name=0; length=0; kern=0; ckern=0; hasCompl=0; dx11=dx12=dx22=ex1=ex2=0;}
 	virtual ~Kernel(){xfree(kern,"~kern1"); xfree(ckern, "~ckern");}
 	void init(int l);
 	void fft();
@@ -585,7 +596,7 @@ struct Interval{
 
 //======================== File list Entry ==========================
 struct FileListEntry{
-	int id;
+	int listId;
 	char *fname;
 };
 
@@ -675,8 +686,8 @@ extern Fourier LCorrelation;			// distance correlation calculation
 
 extern PairEntry *pairs;				// array for pair's correlation (foreground)
 extern int nPairs;						// number of foreground observations
-extern double BgAvCorr;					// average Background correlation
-extern double FgAvCorr;					// average Foreground correlation
+//extern double BgAvCorr;					// average Background correlation
+//extern double FgAvCorr;					// average Foreground correlation
 extern double LCmin, LCmax;
 extern FloatArray *fProfile, *cProfile, *lcProfile;
 extern double mannW_Z;
@@ -746,6 +757,7 @@ void initOutLC();
 void freeLC();
 void printStat();
 void printFgDistr();
+void printBgDistr();
 void printBroadPeak();
 void printRreport();
 void printR();
@@ -765,6 +777,8 @@ void printXMLparams(FILE *f);
 //======================== Testing procedures
 void test();
 //============================================= Calculations =============
+void defFlanks(int l);
+Kernel *MakeKernel(int l);
 void calcSmoothProfile(Fourier *fx, int k, bool cmpl);
 void calcSmoothProfile(int k, bool cmpl);
 void addLCProf(double *f, int pos);
@@ -776,6 +790,7 @@ void Preparator();
 void Covariator();
 void Projector();
 void prepare(const char * fname);
+int calcSparce();
 
 void normChromDist();	// normalize distance distribution
 

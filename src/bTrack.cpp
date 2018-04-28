@@ -339,20 +339,21 @@ bool bTrack::isZero(int i, bool cmpl){
 
 void Track::makeIntervals(bool cmpl, IVSet *iv){
 	int f=0;
-	bool space=true;
+	bool space=false;
 	int nZ=0;
 	int wp=wProfSize;
 	int maxZ=min(maxZero, maxNA);
 	for(int i=0; i<wp; i++){
 		if(isZero(i,cmpl)) nZ++;
 	}
+	space = (nZ > maxZ);
 	for(int i=wp; i<profileLength; i++){
-		if(nZ >= maxZ){
+		if(nZ > maxZ){
 			if(!space){
 				iv->addIv(f,i-wp);
 			}
 			space=true;
-			}
+		}
 		else{
 			if(space) f=i-wp;
 			space=false;
@@ -487,8 +488,8 @@ bTrack::~bTrack(){
 double bTrack::getVal(BINVAL b){
 	if(b==NA){
 			if(NAFlag && trackType==WIG_TRACK){
-			double x=rGauss();
-			double y=x*sd0*noiseLevel+av0;
+			double x=rExp();
+			double y=x*sd0*noiseLevel;
 			return y;
 		}
 		else return 0;
@@ -513,8 +514,8 @@ double bTrack::getValue(int pos, int cmpl){
 	BINVAL b=getBVal(pos,cmpl);
 	if(b==NA){
 			if(NAFlag && trackType==WIG_TRACK){
-			double x=rGauss();
-			double y=x*sd0*noiseLevel+av0;
+			double x=rExp();
+			double y=x*sd0*noiseLevel;
 			return y;
 		}
 		else return 0;
@@ -545,19 +546,20 @@ void Track::ortProject(){
 
 //================================================= Get projected value
 double Track::getProjValue(int pos, bool cmpl){
-	if(pos >= profileLength) return 0;
+	if(pos <0 || pos >= profileLength) return 0;
 	double x=getValue(pos,cmpl);
-//if(projCoeff) x/=(projTrack->getValue(pos,cmpl)+1);
 	if(projCoeff) x-=projCoeff*projTrack->getValue(pos,cmpl);
 	return x;
 }
 
 //================================================= decode the values to an array
-double * Track::getProfile(int pos, bool cmpl){ //====== pos - profile position; cmpl=true <=> +strand
-	double *a=profWindow+LFlankProfSize;
+double * Track::getProfile(double *prof, int pos, int l, bool cmpl){ //====== pos - profile position; l -- fragment length without flanks
+	int ll=l+LFlankProfSize+RFlankProfSize;
+	double *aa=prof+LFlankProfSize;
+	double *a=aa;
 	avWindow=sdWindow=0;
 	//======================================================= fill window
-	for(int i=0; i < wProfSize; i++, a++){
+	for(int i=0; i < l; i++, a++){
 		double x=0;
 		if(complFg==IGNORE_STRAND){				// ignore strand
 			x += getProjValue(pos+i,false);		// profile
@@ -569,28 +571,33 @@ double * Track::getProfile(int pos, bool cmpl){ //====== pos - profile position;
 		else
 			x += getProjValue(pos+i,false);
 		*a=x;
+
 		avWindow+=x; sdWindow+=x*x;
 	}
 
 	//======================================= Window Statistics
-	avWindow/=wProfSize;
-	sdWindow=sdWindow-avWindow*avWindow*wProfSize;
-	sdWindow/=wProfSize-1; sdWindow=sqrt(sdWindow);
+	avWindow/=l;
+	sdWindow=sdWindow-avWindow*avWindow*l;
+	//========================================= Constant window => add noise
+	a=aa;
+	if(sdWindow<=0){
+		sdWindow=sd0*1.e-2;
+	}
+	else{sdWindow/=l; sdWindow=sqrt(sdWindow);}
 	//======================================== fill flanks
-	int x0=wProfSize+LFlankProfSize;
+	int x0=l+LFlankProfSize;
 	int x1=x0+LFlankProfSize+RFlankProfSize;
+
 //=========================================	fill flanks
 	for(int x=x0; x<x1; x++){
-		double xq=rGauss(avWindow,sdWindow)*noiseLevel;
-		profWindow[x%profWithFlanksLength]=xq;
+		double xq=rGauss(0,sdWindow)*noiseLevel;
+		prof[x%ll]=xq;
 	}
-//========================================= Constant window => add noise
-//	if(sdWindow==0){
-//		for(int i=0; i < wProfSize; i++){
-//
-//		}
-//	}
-	return profWindow;
+	return prof;
+}
+
+double * Track::getProfile(int pos, bool cmpl){ //====== pos - profile position; cmpl=true <=> +strand
+	return getProfile(profWindow, pos, wProfSize, cmpl);
 }
 //======================================================
 //======================================================

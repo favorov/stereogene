@@ -2,13 +2,13 @@
  * data.cpp
 
  *
- *  Created on: 05 дек. 2017 г.
+ *  Created on: 05 пїЅпїЅпїЅ. 2017 пїЅ.
  *      Author: andrey
  */
 
 #include "track_util.h"
 
-const char* version="2.13";
+const char* version="2.20";
 
 
 Chromosome *chrom_list;       // list of chromosomes
@@ -25,9 +25,6 @@ char *cfgFile=0;		// config file name
 char *profPath=0;
 char *trackPath=0;
 
-char *trackFil=0;		// Track file
-char *profile1=0;		// first profile file file name
-char *profile2=0;		// second profile file file name
 char *resPath=0;
 char *statFileName=(char*)"./statistics";
 char *paramsFileName=(char*)"./params";
@@ -37,7 +34,7 @@ char *idSuff=(char*)"";
 
 bool  syntax=1;				// Strong syntax control
 
-bool  writeDistr=1;
+int   writeDistr=DISTR_DETAIL;
 bool  writeDistCorr=1;		    // write BroadPeak
 int   crossWidth=10000;
 bool  outSpectr=0;
@@ -55,7 +52,7 @@ int  binBufSize=30000000;
 
 int 	kernelType=KERN_NORM;
 char* 	customKern=0;
-double 	noiseLevel=0.2;
+double 	noiseLevel=0;
 int 	wSize=100000;        // size of widow (nucleotides)
 int 	wStep=0;             // window step   (nucleotides)
 int 	flankSize=0;
@@ -64,6 +61,7 @@ double 	kernelShift=0;      	    // Kernel mean (for Gauss) or Kernel start for 
 int 	intervFg0;
 double 	scaleFactor=0.2;
 bool 	outLC=0;
+bool 	sparse=0;
 int 	LCScale=LOG_SCALE;
 //int 	LCScale=LIN_SCALE;
 double LlcFDR=0;		// treshold on FDR when write Local Correlation track
@@ -90,6 +88,7 @@ char *trackName1=strdup("");
 char *trackName2=strdup("");
 double mannW_Z=0;
 double mannW_p=1;
+double smoothZ=3;
 
 Model 	*model;
 
@@ -115,7 +114,7 @@ FileListEntry files[256];
 int   	nfiles;
 bool LCExists=false;
 
-double 	BgAvCorr=0;
-double 	FgAvCorr=0;
+//double 	BgAvCorr=0;
+//double 	FgAvCorr=0;
 int  	pgLevel=2;
 float total=0;						// total count over the track

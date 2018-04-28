@@ -23,6 +23,10 @@ void Fourier::init(int len){
 	if(length==len) return;
 	length=len; err=0;
 	errStatus="Fourier init";
+	if(re   ) xfree(re   , "free Fourier #1");
+	if(im   ) xfree(im   , "free Fourier #2");
+	if(datRe) xfree(datRe, "free Fourier #3");
+	if(datIm) xfree(datIm, "free Fourier #4");
 	getMem(re,len, "Fourier init #1");
 	getMem(im,len, "Fourier init #2");
 	getMem(datIm,len, "Fourier init #3");
@@ -125,10 +129,28 @@ double *Fourier::getAutoCorr(){
 //=================================================================
 //============================   Kernel ===========================
 //=================================================================
+Kernel *MakeKernel(int l){
+	Kernel *kern=0;
+	switch(kernelType){
+	case KERN_NORM:
+		kern=new NormKernel    (kernelProfShift, kernelProfSigma, l); break;
+	case KERN_LEFT_EXP:
+		kern=new LeftExpKernel (kernelProfShift, kernelProfSigma, l); break;
+	case KERN_RIGHT_EXP:
+		kern=new RightExpKernel(kernelProfShift, kernelProfSigma, l); break;
+	case KERN_CUSTOM:
+		kern=new CustKernel(kernelProfShift, kernelProfSigma, l); break;
+	default: errorExit("Kernel not defined");  break;
+	}
+	return kern;
+}
 
 void Kernel::init(int n){
 	length=n;
 	errStatus="kernel init";
+	if(kern ) xfree(kern ,"free Kern #1");
+	if(ckern) xfree(ckern,"free Kern #1");
+	kern=0; ckern=0;
 	getMem(kern,length, "kernel init #1");
 	getMem(ckern,length, "kernel init #2");
 	ft.init(n);
@@ -184,6 +206,7 @@ double Kernel::dist(Fourier *f1, Fourier *f2, bool complem){
 	double d22=scalar(f2,f2, &c2, complem);
 	Fourier *zft=complem ? &cft : &ft;
 
+	dx11=d11; dx12=d12; dx22=d22; ex1=f1->re[0]; ex2=f2->re[0];
 	//================================================ we should subtract the means
 	double dd11=f1->re[0]*f1->re[0]*zft->re[0]/length;
 	double dd12=f1->re[0]*f2->re[0]*zft->re[0]/length;
@@ -229,8 +252,8 @@ void Kernel::makeKernel(int n){
 }
 
 //======================== Normal Kernel ==============================
-NormKernel::NormKernel(){sigma=1; e=0; name= strdup("Normal_Kernel");}
-NormKernel::NormKernel(double ee,double sgm, int l){
+NormKernel::NormKernel():Kernel(){sigma=1; e=0; name= strdup("Normal_Kernel");}
+NormKernel::NormKernel(double ee,double sgm, int l):Kernel(){
 	sigma=sgm; e=ee; hasCompl=(e!=0);
 	makeKernel(l);name= strdup("Normal_Kernel");
 }
@@ -243,8 +266,8 @@ double NormKernel::kernVal(double x){
 }
 
 //======================== Left exp  Kernel ==============================
-LeftExpKernel::LeftExpKernel(){sigma=1; e=0; name= strdup("Left_Exp_Kernel");}
-LeftExpKernel::LeftExpKernel(double ee,double sgm, int l){
+LeftExpKernel::LeftExpKernel():Kernel(){sigma=1; e=0; name= strdup("Left_Exp_Kernel");}
+LeftExpKernel::LeftExpKernel(double ee,double sgm, int l):Kernel(){
 	sigma=sgm; e=ee;
 	makeKernel(l); name= strdup("Left_Exp_Kernel");
 }
@@ -256,8 +279,8 @@ double LeftExpKernel::kernVal(double x){
 
 
 //======================== Right exp  Kernel ==============================
-RightExpKernel::RightExpKernel(){sigma=1;e=0;name= strdup("Right_Exp_Kernel");}
-RightExpKernel::RightExpKernel(double ee,double sgm, int l){
+RightExpKernel::RightExpKernel():Kernel(){sigma=1;e=0;name= strdup("Right_Exp_Kernel");}
+RightExpKernel::RightExpKernel(double ee,double sgm, int l):Kernel(){
 	sigma=sgm; e=ee;
 	makeKernel(l);name= strdup("Right_Exp_Kernel");
 }
@@ -267,8 +290,8 @@ double RightExpKernel::kernVal(double x){
 	return NSCorrection(x0,(x<0)?0:exp(-x));
 }
 //======================== Custom  Kernel ==============================
-CustKernel::CustKernel(){ initCust(0,1000);}
-CustKernel::CustKernel(double ee,double sgm, int l){
+CustKernel::CustKernel():Kernel(){ initCust(0,1000);}
+CustKernel::CustKernel(double ee,double sgm, int l):Kernel(){
 	initCust(ee,sgm);
 	makeKernel(l);name= strdup("custm_Kernel");
 }

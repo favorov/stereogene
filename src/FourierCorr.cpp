@@ -16,8 +16,8 @@ int nPairs;						// number of foreground observations
 
 void clear(){
 	writeLog("clear Correlator\n");
-	xfree(FgSet,"FgSet"); FgSet=0;
-	xfree(pairs,"pairs"); pairs=0;
+	if(FgSet) xfree(FgSet,"FgSet"); FgSet=0;
+	if(pairs) xfree(pairs,"pairs"); pairs=0;
 	nBkg=0; nFg=0; nPairs=0;
 }
 
@@ -136,17 +136,13 @@ int posPairCmp(const void *xp1, const void *xp2){
 	return pair1->p2 -pair2->p2;
 }
 
-FILE *fbkg=0;
 int distrBkg(int n);
 
 void distrBkg(){
 	srand(33);									// random seed
-	char b[1024];
 	verb("\nBakcground...");
 	cleanCummulative();
-	BgAvCorr=0;
-	strcat(strcpy(b,outFile),".bkg");					// open file for background observations
-	if(writeDistr) fbkg=xopen(b,"wt");
+	avBg=0;
 	getMem0(posPairs,nShuffle,"init randomPairs");
 	getMem0(BkgSet,nShuffle, "bkg Distr"); nBkg=0; 	// allocate array for background observations
 	int n=nShuffle;
@@ -160,10 +156,9 @@ void distrBkg(){
 	}while(n);
 
 	double cc=calcCC();
-	BgAvCorr/=nBkg;
+	avBg/=nBkg;
 	BgTotal=cc;
-	xverb("\nbg_cc=%f \nbg_average=%f\n",cc,BgAvCorr);
-	if(writeDistr) fclose(fbkg);
+	xverb("\nbg_cc=%f \nbg_average=%f\n",cc,avBg);
 	errStatus=0;
 }
 
@@ -185,12 +180,11 @@ int distrBkg(int nSh){
 			}
 			continue;
 		}
-		BgAvCorr+=d;
+		avBg+=d;
 		if(i%1000 ==0) verb("\nShuffling: %i/%li",i,nShuffle);
 		else if(i%100 ==0) verb(".");
 		tst=0;
 		BkgSet[nBkg++]=d;						// store in distribution
-		if(writeDistr) fprintf(fbkg,"%f\n",d);		// write to distribution
 	}
 	return tst;
 }
@@ -198,9 +192,11 @@ int distrBkg(int nSh){
 
 //============================================ Store foreground distribution
 inline void storePair(int i, double d){
-	PairEntry *pe=pairs+(nPairs++);						//== store pair of positions
 	FgSet[nFg++]=d;
-	pe->profPos=i; pe->d=(float)d;// pe->rank=0;		//== define the pair
+	if(writeDistr==DISTR_DETAIL){
+		PairEntry *pe=pairs+(nPairs++);						//== store pair of positions
+		pe->profPos=i; pe->d=(float)d;						//== define the pair
+	}
 }
 
 //============================================= Calculate coherent correlations
@@ -216,11 +212,11 @@ void distrCorr(){
 
 	int siz=(maxPairs+100);
 	getMem0(FgSet, siz, "Corr #1");	zeroMem(FgSet, siz);		//== array for foreground distribution
-	getMem0(pairs, siz, "Corr #2");	zeroMem(pairs, siz);		//== array for pairs
+	if(writeDistr==DISTR_DETAIL) {getMem0(pairs, siz, "Corr #2");	zeroMem(pairs, siz);}		//== array for pairs
 	cleanCummulative();
 
 	//=================== calculate correlations
-	int n_corr=0; FgAvCorr=0;
+	int n_corr=0; avFg=0;
 
 	for(int i=0,k=0; i<l; i+=wProfStep,k++){
 		double d;
@@ -230,37 +226,37 @@ void distrCorr(){
 
 		if((complFg==IGNORE_STRAND)||(!track1->hasCompl && !track2->hasCompl)){ // no direction defined
 			if((d=calcCorelations(i,i, false,false,false)) >=-10){
-				storePair(i,d); n_corr++; FgAvCorr+=d;
+				storePair(i,d); n_corr++; avFg+=d;
 			}
 		}
 		else if((complFg&COLLINEAR)!=0){								// analyze collinear chains
 			if((d=calcCorelations(i,i,true,true,false)) >=-10){		// => =>  valid pair
-				storePair(i,d); n_corr++; FgAvCorr+=d;
+				storePair(i,d); n_corr++; avFg+=d;
 			}
 			if((d=calcCorelations(i,i,false,false,false)) >=-10){	// <= <=  valid pair
-				storePair(i,d); n_corr++; FgAvCorr+=d;
+				storePair(i,d); n_corr++; avFg+=d;
 			}
 		}
 		else if((complFg&COMPLEMENT)!=0){						// analyze complement chains
 			if((d=calcCorelations(i,i,true,false,false)) >=-10){		// => =>  valid pair
-				storePair(i,d); n_corr++; FgAvCorr+=d;
+				storePair(i,d); n_corr++; avFg+=d;
 			}
 			if((d=calcCorelations(i,i,false,true,false)) >=-10){	// <= <=  valid pair
-				storePair(i,d); n_corr++; FgAvCorr+=d;
+				storePair(i,d); n_corr++; avFg+=d;
 			}
 		}
 	}					// end for
 
 	//=================================================== Define rank for q-value calculation
 	if(n_corr==0){
-		xverb("\nno non-zero windows pairs\n",totCorr, FgAvCorr);
+		xverb("\nno non-zero windows pairs\n",totCorr, avFg);
 	}
 	else{
 		track1->finStatistics(); track2->finStatistics();
-		FgAvCorr/=n_corr;
+		avFg/=n_corr;
 		finOutLC();
 		totCorr=calcCC();
-		xverb("\nCorrelation=%f\naverage Corrrelation=%f\n",totCorr, FgAvCorr);
+		xverb("\nCorrelation=%f\naverage Corrrelation=%f\n",totCorr, avFg);
 	}
 	errStatus=0;
 }
@@ -299,8 +295,8 @@ char * makeOutFilename(char * prof1, char*prof2){
 
 //==================== Check for duplication of the comparison
 struct FilePair{
-	char *fil1, *fil2;
-	FilePair(char *f1, char *f2){
+	FileListEntry *fil1, *fil2;
+	FilePair(FileListEntry *f1, FileListEntry *f2){
 		fil1=f1; fil2=f2;
 	}
 };
@@ -308,23 +304,26 @@ const int maxFilePairs=0x10000;
 FilePair *fPairs[maxFilePairs];
 int nFPairs=0;
 
-int addPair(char *f1, char *f2){
-	char *ff1,*ff2;
-	if(strcmp(f1,f2) < 0)  {ff1=f1; ff2=f2;}
-	else				   {ff2=f1; ff1=f2;}
+int addPair(FileListEntry *f1, FileListEntry *f2){
+	FileListEntry *ff1=f1,*ff2=f2;
+
 	for(int i=0; i<nFPairs; i++){
-		if(strcmp(ff1, fPairs[i]->fil1)==0 && strcmp(ff2, fPairs[i]->fil2)==0) {return 0;}
+		if(strcmp(ff1->fname, fPairs[i]->fil1->fname)==0 && strcmp(ff2->fname, fPairs[i]->fil2->fname)==0) {return 0;}
+		if(strcmp(ff2->fname, fPairs[i]->fil1->fname)==0 && strcmp(ff1->fname, fPairs[i]->fil2->fname)==0) {return 0;}
 	}
 	if(nFPairs >= maxFilePairs) errorExit("too many comparisons in one run");
 	fPairs[nFPairs++]=new FilePair(ff1,ff2);
 	return nFPairs;
 }
 
-//Track * trackFactory(const char * fname){
-//
-//}
-
 //========================================================================================
+int fPaircmp(const void *a1, const void* a2){
+	FilePair *p1=(FilePair *)a1;
+	FilePair *p2=(FilePair *)a2;
+	int x=strcmp(p1->fil2->fname, p2->fil2->fname);
+	if(x) return x;
+	return strcmp(p1->fil1->fname, p2->fil1->fname);
+}
 
 int Correlator(){
 	Timer timer;
@@ -353,64 +352,77 @@ int Correlator(){
 	//============================================= Make Profile Pairs
 	for(int i=0; i< nfiles; i++){
 		for(int j=i+1; j< nfiles; j++){
-			if(files[j].id==files[i].id) continue;
+			if(files[j].listId==files[i].listId) continue;
 			if(strcmp (files[j].fname,files[i].fname)==0) continue;
-			if(addPair(files[j].fname,files[i].fname)==0) continue;
+			if(addPair(files+i,files+j)==0) continue;
 		}
 	}
 
+	qsort(fPairs, nPairs, sizeof(FilePair), fPaircmp);
 	//============================================== Do comparison
-	char *fil1=0, *fil2=0;
+	FileListEntry *fil1=0, *fil2=0;
+
 	for(int i=0; i<nFPairs; i++){
 		id=(unsigned int)time(0);					// id is undefined yet
+
 		if(fPairs[i]->fil1 != fil1){
-			profile1=fPairs[i]->fil1;
-			verb("read profile1 <%s>\n", profile1);
-			if(track1) {del(track1); track1=0;}
-			track1=trackFactory(profile1); trackName1=strdup(track1->name);
-			if(pcorProfile) track1->ortProject();
-			if(!track1->makeIntervals()) continue;
 			fil1=fPairs[i]->fil1;
+			trackName1=fil1->fname;
+			verb("read profile1 <%s>\n", trackName1);
+			if(track1) {del(track1); track1=0;}
+			track1=trackFactory(trackName1);
+			if(pcorProfile) track1->ortProject();
+			if(!track1->makeIntervals()){continue;}
 		}
 		if(fPairs[i]->fil2 != fil2){
-			profile2=fPairs[i]->fil2;
-			verb("read profile2 <%s>\n", profile2);
-			if(track2) {del(track2); track2=0;}
-			track2=trackFactory(profile2); trackName2=strdup(track2->name);
-			if(pcorProfile) track2->ortProject();
-			if(!track2->makeIntervals()) continue;
 			fil2=fPairs[i]->fil2;
+			trackName2=fil2->fname;
+			verb("read profile2 <%s>\n", trackName2);
+			if(track2) {del(track2); track2=0;}
+			track2=trackFactory(trackName2);
+			if(pcorProfile) track2->ortProject();
+			if(!track2->makeIntervals()) {continue;}
 		}
 		Timer thisTimer;
-		outFile=makeOutFilename(profile1, profile2);
+		outFile=makeOutFilename(trackName1, trackName2);
 		makeId();
 		writeLog("Correlations:   wSize=%i   kernelType=\"%s\"   kernelSigma=%.0f\n",
 				wSize,getKernelType(),kernelSigma);
-		writeLog("  in1=<%s> in2=<%s> out=<%s>\n", profile1, profile2, outFile);
+		writeLog("  in1=<%s> in2=<%s> out=<%s>\n", trackName1, trackName2, outFile);
 
-		xverb("in1=\"%s\"\n", profile1);
-		xverb("in2=\"%s\"\n", profile2);
+		xverb("in1=\"%s\"\n", trackName1);
+		xverb("in2=\"%s\"\n", trackName2);
 		xverb("out=\"%s\"\n", outFile);
 		//===================================================================== Calculate
-		verb("=== OutFile = <%s>\n",outFile);
-		XYfgCorrelation.initXY();
-		XYbgcorrelation.initXY();
-		initOutLC();
 		clearChromosomes();
-		writeLog("Background\n");
-		distrBkg();						// Make background distribution
 
-		writeLog("Foreground\n");
-		distrCorr();					// Calculate correlations
-		writeLog("Correlations -> Done\n");
-		printCorrelations();			// write correlations
-		printStat();					// write report
-		if(RScriptFg) {
-			printR();
-			if(writePDF){
-				printRreport();
-				printRmd();
+		if(sparse){
+			calcSparce();
+		}
+		else{
+			XYfgCorrelation.initXY();
+			XYbgcorrelation.initXY();
+			initOutLC();
+			writeLog("Background\n");
+			distrBkg();						// Make background distribution
+
+			writeLog("Foreground\n");
+			distrCorr();					// Calculate correlations
+			writeLog("Correlations -> Done\n");
+		}
+		if(nFg && nBkg){
+			printCorrelations();			// write correlations
+			printStat();					// write report
+			if(RScriptFg) {
+				printR();
+				if(writePDF){
+					printRreport();
+					printRmd();
+				}
 			}
+		}
+		else{
+			xverb("*** <%s>: No data for statistics: nFg=%i nBkg=%i ***\n", outFile,nFg, nBkg);
 		}
 		n_cmp++;
 		clear();

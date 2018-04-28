@@ -35,7 +35,8 @@ OBJS=$(od)/FourierCorr.o \
 	$(od)/householder.o \
 	$(od)/data.o \
 	$(od)/sg_utils.o \
-	$(od)/main_conf.o 
+	$(od)/main_conf.o \
+	$(od)/sparse.o 
 	
 objs:$(OBJS)
 
@@ -66,6 +67,7 @@ $(od)/confounder.o: confounder.cpp track_util.h util.h sg_util.h
 $(od)/householder.o: householder.cpp track_util.h util.h sg_util.h
 $(od)/data.o: data.cpp track_util.h util.h sg_util.h
 $(od)/sg_utils.o: sg_utils.cpp track_util.h util.h sg_util.h
+$(od)/sparse.o: sparse.cpp track_util.h util.h sg_util.h
 $(od)/main_conf.o: main_conf.cpp track_util.h util.h sg_util.h
 
 clean:

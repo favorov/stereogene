@@ -41,17 +41,10 @@ void printProgDescr(){
 //============================================ Print Help page =========================================
 
 int main(int argc, char **argv) {
-debugFg=DEBUG_LOG|DEBUG_PRINT;
-clearDeb();
+//debugFg=DEBUG_LOG|DEBUG_PRINT;
+//clearDeb();
 
 	initSG(argc, argv);
-//debugFg=DEBUG_LOG|DEBUG_PRINT;
-//	if(debugFg) clearDeb();
-//==========================================
-//for(int i=0; i<100; i++){
-//	deb("%e",exp(-i*i));
-//}
-//	exit(0);
 //===========================================
 	Preparator();
 	Correlator();
