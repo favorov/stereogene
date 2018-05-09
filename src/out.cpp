@@ -94,24 +94,38 @@ void getStat(double *set, int n, double &av, double &sd){
 	for(int i=0; i<n; i++){
 		av+=set[i]; sd+=set[i]*set[i];
 	}
-	av/=n; sd=sqrt((sd-av*av*n)/(n-1));
+	if(n>1) {
+		sd=sqrt((sd-av*av/n)/(n-1));
+	}
+	else sd=FNA;
+	if(n > 0) av/=n;
+	else av=FNA;
+
 }
 
-double avBg=0,sdBg=0,avFg=0,sdFg=0;
+double avBg=FNA,sdBg=FNA,avFg=FNA,sdFg=FNA;
 void printStat(){
 	verb("Write statistics\n");
 	writeLog("Write statistics\n");
 	char b[2048];
 	MannW=MannWhitney(FgSet, nFg, BkgSet, nBkg);	// do Mann-Whitney test
-	mannW_Z=MannW->z;
-	mannW_p=MannW->pVal;
-	if(MannW ==0) return;
-	xverb("p-val=%e\nnWindows=%i\n=================================\n",
-		MannW->pVal, nFg);
+	if(MannW ==0) {
+		mannW_Z=FNA;
+		mannW_p=FNA;
+		xverb("p-val=NA\nnWindows=%i\n=================================\n",
+				mannW_p, nFg);
+	}
+	else{
+		mannW_Z=MannW->z;
+		mannW_p=MannW->pVal;
+		xverb("p-val=%e\nnWindows=%i\n=================================\n",
+				mannW_p, nFg);
+	}
 	getStat(FgSet, nFg, avFg,sdFg);
 	getStat(BkgSet,nBkg,avBg,sdBg);
 	FILE *f=0;
 	bool fg=true;
+
 	if(statFileName){
 		fg=fileExists(statFileName);
 		if((outRes & TAB)!=0) {
@@ -228,11 +242,17 @@ void printFgDistr(){
 //=====================================================
 //=====================================================
 //=====================================================
+const char *template1="report_r_template.Rmd";
+const char *template2="report_r_template2.Rmd";
+
 void printRmd(){
+
 	char b[2048];
-	sprintf(b,"%sreport_r_template.Rmd",resPath);
 	
-//	if(!fileExists(b))
+	if(writeDistr==DISTR_SHORT) sprintf(b,"%s%s",resPath,template1);
+	else						sprintf(b,"%s%s",resPath,template2);
+
+	if(!fileExists(b))
 	{
 		FILE *f=xopen(b,"wt");
 		fprintf(f, "---	\n");
@@ -393,7 +413,9 @@ void printRreport(){
   	fprintf(f, "	pc_fname <- args[3]\n");
 	fprintf(f, "} \n\n");
 
-	fprintf(f, "rmarkdown::render(\"report_r_template.Rmd\", \"html_document\", \n");
+	const char *xtemplate=(writeDistr==DISTR_SHORT) ? template1 : template2;
+
+	fprintf(f, "rmarkdown::render(\"%s\", \"html_document\", \n",xtemplate);
     fprintf(f, "              params=list(\n");
   	fprintf(f, "track1=fname1, \n");
   	fprintf(f, "track2=fname2, \n");

@@ -94,8 +94,6 @@ int doubleCmp(const void *dd1, const void *dd2){
 statTest *MannWhitney0( double *set1, int nSet1, double *set2,int nSet2);
 //================================================ Mann-Whitney test
 statTest *MannWhitney( double *set1, int nSet1, double *set2,int nSet2){
-//	int nn=200;
-//	return MannWhitney0(sample(set1,nSet1,nn),nn, sample(set2,nSet2,nn),nn);
 	return MannWhitney0(set1,nSet1,set2,nSet2);
 }
 statTest *MannWhitney0( double *set1, int nSet1, double *set2,int nSet2){

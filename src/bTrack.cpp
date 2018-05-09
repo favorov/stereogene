@@ -138,9 +138,9 @@ void BuffArray::readBuff(int pos){
 	if(bufBeg < 0) bufBeg=0;
 	bufEnd=bufBeg+binBufSize+wProfSize*2;
 	if(bufEnd > profileLength) bufEnd = profileLength;
-	fseek(f,bufBeg*sizeof(*bval)+offset,SEEK_SET);
+	fseek(f,bufBeg*sizeof(BINVAL)+offset,SEEK_SET);
 	int l=bufEnd - bufBeg;
-	fread(bval, sizeof(*bval), l, f);
+	fread(bval, sizeof(BINVAL), l, f);
 }
 
 BINVAL BuffArray::get(int pos){

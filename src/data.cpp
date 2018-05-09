@@ -34,6 +34,7 @@ char *idSuff=(char*)"";
 
 bool  syntax=1;				// Strong syntax control
 
+//int   writeDistr=DISTR_SHORT;
 int   writeDistr=DISTR_DETAIL;
 bool  writeDistCorr=1;		    // write BroadPeak
 int   crossWidth=10000;
@@ -104,7 +105,7 @@ XYCorrelation XYfgCorrelation;		    // array for correlation picture
 XYCorrelation XYbgcorrelation;			// array for correlation picture
 Fourier LCorrelation;
 
-double 	totCorr=0, BgTotal=0;
+double 	totCorr=FNA, BgTotal=FNA;
 bool 	RScriptFg=0;
 int 	bpType=BP_SIGNAL;
 int 	cage=0;

@@ -44,7 +44,7 @@ int main(int argc, char **argv) {
 //debugFg=DEBUG_LOG|DEBUG_PRINT;
 //clearDeb();
 
-	initSG(argc, argv);
+initSG(argc, argv);
 //===========================================
 	Preparator();
 	Correlator();

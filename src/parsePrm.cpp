@@ -69,28 +69,32 @@ NamedRes::NamedRes(const char *nm){name=nm; value=0; type=0; f=0;}
 
 char zfdsgfdsID[50];
 char * printId(){sprintf(zfdsgfdsID,"%08lx%s",id,idSuff); return zfdsgfdsID;}
-	char* NamedRes::printValue(char *buf){
-		if(type==0) return strcpy(buf,name);
-		if(f) return f();
-		switch(type){
-		case PRM_STRING:{
-			char *s=*((char**)value);
-			if(s) sprintf(buf,"%s",s); else buf[0]=0;
-			break;}
-		case PRM_DOUBLE:
-			{double *d=(double *)value;
-			if(abs(*d) > 0.1) sprintf(buf,"%.3f",*d);
-			else if(abs(*d) > 0.01) sprintf(buf,"%.4f",*d);
-			else if(abs(*d) > 0.001) sprintf(buf,"%.5f",*d);
-			else sprintf(buf,"%.2e",*d);
-			break;}
-		case PRM_INT:
-			{int *k=(int *)value;
-			sprintf(buf,"%i",*k);
-			break;}
-		}
-		return buf;
-	};
+
+char* NamedRes::printValue(char *buf){
+	if(type==0) return strcpy(buf,name);
+	if(f) return f();
+	switch(type){
+	case PRM_STRING:{
+		char *s=*((char**)value);
+		if(s) sprintf(buf,"%s",s);
+		else sprintf(buf,"NA");
+		break;}
+	case PRM_DOUBLE:
+		{double *d=(double *)value;
+		if(*d==FNA) sprintf(buf,"NA");
+		else if(abs(*d) > 0.1) sprintf(buf,"%.3f",*d);
+		else if(abs(*d) > 0.01) sprintf(buf,"%.4f",*d);
+		else if(abs(*d) > 0.001) sprintf(buf,"%.5f",*d);
+		else sprintf(buf,"%.2e",*d);
+		break;}
+	case PRM_INT:
+		{int *k=(int *)value;
+		if(*k==NA) sprintf(buf,"NA");
+		else sprintf(buf,"%i",*k);
+		break;}
+	}
+	return buf;
+};
 
 struct Param{
 	const char* name;			// command line (cfg) argument name
@@ -121,7 +125,7 @@ struct Param{
 };
 
 const char* getNamebyVal(Name_Value **nval, int val){
-	for(; nval!=0; nval++){
+	for(; *nval!=0; nval++){
 		if((*nval)->value == val) return (*nval)->name;
 	}
 	return "NA";
@@ -145,6 +149,7 @@ Name_Value* kernelTypes[]= {
 		new Name_Value("NORMAL",KERN_NORM),
 		new Name_Value("LEFT_EXP",KERN_LEFT_EXP),
 		new Name_Value("RIGHT_EXP",KERN_RIGHT_EXP),
+		new Name_Value("CUSTOM",KERN_CUSTOM),
 		0
 };
 
@@ -371,7 +376,8 @@ char *Param::printParamValue(char *buf){
 	case PRM_STRING: 	if(prm){
 		char *s=*(char**)prm;
 		if(s) sprintf(buf,"%s",s);} break;
-	case PRM_ENUM: 		sprintf(buf,"%s",getNamebyVal(enums,*(int*)prm)); break;
+	case PRM_ENUM:
+		sprintf(buf,"%s",getNamebyVal(enums,*(int*)prm)); break;
 	case PRM_FG: 		sprintf(buf,"%i",(*(int*)prm) ? 1:0); break;
 	case PRM_PATH:		if(prm){
 		char *s=*(char**)prm;
@@ -641,6 +647,7 @@ void initSG(int argc, char **argv){
 	if(strlen(logFileName)==0 || keyCmp(logFileName, "null")==0) logFileName=0;
 	if(strlen(statFileName)==0 || keyCmp(statFileName, "null")==0) statFileName=0;
 	if(strlen(paramsFileName)==0 || keyCmp(paramsFileName, "null")==0) paramsFileName=0;
+	if(outChrom) writeDistr=DISTR_DETAIL;
 	if(nfiles==0) printMiniHelp();
 	readChromSizes(chromFile);							// read chromosomes
 }

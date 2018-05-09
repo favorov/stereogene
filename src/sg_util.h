@@ -8,6 +8,15 @@
 #ifndef SG_UTIL_H_
 #define SG_UTIL_H_
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
+#include <cmath>
+#include <ctype.h>
+#include <time.h>
+#include <sys/time.h>
+
 struct Track;
 struct bTrack;
 struct Formula;
@@ -32,6 +41,7 @@ const int AP=SG|PRJ|CNF|PG|SM;
 #define BINVAL short
 
 const  BINVAL NA=0x8080;
+const double FNA=9.99999999e+128;
 const  BINVAL MAX_SHORT=32000;
 extern const char* version;
 
@@ -309,7 +319,7 @@ struct IVSet{
 	int capacity;
 	int nIv;			// number of the intervals
 	int totLength;
-//	int ivNo;
+//	int ivNo;j;lkj;
 	IVSet();
 	~IVSet();
 	void addIv(int f, int t);

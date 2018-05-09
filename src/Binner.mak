@@ -30,7 +30,7 @@ OBJS=\
 	$(od)/bTrack.o \
 	$(od)/data.o \
 	$(od)/formula.o \
-	$(od)/FourierCorr.o \
+	$(od)/fourierCorr.o \
 	$(od)/householder.o \
 	$(od)/kernel.o \
 	$(od)/mann.o \
@@ -62,7 +62,7 @@ $(od)/binning.o:          binning.cpp          sg_util.h track_util.h util.h
 $(od)/bTrack.o:           bTrack.cpp           sg_util.h track_util.h util.h
 $(od)/data.o:             data.cpp             sg_util.h track_util.h util.h
 $(od)/formula.o:          formula.cpp          sg_util.h track_util.h util.h
-$(od)/FourierCorr.o:      FourierCorr.cpp      sg_util.h track_util.h util.h
+$(od)/fourierCorr.o:      fourierCorr.cpp      sg_util.h track_util.h util.h
 $(od)/householder.o:      householder.cpp      sg_util.h track_util.h util.h
 $(od)/kernel.o:           kernel.cpp           sg_util.h track_util.h util.h
 $(od)/mann.o:             mann.cpp             sg_util.h track_util.h util.h
