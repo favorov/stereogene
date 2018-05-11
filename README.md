@@ -13,4 +13,4 @@ www is a local copy of the http://stereogene.bioinf.fbb.msu.ru/ project's webpag
 galaxy contains the Galaxy (https://galaxyproject.org/) integration stub for Stereogene. 
 Please see readme.txt in the galaxy folder for instructions.
 
-20-th of January, 2018
+10-th of May, 2018
