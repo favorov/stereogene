@@ -1,7 +1,7 @@
 /*
  * sg_utils.cpp
  *
- *  Created on: 05 дек. 2017 г.
+ *  Created on: May 05, 2017 .
  *      Author: andrey
  */
 

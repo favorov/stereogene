@@ -1,172 +1,172 @@
-=========== Version 1.43 =================
-1. Previous version has a limit on the chromosome number - 300. 1.43 has not such limit.
-2. Files with distance distributions *.fgCorr and *.bgCorr are replaced by single file *.dist
-3. Flag definition Distances=<0|1> is replaced by Distances=<TOTAL | DETAIL | NONE>: 
-   In the first case <TOTAL> the file *.dist will contain fields: 
-   	   x - distance
-	   Bg - background correlation function
-	   Fg - foreground correlation function
-	   FgPlus - foreground correlation function for the positive windows
-	   FgMinus - foreground correlation function for the negative windows
-   In the second case <DETAIL> the file *.dist will contain additional fields with the distance distribution for every chromosome separately.
-4. The chromosome statistics file can be created.
-5. Cumulative file Statistics changed. It contains now additional fields with average and standard deviations of foreground and background distributions.
-
-========== Version 1.44 ====================
-1. Fixed error in output files (segment boundaries are now defined as end=beg+window_length)
-2. Active module is removed from the StereoGene main program
-3. local correlation can be calculated as f\int g\rho + g\int f\rho and as \int g\rho*\int f\rho (see parameter outWig)
-4. Active is implemented as a separate program.
-
-========== Version 1.45 ====================
-1. Fixed an memory allocation error.
-2. Fixed error with list file location. Now file list can be located in 'files' directory
-========== Version 1.46 ====================
-1. in the cfg-file the boolean Flags now can be defined as YES/NO or ON/OFF
-2. the 'verbose' parameter can be defined in the cfg-file
-3. the Program generates a WARNING message if unknown parameter appears.
-========== Version 1.47 ====================
-1. Now the program analyses modification time of track and profile. If the track file has more resent time than a profile file the preparation stage will be done.
-2. The NA flag is used on preparation step
-========== Version 1.48 ====================
-1. Fixed bug in trackPrepare (read wig-files). The previous versions write a parasite data to the profile. As result a periodic small peaks appears.
-========== Version 1.50 ====================
-1. A new parameter introduced: kernelNS. This is percent for reducing kernel values in the interval [-100..+100]bp: newVal=oldVal*(1-kernelNS/100).
-2. A new out-file statistics.xml.  
-========== Version 1.51 ====================
-1. Fixed bug in local correlation wig-file 
-2. Local correlation wig file uses log scale 
-========== Version 1.52 ====================
-1. Fixed bug in auto-correlation function
-========== Version 1.53 ====================
-1. Changed scale in outWIG
-========== Version 1.54 ====================
-1. Makefile. If you have problems with ccvars, replace it with ccvars.simple
-========== Version 1.55 ====================
-1. Fixed bud with loss of the last chromosom
-2. Allowed a blank lines in chrom length file
-========== Version 1.56 ====================
-1. Fixed bug in read chromosomes
-========== Version 1.57 ====================
-1. Program reads cfg from program directory, then from current working directory, then from args
-2. Program creates necessary directories
-3. Program parse tilda at the beginning of filename
-4. Program allows spaces in filenames / directory names  
-========== Version 1.58 ====================
-1. Program do not use default cfg file. If cfg file is used it should be defined explcitelly in command line: cgf=<fname>
-2. Program can use two equivalent arguments notation: param=value and -param value
-3. File with Chromosomes can be defined in env variable SG_CHROM
-4. ErrorExit on unknown parameter or incorrect value
-5. new flag -clear. It forces profile recalculation.
-6. flag -h introduced. It shows a help page
-7. lock-unlock for cumulative files (not for windows)
-8. flag silent introduced. Even if 'verbose' is OFF the main results are printed to stdout. If silent is ON no output expected.
-9. New system of parameters parsing introduced (testing needed!)
-========== Version 1.59 ====================
-1. Fixed some bugs with opening files
-2. Some default values changed (maxNA=95, maxZero=95)
-3. The shuffling procedure corrected 
-========== Version 1.60 ====================
-1. Introduced parameter minShuffle - minimal number of shuffles
-2. File statistics and statistics.xml get new parameters nFg = number of observations: nBkg = actual number of shuffles.
-========== Version 1.61 ====================
-1. NA values are used only for WIG tracks; for the BED and other tracks types the program treats NA as 0 always regardless '-na' parameter definition.  
-========== Version 1.62 ====================
-1. Fixed bug with chromosome file -- number of chromosomes can exceed 300.  
-2. Fixed bug on shuffling of sparse profiles 
-========== Version 1.63 ====================
-1. List of compilers expanded
-========== Version 1.64 ====================
-1. The program reports total correlation and average correlation (the statistics file is changed!)
-2. Corrected xml output
-3. Strong syntax control for input profiles
-4. Bugfix
-5. Chromosome files for hg18 and hg19 added
-6. Additional memory checks added
-7. Stdout format was changed
-========== Version 1.65 ====================
-1. R script changed
-2. _report.R script to generate html report from Rmd file and the Rmd file are created by the program 
-========== Version 1.66 ====================
-1. fixed bug in work with track lists
-2. A diagnostic for incorrect chromosome positions
-3. GNU version check to choose between mkdir and _mkdir if WIN32
-4. Fixed bug with incorrect positions on the chromosomes
-========== Version 1.67 ====================
-1. parameter 'step' is renamed to 'bin' 
-2. parameter 'outWig' is renamed to 'outLC'
-3. Introduced the distributions for the local correlation (file *.LChist)
-========== Version 1.68 ====================
-1. Fixed a bug with flanks
-2. Fixed conflict in windows enviroment
-3. Documentation improved
-4. Improved work with -na flag 
-========== Version 1.70 ====================
-1. Improved calculation of the total correlation.
-2. File Statistics changed 
-3. The cross-correlation function renormalized
-4. A new parameter crossWidth introduced. This parameter defines width of plot for cross-correlation function The deafault is 10000
-5. The documentation changed 
-========== Version 1.71 ====================
-1. Autocorrelation now is written to the file *.dist.
-2. Numerical parameter 'lAuto' replaced by boolean parameter 'AutoCorr'.
-3. Fixed bug with logarithmic data scaling
-========== Version 1.72 ====================
-1. Parameter Distances changed. Now value DETAIL'Write by chromosomes' depends on 'outChrom' parameter. 
-2. The local correlation track now can be written with linear scale, logarithmic scale, and double-logarithmic scale.
-3. The parameter -lc introduced. This parameter equivalent to outLC=BASE
-============================================
-============================================
-========== Version 2.00 ====================
-1. Binary profile changed from byte to short.
-2. Local correlation presented as bedgraph without normalization.
-3. In-memory arrays changed to buffered swap-file arrays. A parameter for buffer size introduced. 
-4. Parameter nShuffle now defines absolute number of shuffle.
-5. The program 'confounder' introduced. The program calculates the covariation matrix and calculates the first principal component.
-6. The parameter 'confounder' introduced. This parameter defines filename for confounder.
-7. The parameter 'ScaleFactor' removed
-8. The parameter 'strand' removed
-9. The parameter 'scale' removed
-10. The kernel can be defined by user as a formula (parameter 'customKern').
-11. The parameter 'type' removed. The type of input files are defined automatically. 
-12. The parameter 'Step' renamed by 'bin'
-========== Version 2.01 ====================
-1. Fixed a bug in premapping.
-2. premapping uses maxZero parameter implicitly.
-3. A logarithmic scale used for binary presentation: x=scale*log(1+z)
-4. A timer for preparation stage included
-5. The parameter file and XML output changed
-6. Version is reported in the param file, statistics file and XML file
-7. Date/Time of run is reported in the statistics and statistics.xml files
-========== Version 2.02 ====================
-1. ID formation changed.
-2. Now the model is a formula. 
-3. User can switch off writing bedGraph for projection (only binary profiles will be written)
-4. Log-file can be defined as $.log where $ means current output file. If the user do not define $ the log-file will be cumulative.  
-========== Version 2.03 ====================
-1. For avoid long constant tracks a randomize procedure introduced. On track preparation every observed value multiplied by rGauss(1,0.001). 
-2. Fixed a bug with out bed graph 
-3. A possibility to add a suffix to the ID introduced
-4. For very sparse tracks a number of shuffles reduced. 
-========== Version 2.10 ====================
-1. A module parse_genes introduced The module takes bed (refseq) or gtf (GENCODE) files. This module creates a bed tracks for gene/exons/introns starts/bodies/ends
-2. The interval parameters such as gene_beg, gene_end, etc. removed.  
-========== Version 2.11 ====================
-1. Two new program added: binning -- binning of the input track and smoother -- smooth the input track with given kernel.
-2. A New parameter introduced: LCFg=<BASE | CENTER>. The parameter regulates the mean subtraction on the local correlation calculation.
-========== Version 2.12 ====================
-1. Fixed a problem with memory leak
-2. Two FDR thresholds introduced for the local correlations -- for unexpected high values (R_FDR) and for unexpected low value (L_FDR)
-3. Fixed bug with flanks  
-========== Version 2.13 ====================
-1. Fixed bug with smoother (normalization)
-2. Changed statistics table and statistics.xml 
-3. Changed noise formula: noise=sd*rgauss()*noiselevel+av replaced with noise=sd*rExp()*noiselevel;
-4. Smoother: a z-score threshold for output introduced (parameter smoothZ)
-5. Order of the input files processing changed: first file is from the first list, second from the second one.
-========== Version 2.20 ====================
-1. Sparse data processing introduced
-2. The parameter writeDistr now has 3 values that define type of foreground distribution file (see the Documentation)
-3. Fixed bug with report file
-4. User may set 'null' for statistics, params, and log filenames 
-5. If no correlation found (number of Windows =0) the results are written to statistics file with NA values
+=========== Version 1.43 =================
+1. Previous version has a limit on the chromosome number - 300. 1.43 has not such limit.
+2. Files with distance distributions *.fgCorr and *.bgCorr are replaced by single file *.dist
+3. Flag definition Distances=<0|1> is replaced by Distances=<TOTAL | DETAIL | NONE>: 
+   In the first case <TOTAL> the file *.dist will contain fields: 
+   	   x - distance
+	   Bg - background correlation function
+	   Fg - foreground correlation function
+	   FgPlus - foreground correlation function for the positive windows
+	   FgMinus - foreground correlation function for the negative windows
+   In the second case <DETAIL> the file *.dist will contain additional fields with the distance distribution for every chromosome separately.
+4. The chromosome statistics file can be created.
+5. Cumulative file Statistics changed. It contains now additional fields with average and standard deviations of foreground and background distributions.
+
+========== Version 1.44 ====================
+1. Fixed error in output files (segment boundaries are now defined as end=beg+window_length)
+2. Active module is removed from the StereoGene main program
+3. local correlation can be calculated as f\int g\rho + g\int f\rho and as \int g\rho*\int f\rho (see parameter outWig)
+4. Active is implemented as a separate program.
+
+========== Version 1.45 ====================
+1. Fixed an memory allocation error.
+2. Fixed error with list file location. Now file list can be located in 'files' directory
+========== Version 1.46 ====================
+1. in the cfg-file the boolean Flags now can be defined as YES/NO or ON/OFF
+2. the 'verbose' parameter can be defined in the cfg-file
+3. the Program generates a WARNING message if unknown parameter appears.
+========== Version 1.47 ====================
+1. Now the program analyses modification time of track and profile. If the track file has more resent time than a profile file the preparation stage will be done.
+2. The NA flag is used on preparation step
+========== Version 1.48 ====================
+1. Fixed bug in trackPrepare (read wig-files). The previous versions write a parasite data to the profile. As result a periodic small peaks appears.
+========== Version 1.50 ====================
+1. A new parameter introduced: kernelNS. This is percent for reducing kernel values in the interval [-100..+100]bp: newVal=oldVal*(1-kernelNS/100).
+2. A new out-file statistics.xml.  
+========== Version 1.51 ====================
+1. Fixed bug in local correlation wig-file 
+2. Local correlation wig file uses log scale 
+========== Version 1.52 ====================
+1. Fixed bug in auto-correlation function
+========== Version 1.53 ====================
+1. Changed scale in outWIG
+========== Version 1.54 ====================
+1. Makefile. If you have problems with ccvars, replace it with ccvars.simple
+========== Version 1.55 ====================
+1. Fixed bud with loss of the last chromosom
+2. Allowed a blank lines in chrom length file
+========== Version 1.56 ====================
+1. Fixed bug in read chromosomes
+========== Version 1.57 ====================
+1. Program reads cfg from program directory, then from current working directory, then from args
+2. Program creates necessary directories
+3. Program parse tilda at the beginning of filename
+4. Program allows spaces in filenames / directory names  
+========== Version 1.58 ====================
+1. Program do not use default cfg file. If cfg file is used it should be defined explcitelly in command line: cgf=<fname>
+2. Program can use two equivalent arguments notation: param=value and -param value
+3. File with Chromosomes can be defined in env variable SG_CHROM
+4. ErrorExit on unknown parameter or incorrect value
+5. new flag -clear. It forces profile recalculation.
+6. flag -h introduced. It shows a help page
+7. lock-unlock for cumulative files (not for windows)
+8. flag silent introduced. Even if 'verbose' is OFF the main results are printed to stdout. If silent is ON no output expected.
+9. New system of parameters parsing introduced (testing needed!)
+========== Version 1.59 ====================
+1. Fixed some bugs with opening files
+2. Some default values changed (maxNA=95, maxZero=95)
+3. The shuffling procedure corrected 
+========== Version 1.60 ====================
+1. Introduced parameter minShuffle - minimal number of shuffles
+2. File statistics and statistics.xml get new parameters nFg = number of observations: nBkg = actual number of shuffles.
+========== Version 1.61 ====================
+1. NA values are used only for WIG tracks; for the BED and other tracks types the program treats NA as 0 always regardless '-na' parameter definition.  
+========== Version 1.62 ====================
+1. Fixed bug with chromosome file -- number of chromosomes can exceed 300.  
+2. Fixed bug on shuffling of sparse profiles 
+========== Version 1.63 ====================
+1. List of compilers expanded
+========== Version 1.64 ====================
+1. The program reports total correlation and average correlation (the statistics file is changed!)
+2. Corrected xml output
+3. Strong syntax control for input profiles
+4. Bugfix
+5. Chromosome files for hg18 and hg19 added
+6. Additional memory checks added
+7. Stdout format was changed
+========== Version 1.65 ====================
+1. R script changed
+2. _report.R script to generate html report from Rmd file and the Rmd file are created by the program 
+========== Version 1.66 ====================
+1. fixed bug in work with track lists
+2. A diagnostic for incorrect chromosome positions
+3. GNU version check to choose between mkdir and _mkdir if WIN32
+4. Fixed bug with incorrect positions on the chromosomes
+========== Version 1.67 ====================
+1. parameter 'step' is renamed to 'bin' 
+2. parameter 'outWig' is renamed to 'outLC'
+3. Introduced the distributions for the local correlation (file *.LChist)
+========== Version 1.68 ====================
+1. Fixed a bug with flanks
+2. Fixed conflict in windows enviroment
+3. Documentation improved
+4. Improved work with -na flag 
+========== Version 1.70 ====================
+1. Improved calculation of the total correlation.
+2. File Statistics changed 
+3. The cross-correlation function renormalized
+4. A new parameter crossWidth introduced. This parameter defines width of plot for cross-correlation function The deafault is 10000
+5. The documentation changed 
+========== Version 1.71 ====================
+1. Autocorrelation now is written to the file *.dist.
+2. Numerical parameter 'lAuto' replaced by boolean parameter 'AutoCorr'.
+3. Fixed bug with logarithmic data scaling
+========== Version 1.72 ====================
+1. Parameter Distances changed. Now value DETAIL'Write by chromosomes' depends on 'outChrom' parameter. 
+2. The local correlation track now can be written with linear scale, logarithmic scale, and double-logarithmic scale.
+3. The parameter -lc introduced. This parameter equivalent to outLC=BASE
+============================================
+============================================
+========== Version 2.00 ====================
+1. Binary profile changed from byte to short.
+2. Local correlation presented as bedgraph without normalization.
+3. In-memory arrays changed to buffered swap-file arrays. A parameter for buffer size introduced. 
+4. Parameter nShuffle now defines absolute number of shuffle.
+5. The program 'confounder' introduced. The program calculates the covariation matrix and calculates the first principal component.
+6. The parameter 'confounder' introduced. This parameter defines filename for confounder.
+7. The parameter 'ScaleFactor' removed
+8. The parameter 'strand' removed
+9. The parameter 'scale' removed
+10. The kernel can be defined by user as a formula (parameter 'customKern').
+11. The parameter 'type' removed. The type of input files are defined automatically. 
+12. The parameter 'Step' renamed by 'bin'
+========== Version 2.01 ====================
+1. Fixed a bug in premapping.
+2. premapping uses maxZero parameter implicitly.
+3. A logarithmic scale used for binary presentation: x=scale*log(1+z)
+4. A timer for preparation stage included
+5. The parameter file and XML output changed
+6. Version is reported in the param file, statistics file and XML file
+7. Date/Time of run is reported in the statistics and statistics.xml files
+========== Version 2.02 ====================
+1. ID formation changed.
+2. Now the model is a formula. 
+3. User can switch off writing bedGraph for projection (only binary profiles will be written)
+4. Log-file can be defined as $.log where $ means current output file. If the user do not define $ the log-file will be cumulative.  
+========== Version 2.03 ====================
+1. For avoid long constant tracks a randomize procedure introduced. On track preparation every observed value multiplied by rGauss(1,0.001). 
+2. Fixed a bug with out bed graph 
+3. A possibility to add a suffix to the ID introduced
+4. For very sparse tracks a number of shuffles reduced. 
+========== Version 2.10 ====================
+1. A module parse_genes introduced The module takes bed (refseq) or gtf (GENCODE) files. This module creates a bed tracks for gene/exons/introns starts/bodies/ends
+2. The interval parameters such as gene_beg, gene_end, etc. removed.  
+========== Version 2.11 ====================
+1. Two new program added: binning -- binning of the input track and smoother -- smooth the input track with given kernel.
+2. A New parameter introduced: LCFg=<BASE | CENTER>. The parameter regulates the mean subtraction on the local correlation calculation.
+========== Version 2.12 ====================
+1. Fixed a problem with memory leak
+2. Two FDR thresholds introduced for the local correlations -- for unexpected high values (R_FDR) and for unexpected low value (L_FDR)
+3. Fixed bug with flanks  
+========== Version 2.13 ====================
+1. Fixed bug with smoother (normalization)
+2. Changed statistics table and statistics.xml 
+3. Changed noise formula: noise=sd*rgauss()*noiselevel+av replaced with noise=sd*rExp()*noiselevel;
+4. Smoother: a z-score threshold for output introduced (parameter smoothZ)
+5. Order of the input files processing changed: first file is from the first list, second from the second one.
+========== Version 2.20 ====================
+1. Sparse data processing introduced
+2. The parameter writeDistr now has 3 values that define type of foreground distribution file (see the Documentation)
+3. Fixed bug with report file
+4. User may set 'null' for statistics, params, and log filenames 
+5. If no correlation found (number of Windows =0) the results are written to statistics file with NA values

@@ -17,16 +17,31 @@ FloatArray *fProfile=0, *cProfile=0;
 void bTrack::initProfile(){
 	initProfile(0);
 };
+
+void bTrack::clearFiles(){
+	char bfil[4096];
+	makeFileName(bfil,profPath, name, BPROF_EXT);
+	if(fileExists(bfil)) remove(bfil);
+	makeFileName(bfil,profPath, name, PRM_EXT);
+	if(fileExists(bfil)) remove(bfil);
+}
+
+
 void bTrack::initProfile(char *tName){
 	errStatus="init Profile";
+
 	if(tName){
 		name=strdup(tName);
 		if(bytes) bytes->close();
 	}
+
+
+	clearFiles();
 	if(bytes==0) bytes=new BuffArray();
 	bytes->init(this,0,1);
 	if(fProfile==0) fProfile=new FloatArray();
 	fProfile->init(NA);
+//	makeFileName(b,profPath, fname, PRM_EXT);
 	errStatus=0;
 };
 //================================================================= Add segment
@@ -482,8 +497,8 @@ void bTrack::makeBinTrack(){
 	verb("Finalize profiles... \n");
 	finProfile(); //============ Calculate min,max,average; convert to bytes
 	verb("Write profiles... \n");
-	writeProfilePrm();
 	writeByteProfile();					//============ write binary profiles
+	writeProfilePrm();
 	writeLog("    Make binary track -> OK. Time=%s\n",tm.getTime());
 
 	return;

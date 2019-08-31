@@ -1,7 +1,7 @@
 /*
  * sg_util.h
  *
- *  Created on: 05 дек. 2017 г.
+ *  Created on: May 05, 2017 .
  *      Author: andrey
  */
 
@@ -398,6 +398,7 @@ struct bTrack:Track{
 	virtual double getValue(int pos, int cmpl);
 	virtual void clear();
 
+	void clearFiles();
 	bool readPrm();
 	bool readBin();
 	void makeBinTrack(const char *fname);

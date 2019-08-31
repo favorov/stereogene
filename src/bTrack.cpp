@@ -487,7 +487,7 @@ bTrack::~bTrack(){
 //======================================= decode binary value to real value
 double bTrack::getVal(BINVAL b){
 	if(b==NA){
-			if(NAFlag && trackType==WIG_TRACK){
+			if(NAFlag && trackType!=BED_TRACK){
 			double x=rExp();
 			double y=x*sd0*noiseLevel;
 			return y;
@@ -513,7 +513,7 @@ int    bTrack::getBVal(int pos, int cmpl){
 double bTrack::getValue(int pos, int cmpl){
 	BINVAL b=getBVal(pos,cmpl);
 	if(b==NA){
-			if(NAFlag && trackType==WIG_TRACK){
+			if(NAFlag && trackType!=BED_TRACK){
 			double x=rExp();
 			double y=x*sd0*noiseLevel;
 			return y;
