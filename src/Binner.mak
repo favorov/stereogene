@@ -24,7 +24,7 @@ OBJS=\
 	$(od)/bTrack.o \
 	$(od)/data.o \
 	$(od)/formula.o \
-	$(od)/fourierCorr.o \
+	$(od)/FourierCorr.o \
 	$(od)/householder.o \
 	$(od)/kernel.o \
 	$(od)/mann.o \
