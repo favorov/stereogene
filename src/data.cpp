@@ -22,10 +22,9 @@ char trackName[4096];       // current track name
 char *chromFile=0;
 char *confFile=0;		// confounder file name
 char *cfgFile=0;		// config file name
-char *profPath=0;
-char *trackPath=0;
-
-char *resPath=0;
+char *profPath=strdup("./");
+char *trackPath=strdup("./");
+char *resPath=strdup("./");
 char *statFileName=(char*)"./statistics";
 char *paramsFileName=(char*)"./params";
 char *inputProfiles=0;

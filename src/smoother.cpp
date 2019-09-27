@@ -38,7 +38,6 @@ void smooth(const char *fname){
 	initOutLC();
 	int l=profileLength;
 	bTrack *tr=new bTrack(fname);
-
 	for(int i=0,k=0; i<l; i+=wProfStep,k++){
 		double d;
 		d=100.*k/(l/wProfStep);
@@ -100,7 +99,6 @@ void Smoother(){
 //=====================================================================
 int main(int argc, char **argv) {
 	debugFg=DEBUG_LOG|DEBUG_PRINT; clearDeb();
-//deb(0);
 	initSG(argc, argv);
 //	if(debugFg) {debugFg=DEBUG_LOG|DEBUG_PRINT; clearDeb(); }
 	Preparator();

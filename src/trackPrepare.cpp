@@ -56,6 +56,7 @@ int bTrack::addSgm(ScoredRange *bed, FloatArray *prof){
 	double noise=0.001;
 	int p1=pos2filePos(bed->chrom, bed->beg);
 	int p2=pos2filePos(bed->chrom, bed->end);
+	if(p1<0 || p2<0) return 0;
 	if(p1<0) {p1=0;} if(p2>=profileLength) {p2=profileLength-1;}
 	float d;
 	if(p1==p2){
@@ -497,10 +498,9 @@ void bTrack::makeBinTrack(){
 	verb("Finalize profiles... \n");
 	finProfile(); //============ Calculate min,max,average; convert to bytes
 	verb("Write profiles... \n");
-	writeByteProfile();					//============ write binary profiles
 	writeProfilePrm();
 	writeLog("    Make binary track -> OK. Time=%s\n",tm.getTime());
-
+	clear();
 	return;
 }
 

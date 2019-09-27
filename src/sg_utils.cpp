@@ -1,7 +1,7 @@
 /*
  * sg_utils.cpp
  *
- *  Created on: May 05, 2017 .
+ *  Created on: 05 дек. 2017 г.
  *      Author: andrey
  */
 
@@ -143,7 +143,7 @@ Chromosome* findChrom(char *ch){
 //========================================================================================
 long pos2filePos(char*chrom,long pos){
 	Chromosome *ch=findChrom(chrom);
-	if(ch==0) return 0;
+	if(ch==0) return -1;
 	curChrom=ch;
 	long p=pos/binSize+curChrom->base;
 	return p;

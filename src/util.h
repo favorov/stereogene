@@ -1,7 +1,7 @@
 /*
  * util.h
  *
- *  Created on: May 05, 2017
+ *  Created on: 05 дек. 2017 г.
  *      Author: andrey
  */
 #include <stdio.h>

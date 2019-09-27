@@ -1,7 +1,7 @@
 /*
  * sg_util.h
  *
- *  Created on: May 05, 2017 .
+ *  Created on: 05 дек. 2017 г.
  *      Author: andrey
  */
 
@@ -108,10 +108,10 @@ extern int  writeDistr;		// flag: write distributions
 
 extern char trackName[4096];   	// current track name
 extern char *profPath;		// path to binary profiles
-extern char *cfgFile;		// config file name
-extern char *confFile;		// confounder file name
 extern char *trackPath;		// path to GBrowse track files
 extern char *resPath;		// path to results files (tracks and distributions)
+extern char *cfgFile;		// config file name
+extern char *confFile;		// confounder file name
 extern char *statFileName;	// File name for cummulative statistics
 extern char *paramsFileName; // Filename for save parameters of runs
 extern char *idSuff;
