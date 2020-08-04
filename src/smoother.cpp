@@ -32,7 +32,6 @@ void printMiniHelp(){
 double *smoothProf=0;
 double *smTmp=0;
 
-
 void smooth(const char *fname){
 	outLC=1;
 	initOutLC();
@@ -67,8 +66,11 @@ void smooth(const char *fname){
 
 	for(int i=0; i<l; i++) {
 		double x=lcProfile->get(i);
-		if(smoothZ){if((x-ee)/dd < smoothZ) x=0;}
-		else	   {x=x*tr->total/tt/binSize;}
+		if(smoothZ){
+			double z=(x-ee)/dd;
+			if(z < smoothZ) x=0;
+		}
+		x=x*tr->total/tt/binSize;
 		lcProfile->set(i,x);
 	}
 

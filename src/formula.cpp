@@ -224,7 +224,7 @@ char *FNode::print(char *b){
 		{MULT,DIV,PLUS,MINUS,EQ,UMINUS,SIN,COS,TAN,EXP,LOG,SQR,ABS,SIGN,ATAN,IDENT,CONST,TRACK};
 	char oper='?';
 	for(int i=0; oprs[i]; i++) if(operation==opcodes[i]) oper=oprs[i];
-	char val[20], chL[10], chR[10];
+	char val[20], chL[20], chR[20];
 	if(childL <0) strcpy(chL," "); else sprintf(chL,"%i",childL);
 	if(childR <0) strcpy(chR," "); else sprintf(chR,"%i",childR);
 	sprintf(val,"%f",value);

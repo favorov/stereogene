@@ -81,7 +81,8 @@ int calcSparce(){
 	//============================================== fill positions
 	for(int i=0; i<nn; i++){
 		int f=master->ivs->ivs[i]->f, t=master->ivs->ivs[i]->t;
-		if(f < 0) f=0; if(t > profileLength) t=profileLength;
+		if(f < 0) f=0;
+		if(t > profileLength) t=profileLength;
 		int ll=t-f;
 		sparceCoherent[i]=new sparceDat(f, f, ll);
 		int rf=slave->getRnd(0);

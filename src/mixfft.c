@@ -131,12 +131,16 @@ void initFFT(int n){
 	transTableSetup(sofarRadix, actualRadix, remainRadix, &nFactor, n);
 }
 
+extern void* memset(void*, int, size_t);
 void factorize(int n, int *nFact, int fact[])
 {
     int i,j,k;
     int nRadix;
     int radices[7];
     int factors[maxFactorCount];
+
+    memset(factors,0,sizeof(factors));
+
 
     nRadix    =  6;  
     radices[1]=  2;

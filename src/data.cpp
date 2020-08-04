@@ -8,7 +8,7 @@
 
 #include "track_util.h"
 
-const char* version="2.20";
+const char* version="2.21";
 
 
 Chromosome *chrom_list;       // list of chromosomes
@@ -88,7 +88,7 @@ char *trackName1=strdup("");
 char *trackName2=strdup("");
 double mannW_Z=0;
 double mannW_p=1;
-double smoothZ=3;
+double smoothZ=0;
 
 Model 	*model;
 

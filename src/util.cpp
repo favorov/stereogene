@@ -410,11 +410,7 @@ int _makeDir(const char * path){
     struct stat sb;
     if (stat(path, &sb) == 0 && S_ISDIR(sb.st_mode)) return 0;
 #if defined(_WIN32)
-#if __GNUC__ > 5
-	return _mkdir(path);
-#else
 	return mkdir(path);
-#endif
 #else
 	mode_t mode=S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH;
 	return mkdir(path, mode); // notice that 777 is different than 0777

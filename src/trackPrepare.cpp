@@ -155,6 +155,17 @@ int checkWig(char *b){
 	return WIG_TRACK;
 }
 
+int checkBed(char *b){
+	int type=BED_TRACK;
+	int nTab=0;
+	char *s=b;
+	for(; s; s=strchr(s,'\t')) {
+		s++; nTab++;
+	}
+	if(nTab < 5) type=	BED_GRAPH;
+	return type;
+}
+
 char * readChrom(char *s){return strtok(s," \t\n\r");}
 char* readChrom(){return strtok(0," \t\n\r");}
 long readInt(){
@@ -202,6 +213,7 @@ void bTrack::readInputTrack(const char *fname, int cage){
 		if(strncmp(inputString,"#bedGraph",9)==0) {trackType=BED_GRAPH; continue;}
 		if(*inputString=='#' || *inputString==0) continue;							//======== comment line
 		if(trackType==WIG_TRACK) trackType=checkWig(inputString);
+//		if(trackType==BED_TRACK) trackType=checkBed(inputString);
 
 		beg=-1; end=-1;
 
@@ -347,7 +359,6 @@ void bTrack::finProfile(){
 			lprof+=1;
 			if(z < minP) minP=z;
 			if(z > maxP) maxP=z;
-//if(z!=0) deb(0,"%i\t%f\tmin=%f\tmax=%f",i,z,minP, maxP);
 		}
 
 		if(cbytes && (z=cProfile->getLog(i)) != NA){

@@ -184,6 +184,7 @@ void FloatArray::init(int na){
 		for(int i=0; i<profileLength; i++) val[i]=na;	//== fill initial values
 		return;
 	}
+
 	fseek(f,0,SEEK_SET);
 	bufBeg=bufEnd=-1; wr=false;
 	for(int i=0; i<binBufSize; i++) val[i]=na;			// Fill the file with NA

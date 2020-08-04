@@ -1,9 +1,3 @@
-#****************************************************************************#
-#SeSiMCMC. Looking - for - motifs by MCMC project. (c) A. Favorov 2001
-#$Id: Makefile 1900 2013-07-09 07:36:01Z favorov $
-#****************************************************************************#
-#this file can be started only from parent directory
-
 makefiles=\
 	StereoGene.mak \
 	Smoother.mak \
