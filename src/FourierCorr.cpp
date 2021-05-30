@@ -4,6 +4,7 @@
  *  Created on: Feb 20, 2013
  *      Author: mironov
  */
+#include <limits.h>
 #include "track_util.h"
 
 double *BkgSet=0, *FgSet=0;			// background and foreground sets of the correlations
