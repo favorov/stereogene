@@ -139,7 +139,10 @@ int posPairCmp(const void *xp1, const void *xp2){
 int distrBkg(int n);
 
 void distrBkg(){
-	srand(33);									// random seed
+	if(randseed<0) {
+		randseed=((long long)(-randseed)*time(NULL))%INT_MAX;
+	}
+	srand(randseed);									// random seed
 	verb("\nBakcground...");
 	cleanCummulative();
 	avBg=0;

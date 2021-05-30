@@ -161,7 +161,8 @@ extern double maxNA0;			// max allowed NA values - if at lest one of profiles co
 extern double maxZero0;			// max allowed zero values - if both profiles contains more than maxZero zeros the window will be ignored
 extern double maxNA;			// max allowed NA values - if at lest one of profiles contains more than maxNA NA values the window will be ignored
 extern double maxZero;			// max allowed zero values - if both profiles contains more than maxZero zeros the window will be ignored
-extern int nShuffle;			// number of shuffle in percents
+extern int nShuffle;			// number of shuffles
+extern int randseed;  //the random generator seed parameter, the default is 33; positive and zero numbers are passsed to srand, the negative are used as srand((-randseed)*time(NULL) %% maxuint)  
 extern int nCompare;			// number of observations
 
 extern int threshold;

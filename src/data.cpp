@@ -8,7 +8,7 @@
 
 #include "track_util.h"
 
-const char* version="2.21";
+const char* version="2.22";
 
 
 Chromosome *chrom_list;       // list of chromosomes
@@ -84,6 +84,7 @@ double 	maxZero0=95;
 double 	maxNA=100;
 double 	maxZero=100;
 int 	nShuffle=10000;
+int randseed=33;  //the random generator seed parameter, the default is 33; positive and zero numbers are passsed to srand, the negative are used as srand((-randseed)*time(NULL))  
 char *trackName1=strdup("");
 char *trackName2=strdup("");
 double mannW_Z=0;

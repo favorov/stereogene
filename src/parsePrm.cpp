@@ -244,6 +244,7 @@ Param *pparams[]={
 		new Param(SG, "maxNA"		,1, &maxNA0  	,"Max number of NA values in window (percent)"),
 		new Param(SG, "maxZero"		,1, &maxZero0  	,"Max number of zero values in window (percent)"),
 		new Param(SG, "nShuffle"	,1, &nShuffle  	,"Number of shuffles for background calculation"),
+		new Param(SG, "randseed"	,1, &randseed  	,"Random seed; positive and zero numbers are passsed to srand, the negative are used as srand((-randseed)*time(NULL)%INT_MAX)"),
 		new Param(SG, "noiseLevel"	,1, &noiseLevel ,0),
 		new Param(SG, "complFg"		,1, &complFg	,complFlags,0),
 		new Param(SG, "LCFg"		,1, &lcFlag		,LCFlags,0),
@@ -632,6 +633,7 @@ void printHelp(){
 		}
 		 j++;
 	}
+	printf("Visit http://stereogene.bioinf.fbb.msu.ru/ for some examples.\n\n");
 }
 
 
