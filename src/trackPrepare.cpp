@@ -155,17 +155,6 @@ int checkWig(char *b){
 	return WIG_TRACK;
 }
 
-int checkBed(char *b){
-	int type=BED_TRACK;
-	int nTab=0;
-	char *s=b;
-	for(; s; s=strchr(s,'\t')) {
-		s++; nTab++;
-	}
-	if(nTab < 5) type=	BED_GRAPH;
-	return type;
-}
-
 char * readChrom(char *s){return strtok(s," \t\n\r");}
 char* readChrom(){return strtok(0," \t\n\r");}
 long readInt(){
@@ -179,8 +168,6 @@ double readFloat(){
 	if(s==0) return -1;
 	return atof(s);
 }
-
-
 
 void bTrack::readInputTrack(const char *fname, int cage){
 	char *chrom=0;
@@ -213,7 +200,6 @@ void bTrack::readInputTrack(const char *fname, int cage){
 		if(strncmp(inputString,"#bedGraph",9)==0) {trackType=BED_GRAPH; continue;}
 		if(*inputString=='#' || *inputString==0) continue;							//======== comment line
 		if(trackType==WIG_TRACK) trackType=checkWig(inputString);
-//		if(trackType==BED_TRACK) trackType=checkBed(inputString);
 
 		beg=-1; end=-1;
 
@@ -221,14 +207,16 @@ void bTrack::readInputTrack(const char *fname, int cage){
 			case BED_TRACK:										//======== BED
 				score=1;										//======== default score=1
 				strand=0;										//======== default strand=unknown
-				chrom=readChrom(inputString);								//======== find chrom field
+				chrom=readChrom(inputString);					//======== find chrom field
 				beg=readInt();									//======== find beg field
 				end=readInt();									//======== find end field
 				sx=strtok(0,"\t\n"); if(sx==0) break;			//======== ignore name field
 				sx=strtok(0,"\t\n"); if(sx==0) break;			//======== take score field
 				if(*sx!=0 && (isdigit(*sx) || *sx=='-')) {
-					score=atof(sx);
-					if(score==0) score=0.01;
+					if(isfloat(sx)){
+						score=atof(sx);
+						if(score==0) score=0.01;
+					}
 				}
 				sx=strtok(0,"\t\n"); if(sx==0) break;			//======== take strand field
 				if(*sx!=0 && *sx!='.') {strand=*sx; nStrand++;}
@@ -597,7 +585,7 @@ void bTrack::writeBinnedProf(const char *fname){
 
 	char *s=strrchr(pfil,'/'); if(s==0) s=wfil;
 	s=strrchr(s,'.'); if(s) *s=0;
-	sprintf(wfil,"%s_%i.bgr",pfil,binSize);
+	snprintf(wfil,sizeof(wfil),"%s_%i.bgr",pfil,binSize);
 
 	FILE *f=gopen(wfil,"w");
 	fprintf(f,"track type=bedGraph name=\"%s\" description=\"Binned track. Binsize=%i\"\n",name, binSize);

@@ -1,7 +1,7 @@
 /*
  * sg_util.h
  *
- *  Created on: 05 дек. 2017 г.
+ *  Created on: 05-th of December, year 2017 AD
  *      Author: andrey
  */
 
@@ -121,7 +121,7 @@ extern int inputErr;		// flag: if input track has errors
 extern int inputErrLine;	// Error line in the input
 extern char curFname[4048];	// current input file
 
-extern int inpThreshold;		// Testing of binarized input data, % of max
+//extern int inpThreshold;		// Testing of binarized input data, % of max
 //============================ Track parameters ===============================
 extern int   lcFlag;		// LC flag: BASE or CENTER
 extern int   complFg;		// Flag: IGNORE_STRAND - ignore strand; COLLINEAR - compare collinear strands; COMPLEMENT - compare complement strands
@@ -161,8 +161,7 @@ extern double maxNA0;			// max allowed NA values - if at lest one of profiles co
 extern double maxZero0;			// max allowed zero values - if both profiles contains more than maxZero zeros the window will be ignored
 extern double maxNA;			// max allowed NA values - if at lest one of profiles contains more than maxNA NA values the window will be ignored
 extern double maxZero;			// max allowed zero values - if both profiles contains more than maxZero zeros the window will be ignored
-extern int nShuffle;			// number of shuffles
-extern int randseed;  //the random generator seed parameter, the default is 33; positive and zero numbers are passsed to srand, the negative are used as srand((-randseed)*time(NULL) %% maxuint)  
+extern int nShuffle;			// number of shuffle in percents
 extern int nCompare;			// number of observations
 
 extern int threshold;
@@ -174,8 +173,9 @@ extern bool syntax;				// Strong syntax control
 extern bool outPrjBGr;
 extern bool writeDistCorr;		// write BroadPeak
 extern bool outLC;
-extern bool sparse;				// the data is sparce
+//extern bool sparse;				// the data is sparce
 
+extern bool	localSuffle;		// use shuffle inside the windoww
 extern int LCScale;
 extern int crossWidth;
 extern bool RScriptFg;
@@ -186,6 +186,7 @@ extern int cage;
 extern bool clearProfile; //Force profile recalculation
 extern int scoreType;
 extern bool writePDF;
+extern bool writeHTML;
 extern double LlcFDR;		// treshold on FDR when write Local Correlation track
 extern double RlcFDR;		// treshold on FDR when write Local Correlation track
 extern double smoothZ;
@@ -352,7 +353,6 @@ struct Track{		        // Binary track
 	int deriv;						// order of derivative
 	double projCoeff;
 	double *autoCorr;				// autocorrelation function
-
 	Track();						// empty constructor
 	virtual ~Track();						// empty constructor
 	void init();
@@ -378,8 +378,7 @@ struct Track{		        // Binary track
 	bool makeIntervals();
 	void makeIntervals(bool cmpl, IVSet *iv);
 	int  getRnd(bool cmpl1);
-	void writeWig(FILE* f, Chromosome *ch);
-	void writeWig();
+	void writeAuto();
 
 };
 //============================== Model =======================================
@@ -553,11 +552,11 @@ public:
 	virtual ~Kernel(){xfree(kern,"~kern1"); xfree(ckern, "~ckern");}
 	void init(int l);
 	void fft();
-	void fftx(double* , int deriv);		// do transform for given data
-	void ffty(double* , int deriv);		// do transform for given data
-	double scalar(Fourier *f1, Fourier *f2, Complex *c, bool complem);
-	double dist  (Fourier *f1, Fourier *f2, bool complem);
-	double dist(bool complem);
+	void fftx(double* , int deriv=0);		// do transform for given data
+	void ffty(double* , int deriv=0);		// do transform for given data
+	double scalar(Fourier *f1, Fourier *f2, Complex *c, bool complem, int delta=0);
+	double dist  (Fourier *f1, Fourier *f2, bool complem, int delta=0);
+	double dist(bool complem, int delta=0);
 	void makeKernel(int l);
 	double NSCorrection(double x, double val);
 	virtual double kernVal(double x)=0;
@@ -613,7 +612,7 @@ struct FileListEntry{
 };
 
 //===================================================================
-struct PairEntry{			//==== correlation for pair of windows
+struct FgEntry{			//==== correlation for pair of windows
 	int profPos;			//==== Profile position
 	float d;				//==== Correlation
 };
@@ -696,8 +695,8 @@ extern XYCorrelation XYbgcorrelation;		// array for background correlation pictu
 
 extern Fourier LCorrelation;			// distance correlation calculation
 
-extern PairEntry *pairs;				// array for pair's correlation (foreground)
-extern int nPairs;						// number of foreground observations
+extern FgEntry *FgCorr;				// array for pair's correlation (foreground)
+extern int nFgPos;						// number of foreground observations
 //extern double BgAvCorr;					// average Background correlation
 //extern double FgAvCorr;					// average Foreground correlation
 extern double LCmin, LCmax;
@@ -709,6 +708,7 @@ extern double sdBg;
 extern double avFg;
 extern double sdFg;
 extern Timer debTimer;
+extern int listID;
 
 //=============================== Chromosomes ===========================
 int  readChromSizes(char *fname);			// read chromosomes
@@ -730,7 +730,7 @@ char *cfgName(char* p, char* ext);			// Make config file name
 char *makePath(char* pt);					// Make path - add '/' to the end of pathname
 void makeDirs();
 int   getTrackType(const char *fname);
-void addFile(char* fname);			// Add filename to file list
+void addList(char* fname);			// Add filename to file list
 
 void writeBedGr(const char *fname, FloatArray *array, float lTreshold, float rTreshold);
 void writeBedGr(FILE* f, FloatArray *array);
@@ -741,6 +741,8 @@ double rExp();								// exp random value
 double rGauss(double e, double sigma);		// normal random with given mean and sigma
 unsigned long randInt(unsigned long n);		// uniform random int
 double drand();								// uniform random double [0,1]
+double drand(double xx);						// uniform random double [0,xx]
+int irand(int xx);						// uniform random int [0,xx]
 statTest *MannWhitney( double *set1, int nSet1, double *set2,int nSet2);	//Mann-Whitney test
 
 //============================================ Fourier transformation
@@ -780,6 +782,7 @@ void printStat(FILE *f);
 char * printId();
 
 void printCorrelations();
+void printAuto();
 void printChomosomes(char *fname);
 void printChrDistances(char *fname);
 void printParamNames(FILE* f);
@@ -802,7 +805,6 @@ void Preparator();
 void Covariator();
 void Projector();
 void prepare(const char * fname);
-int calcSparce();
 
 void normChromDist();	// normalize distance distribution
 

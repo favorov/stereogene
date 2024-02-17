@@ -8,7 +8,7 @@
 
 #include "track_util.h"
 
-const char* version="2.22";
+const char* version="2.30";
 
 
 Chromosome *chrom_list;       // list of chromosomes
@@ -40,30 +40,30 @@ int   crossWidth=10000;
 bool  outSpectr=0;
 bool  outChrom=0;
 int   outRes=XML|TAB;
-int   inpThreshold=0;		// Testing of binarized input data, % of max
-bool  writePDF=true;
+//int   inpThreshold=0;			// Testing of binarized input data, % of max
 int   complFg=IGNORE_STRAND;
 int   lcFlag=CENTER;
 int   profileLength;			// size of the profile array
 
-char *pcorProfile=0;    // partial correlation profile file name
+char *pcorProfile=0;    		// partial correlation profile file name
 int  binBufSize=30000000;
 
 
 int 	kernelType=KERN_NORM;
 char* 	customKern=0;
 double 	noiseLevel=0;
-int 	wSize=100000;        // size of widow (nucleotides)
-int 	wStep=0;             // window step   (nucleotides)
+int 	wSize=100000;        	// size of widow (nucleotides)
+int 	wStep=0;             	// window step   (nucleotides)
 int 	flankSize=0;
 double 	kernelSigma=1000.;    	// kernel width (nucleotides)
-double 	kernelShift=0;      	    // Kernel mean (for Gauss) or Kernel start for exponent
+double 	kernelShift=0;      	// Kernel mean (for Gauss) or Kernel start for exponent
 int 	intervFg0;
 double 	scaleFactor=0.2;
 bool 	outLC=0;
-bool 	sparse=0;
+//bool 	sparse=0;
+bool	localSuffle=0;			// use shuffle inside the windoww
 int 	LCScale=LOG_SCALE;
-//int 	LCScale=LIN_SCALE;
+
 double LlcFDR=0;		// treshold on FDR when write Local Correlation track
 double RlcFDR=0.5;		// treshold on FDR when write Local Correlation track
 
@@ -84,12 +84,11 @@ double 	maxZero0=95;
 double 	maxNA=100;
 double 	maxZero=100;
 int 	nShuffle=10000;
-int randseed=33;  //the random generator seed parameter, the default is 33; positive and zero numbers are passsed to srand, the negative are used as srand((-randseed)*time(NULL))  
 char *trackName1=strdup("");
 char *trackName2=strdup("");
 double mannW_Z=0;
 double mannW_p=1;
-double smoothZ=0;
+double smoothZ=3;
 
 Model 	*model;
 
@@ -107,12 +106,14 @@ Fourier LCorrelation;
 
 double 	totCorr=FNA, BgTotal=FNA;
 bool 	RScriptFg=0;
+bool 	writeHTML=false;
+bool  	writePDF=false;
 int 	bpType=BP_SIGNAL;
 int 	cage=0;
 bool 	clearProfile=false;
 int 	scoreType=AV_SCORE;
 FileListEntry files[256];
-int   	nfiles;
+int   	nfiles=0;
 bool LCExists=false;
 
 //double 	BgAvCorr=0;

@@ -221,7 +221,7 @@ Param *pparams[]={
 		new Param(SG,"statistics"	,0, &statFileName	,"cumulative file with statistics"),
 		new Param(SG,"params" 		,0, &paramsFileName	,"cumulative file with parameters"),
 		new Param(AP,"log" 		,0, &logFileName	,"cumulative log-file"),
-		new Param(AP,"id_suff" 	,0, &idSuff		,0),
+		new Param(AP,"id_suff" 	,0, &idSuff		,0),	// suffix for the result files
 //======================== =====================================================================================
 		new Param(AP, "input parameters"),
 		new Param(AP, "chrom"		,1, &chromFile	,"chromosome file"),
@@ -244,13 +244,11 @@ Param *pparams[]={
 		new Param(SG, "maxNA"		,1, &maxNA0  	,"Max number of NA values in window (percent)"),
 		new Param(SG, "maxZero"		,1, &maxZero0  	,"Max number of zero values in window (percent)"),
 		new Param(SG, "nShuffle"	,1, &nShuffle  	,"Number of shuffles for background calculation"),
-		new Param(SG, "randseed"	,1, &randseed  	,"Random seed; positive and zero numbers are passsed to srand, the negative are used as srand((-randseed)*time(NULL)%INT_MAX)"),
 		new Param(SG, "noiseLevel"	,1, &noiseLevel ,0),
 		new Param(SG, "complFg"		,1, &complFg	,complFlags,0),
 		new Param(SG, "LCFg"		,1, &lcFlag		,LCFlags,0),
-		new Param(SG, "sparse"		,1, &sparse		,0),
-		new Param(SG, "sp"			,1, &sparse		,1,"the data is sparce"),
-//======================== =====================================================================================
+		new Param(SG, "localSuffle",1, &localSuffle,1,"Use cyclic permutations"),
+//==============================================================================================================
 		new Param(SG, "Output parameters"),
 		new Param(SG, "outSpectr" 	,1, &outSpectr    ,"write fourier spectrums"),
 		new Param(SG, "outChrom" 	,1, &outChrom     ,"write statistics by chromosomes"),
@@ -261,16 +259,17 @@ Param *pparams[]={
 		new Param(SG, "Distances" 	,1, &writeDistCorr,1,"Write distance correlations"),
 		new Param(SG, "outLC"		,1, &outLC		  ,0),
 		new Param(SG, "lc"			,0, &outLC		  ,1,"produce profile correlation"),
+		new Param(SG, "localSuffle"	,0, &localSuffle  ,"use shuffle inside the windoww"),
 		new Param(SG, "LCScale"		,0, &LCScale	  ,LCScaleTypes,"Local correlation scale: LOG | LIN"),
 		new Param(SG, "L_FDR"		,1, &LlcFDR	      ,"threshold on left FDR when write the local correlation"),
 		new Param(SG, "R_FDR"		,1, &RlcFDR	      ,"threshold on right FDR when write the local correlation"),
 		new Param(SG, "outRes" 		,0, &outRes 	  ,outResTypes,"format for results in statistics file"),
 		new Param(SG, "AutoCorr"  	,1, &doAutoCorr   ,0),
+		new Param(SG, "pdf"			,1, &writePDF  	  ,1, 0),	//write R plots to pdf
+		new Param(SG, "HTML"		,1, &writeHTML 	  ,1, 0),	//write report to HTML
 //======================== =================== Additional parameters (see Undocumented) ===============================
-		new Param(SG, "inpThreshold",0, &inpThreshold ,0),	//input binarization testing, %of max
 		new Param(AP, "debug"		,0, &debugFg   	  ,0),	//debug mode
 		new Param(AP, "d"			,0, &debugFg   	  ,1, 0),	//debug mode
-		new Param(SG, "pdf"			,1, &writePDF  	  ,1, 0),	//write R plots to pdf
 		new Param(PG, "pgLevel"		,1, &pgLevel  	  ,1, 0),	//minimal level in ENCODE to be taken into account
 
 		new Param(AP, "Happy correlations!"),
@@ -451,7 +450,7 @@ void readPrm(char *b){
 }
 
 void readPrm(char *key, char *val){
-	if(keyCmp(key,"in")==0) {addFile(val); return;}
+	if(keyCmp(key,"in")==0) {addList(val); return;}
 	if(keyCmp(key,"cfg")==0) readConfig(val);
 	Param* prm=findParam(key);
 	if(prm!=0){
@@ -492,7 +491,7 @@ void parseArgs(int argc, char **argv){
 			readPrm(argv[i]);
 		}
 		else{
-			addFile(argv[i]);
+			addList(argv[i]);
 		}
 	}
 	if(wStep==0)   wStep=wSize;
@@ -633,7 +632,6 @@ void printHelp(){
 		}
 		 j++;
 	}
-	printf("Visit http://stereogene.bioinf.fbb.msu.ru/ for some examples.\n\n");
 }
 
 
@@ -644,6 +642,8 @@ void initSG(int argc, char **argv){
 	if(chrom!=0) chromFile=strdup(chrom);
 	unsigned long t=time(0);	id=(unsigned int)t;	// define run id
 	parseArgs(argc, argv);
+	if(debugFg) {clearDeb(); debugFg=DEBUG_LOG|DEBUG_PRINT;}
+
 	makeDirs();
 //	if(strcmp(logFileName,"null")==0 || strcmp(logFileName,"NULL")==0) logFileName=0;
 	if(strlen(logFileName)==0 || keyCmp(logFileName, "null")==0) logFileName=0;
@@ -671,14 +671,13 @@ void PrepareParams(){
 	//====================================================================== Prepare parameters
 	kernelProfSigma=kernelSigma/binSize;   // kernel width ((profile scale)
 	kernelProfShift=kernelShift/binSize;   // kernel shift ((profile scale)
-	if(sparse){
-		flankSize=(flankSize==0) ? kernelSigma*3 : flankSize;
-		writeDistCorr=0; outSpectr=0; outChrom=0; outLC=0;
-		wProfSize=1; writeDistr=DISTR_SHORT;
-		maxNA0=100; maxZero0=100;
-	}
+//	if(sparse){
+//		flankSize=(flankSize==0) ? kernelSigma*3 : flankSize;
+//		writeDistCorr=0; outSpectr=0; outChrom=0; outLC=0;
+//		wProfSize=1; writeDistr=DISTR_SHORT;
+//		maxNA0=100; maxZero0=100;
+//	}
 	maxNA   =(int)(maxNA0  * wProfSize/100);			// rescale maxNA
-//deb("==>> %f %f %i %f", maxNA0, maxZero0, wProfSize, maxNA);
 	maxZero =(int)(maxZero0* wProfSize/100);			// rescale maxZero
 	if(maxZero>=wProfSize) maxZero=wProfSize-1;
 	if(maxNA  >=wProfSize) maxNA  =wProfSize-1;

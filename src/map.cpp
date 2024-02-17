@@ -61,7 +61,7 @@ void IVSet::fin(){
 		totLength += l;
 		ivs[i]->cumLength=totLength;
 	}
-	verb("Mapping:  lprofile=%i  totL=%i niv=%i\n",profileLength, totLength, nIv);
+	verb("Mapping:  lprofile=%i  totalIvLength=%i niv=%i\n",profileLength, totLength, nIv);
 }
 //===============================================================================
 

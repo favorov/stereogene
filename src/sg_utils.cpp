@@ -1,7 +1,7 @@
 /*
  * sg_utils.cpp
  *
- *  Created on: 05 дек. 2017 г.
+ *  Created on: 05-th of December, year 2017 AD
  *      Author: andrey
  */
 
@@ -326,18 +326,21 @@ int getFlag(char*s){
 //=================================================================
 //============================= File list =========================
 //=================================================================
-int   fileId=0;
 
-void addFile(char* fname, int id){
+void addTracks(char* fname, int list_id){
 	fname=trim(fname);
 	if(strlen(fname)==0) return;
 
+	for (int i = 0; i < nfiles; i++) {
+		if(strcmp(fname,files[i].fname)==0) return;
+	}
 	files[nfiles].fname=strdup(fname);
-	files[nfiles].listId=fileId;
+	files[nfiles].listId=list_id;
 	nfiles++;
 }
 
-void addFile(char* fname){
+int listID=0;	//ID of the list from where the tack is taken
+void addList(char* fname){
 	if(nfiles > 256) errorExit("too many input files\n");
 	char b[4096], *s;
 	strcpy(b,fname); s=strrchr(b,'.'); if(s) s++;
@@ -352,13 +355,14 @@ void addFile(char* fname){
 			strtok(b,"\r\n#");
 			s=trim(b);
 			if(strlen(s)==0 || *s=='#') continue;
-			addFile(s, fileId);
+			addTracks(s,listID);
 		}
-		fclose(f); fileId++;
+		fclose(f);
+		listID++;
 		return;
 	}
 	else{
-		addFile(fname, fileId); fileId++;
+		addTracks(fname,listID++);
 	}
 }
 

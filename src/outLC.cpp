@@ -221,11 +221,6 @@ double LocalCorrTrack(int pos1, int pos2, bool cmpl1, bool cmpl2, bool rnd){
 		double x=smoothProf1[i]	/profWithFlanksLength;					//the smoothed profile for x
 		double y=smoothProf2[i]	/profWithFlanksLength;					//the smoothed profile for y
 		double lc=0;													//local correlation
-//		int ax=bTrack1.getBVal(pos1+i-LFlankProfSize,cmpl1);
-//		int ay=bTrack2.getBVal(pos2+i-LFlankProfSize,cmpl2);
-//		if(ax==NA || ay==NA) {lcTmp[i]=NA; continue;}
-//		double x0=(ax==NA)?0: bTrack1.getVal(ax), y0=(ay==NA)?0: bTrack2.getVal(ay);
-//		lc=0.5*(x0*y+y0*x);
 
 		lc=x*y/sd;
 		lc=normLC(lc);

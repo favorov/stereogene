@@ -6,18 +6,6 @@
  */
 #include "track_util.h"
 
-
-void removeNA(BINVAL *s, int l){
-	if(NAFlag) return;
-	for(int i=0; i<l; i++){
-		if(s[i]==NA) s[i]=0;
-		if(inpThreshold){
-			if((s[i])*100./250 > inpThreshold) s[i]=250;
-			else s[i]=0;
-		}
-	}
-}
-
 void failParam(const char* s){
 	verb("parameter \'%s\' failed\n",s);
 }
@@ -184,7 +172,6 @@ void FloatArray::init(int na){
 		for(int i=0; i<profileLength; i++) val[i]=na;	//== fill initial values
 		return;
 	}
-
 	fseek(f,0,SEEK_SET);
 	bufBeg=bufEnd=-1; wr=false;
 	for(int i=0; i<binBufSize; i++) val[i]=na;			// Fill the file with NA
@@ -299,7 +286,8 @@ bool bTrack::readTrack(const char *fname){
 	for(;*fname==DERIV; fname++) {
 		deriv++;
 	}
-	name=strdup(fname);
+	char b[4096];
+	name=strdup(getFnameWithoutExt(b,fname));
 	//============================================== Read params
 	if(!readPrm()) return false;
 	if(!readBin()) return false;
@@ -312,12 +300,10 @@ bool bTrack::readTrack(const char *fname){
 //===============================================================================
 double Track::addStatistics(){
 	double avv=0, sdd=0;
-//deb(21,"nn=%i",nObs);
 	for(int i=0; i<profWithFlanksLength; i++){
 		double x=profWindow[i];
 		if(x!=NA){avv+=x; sdd+=x*x;  nObs++;}
 	}
-//deb(22,"nn=%i",nObs);
 	av+=avv; sd+=sdd;
 	return avv/profWithFlanksLength;
 }
@@ -338,6 +324,9 @@ bool bTrack::isZero(int i, bool cmpl){
 	return getBVal(i,cmpl)<=threshold;
 }
 
+
+//=======================================================================================
+// The intervals are used to select non-zero windows for background distribution
 void Track::makeIntervals(bool cmpl, IVSet *iv){
 	int f=0;
 	bool space=false;
@@ -347,11 +336,14 @@ void Track::makeIntervals(bool cmpl, IVSet *iv){
 	for(int i=0; i<wp; i++){
 		if(isZero(i,cmpl)) nZ++;
 	}
+	// use sliding window with length wProfSize.
+	// if a nonzero widow found it add to the list.
+	// If new window overlaps with the previous interval the interval expands.
 	space = (nZ > maxZ);
 	for(int i=wp; i<profileLength; i++){
 		if(nZ > maxZ){
 			if(!space){
-				iv->addIv(f,i-wp);
+				iv->addIv(f,i);
 			}
 			space=true;
 		}
@@ -371,8 +363,8 @@ bool Track::makeIntervals(){
 	makeIntervals(0, ivs);
 	if(hasCompl) makeIntervals(1, ivsC);
 	if(ivs->nIv+ivsC->nIv == 0) {
-		writeLog("Track <%s>: no nonZero windows",name);
-		fprintf(stderr,"Track <%s>: no nonZero windows",name);
+		writeLog(      "Track <%s>: no non-zero windows\n",name);
+		fprintf(stderr,"Track <%s>: no non-zero windows\n",name);
 		return false;
 	}
 	ivs->fin();
@@ -386,9 +378,10 @@ bool Track::makeIntervals(){
 }
 
 //========================================================================
+//==================================== get random position in the interval
 int Track::getRnd(bool cmpl){
 	int pos;
-	pos=cmpl ? ivsC->randPos() : ivs->randPos();         // get random position in the interval
+	pos=cmpl ? ivsC->randPos() : ivs->randPos();
 	return pos;
 }
 
@@ -602,28 +595,16 @@ double * Track::getProfile(int pos, bool cmpl){ //====== pos - profile position;
 }
 //======================================================
 //======================================================
-void Track::writeWig(FILE* f, Chromosome *ch){
-	int pos1=ch->base;
-	int pos2=pos1+ch->length/binSize;
-	int fg=0;
-	int tr=10;
-	for(int i=0,j=pos1; j<pos2; j++,i++){
-		double x=getValue(j,0)*4;
-		if(x<tr) {fg=0; continue;}
-		if(fg==0){
-			fprintf(f,"fixedStep chrom=%s start=%i step=%i span=%i\n",ch->chrom,
-					i*binSize,binSize,binSize);
-		}
-		fprintf(f,"%.0f\n",x); fg=1;
-	}
-}
 //======================================================
-void Track::writeWig(){
-	FILE *f=xopen(name,"wt");
-	verb("write track <%s>\n",name);
-	fprintf(f,"track type=wiggle_0 description=\"%s\"\n",name);
-	for(int i=0; i<n_chrom; i++){
-		writeWig(f,chrom_list+i);
+
+void Track::writeAuto(){
+	if(autoCorr==0) return;
+	char b[4096];
+	sprintf(b,"%s%s.auto",resPath,name);
+	FILE *f=xopen(b,"wt");
+	for(int j=0; j<profWithFlanksLength; j++){
+		int k=(j + profWithFlanksLength / 2 ) % profWithFlanksLength;
+		fprintf(f,"%i\t%9.5f\n",(j - profWithFlanksLength / 2) * binSize,autoCorr[k]);
 	}
 	fclose(f);
 }
@@ -637,9 +618,9 @@ Model::Model(){
 
 //================================================================================
 void Model::readModel(const char *fnam){
-	name=strdup(fnam);
 	char bb[2048];
 	char b[2048];
+	name=strdup(getFnameWithoutExt(b,fnam));
 	makeFileName(bb,trackPath, fnam);
 	FILE *f=fopen(bb,"r");
 	*bb=0;
@@ -657,7 +638,8 @@ void Model::readModel(const char *fnam){
 
 //================================================================================
 bool   Model::readTrack(const char *fname){
-	name=strdup(fname);
+	char b[2048];
+	name=strdup(getFnameWithoutExt(b,fname));
 	readModel(fname);
 	return true;
 }

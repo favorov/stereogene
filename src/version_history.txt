@@ -170,7 +170,7 @@
 3. Fixed bug with report file
 4. User may set 'null' for statistics, params, and log filenames 
 5. If no correlation found (number of Windows =0) the results are written to statistics file with NA values
-========== Version 2.21 ====================
-1. Fixed minor bugs in Smoother and Projector
-========== Version 2.22 ====================
-1. randomseed parameter 
+========== Version 2.30 ====================
+1. The background defined as cycle shifting in the window
+2. input multiple track lists
+3. Syntax control on bed files -- wrong fields ignored

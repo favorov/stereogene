@@ -41,13 +41,15 @@ void printProgDescr(){
 //============================================ Print Help page =========================================
 
 int main(int argc, char **argv) {
-//debugFg=DEBUG_LOG|DEBUG_PRINT;
-//clearDeb();
 
-initSG(argc, argv);
+	initSG(argc, argv);
+
+	writeLog("====== Start ====== deb=%i\n",debugFg);
+
 //===========================================
 	Preparator();
 	Correlator();
 	fflush(stdout);
+	writeLog("====== End ======\n");
 	return 0;
 }

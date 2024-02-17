@@ -109,11 +109,10 @@ float *Fourier::getSpectrum(){
 double *tmpDRe=0, *tmpDIm=0, *tmpIm=0;
 
 double *Fourier::getAutoCorr(){
-
-	getMem(autocorr,length,"AutoCorr #1");
-	getMem(tmpDRe,length,"AutoCorr #2");
-	getMem(tmpDIm,length,"AutoCorr #3");
-	getMem(tmpIm,length,"AutoCorr #4");
+	getMem0(autocorr,length,"AutoCorr #1");
+	getMem0(tmpDRe,length,"AutoCorr #2");
+	getMem0(tmpDIm,length,"AutoCorr #3");
+	getMem0(tmpIm,length,"AutoCorr #4");
 
 	tmpDRe[0]=0;
 	for(int i=1; i<length; i++){
@@ -121,8 +120,6 @@ double *Fourier::getAutoCorr(){
 	}
 	zeroMem(tmpDIm,length);
 	calc(tmpDRe, tmpDIm, autocorr, tmpIm);
-
-	xfree(autocorr,"Fourier1"); xfree(tmpDRe,"Fourier2"); xfree(tmpDIm,"Fourier3"); xfree(tmpIm,"Fourier3");
 	return autocorr;
 }
 
@@ -172,38 +169,63 @@ void Kernel::fft(){
 	cft.calc(ckern,0);
 }
 
-//============================== Kerneled scalar prod =\int f(x) \rho(x-y) g(y) / Length
-double Kernel::scalar(Fourier *f1, Fourier *f2, Complex *c, bool complem){
+//============================== Kerneled scalar prod =\int f(x+phi) \rho(x-y) g(y) / Length
+double Kernel::scalar(Fourier *f1, Fourier *f2, Complex *c, bool complem, int delta){ //phi -- shuffle phase
 	if(f1->length !=length) return 0;
 	if(f2->length !=length) return 0;
 	double re=0, im=0;
 	Fourier *zft=complem ? &cft : &ft;
 
 	for(int i=0; i<length/2; i++){
-		double RaRb_plus_IaIb =f1->re[i]*f2->re[i] + f1->im[i]*f2->im[i]; //==== Re(a)*Re(b)+Im(a)*Im(b)
-		double RaIb_minus_IaRb=f1->re[i]*f2->im[i] - f1->im[i]*f2->re[i]; //==== Re(a)*Im(b)-Im(a)*Re(b)
+		int idelta=(i+delta)%length;
+		double RePhi=cos(2*PI*idelta/length);
+		double ImPhi=sin(2*PI*idelta/length);
+//		double RePhi=cos(2*PI*idelta*i/length);
+//		double ImPhi=sin(2*PI*idelta*i/length);
+		double ReF1 =f1->re[i] * RePhi - f1->im[i] *ImPhi;
+		double ImF1 =f1->re[i] * ImPhi + f1->im[i] *RePhi;
+
+		f1->re[i]=ReF1;
+		f1->im[i]=ImF1;
+
+		double RaRb_plus_IaIb =ReF1*f2->re[i] + ImF1*f2->im[i]; //==== Re(a)*Re(b)+Im(a)*Im(b)
+		double RaIb_minus_IaRb=ReF1*f2->im[i] - ImF1*f2->re[i]; //==== Re(a)*Im(b)-Im(a)*Re(b)
 		//==  Re=SUM Re(kern)(Re(a)*Re(b)+Im(a)*Im(b)) + Im(kern)*(Re(a)*Im(b)-Im(a)*Re(b))
 		re+=(zft->re[i]*RaRb_plus_IaIb + zft->im[i]*RaIb_minus_IaRb)/length;
 		//==  Im=SUM Im(kern)(Re(a)*Re(b)+Im(a)*Im(b)) - Re(kern)*(Re(a)*Im(b)-Im(a)*Re(b))
 		im+=(zft->im[i]*RaRb_plus_IaIb - zft->re[i]*RaIb_minus_IaRb)/length;
+
+//		int id=(i+delta)%length;
+//		double ReF1 = f1->re[id];
+//		double ImF1 = f1->im[id];
+//
+//		double RaRb_plus_IaIb =ReF1*f2->re[i] + ImF1*f2->im[i]; //==== Re(a)*Re(b)+Im(a)*Im(b)
+//		double RaIb_minus_IaRb=ReF1*f2->im[i] - ImF1*f2->re[i]; //==== Re(a)*Im(b)-Im(a)*Re(b)
+//		//==  Re=SUM Re(kern)(Re(a)*Re(b)+Im(a)*Im(b)) + Im(kern)*(Re(a)*Im(b)-Im(a)*Re(b))
+//		re+=(zft->re[i]*RaRb_plus_IaIb + zft->im[i]*RaIb_minus_IaRb)/length;
+//		//==  Im=SUM Im(kern)(Re(a)*Re(b)+Im(a)*Im(b)) - Re(kern)*(Re(a)*Im(b)-Im(a)*Re(b))
+//		im+=(zft->im[i]*RaRb_plus_IaIb - zft->re[i]*RaIb_minus_IaRb)/length;
 	}
 	if(c!=0) {c->re=re; c->im=im;}
+
+//	return sqrt(re*re+im*im);
+
 	return re;
 }
 
 //======================================== Calculate distance (correlation)
-double Kernel::dist(bool complem){
-		return dist(&fx,&fy, complem);
+double Kernel::dist(bool complem, int delta){
+		return dist(&fx,&fy, complem, delta);
 }
 
 
 //======================================== Calculate distance (correlation)
-double Kernel::dist(Fourier *f1, Fourier *f2, bool complem){
+double Kernel::dist(Fourier *f1, Fourier *f2, bool complem, int delta){
 	Complex c0=Complex(), c1=Complex(), c2=Complex();
 
-	double d12=scalar(f1,f2, &c0, complem);
-	double d11=scalar(f1,f1, &c1, complem);
-	double d22=scalar(f2,f2, &c2, complem);
+	double d12=scalar(f1,f2, &c0, complem, delta);
+	double d11=scalar(f1,f1, &c1, true);
+	double d22=scalar(f2,f2, &c2, true);
 	Fourier *zft=complem ? &cft : &ft;
 
 	dx11=d11; dx12=d12; dx22=d22; ex1=f1->re[0]; ex2=f2->re[0];
@@ -335,17 +357,12 @@ void XYCorrelation::calcXYCorr(bool cmpl1, bool cmpl2){
 		ImX=cmpl1  ? -ImX : ImX;
 		ImY=cmpl2  ? -ImY : ImY;
 		datRe[i]=(ReX*ReY+ImX*ImY);
-		datIm[i]=(-ReX*ImY+ImX*ReY);
+		datIm[i]=(-ReX*ImY-ImX*ReY);
+//		datIm[i]=(-ReX*ImY+ImX*ReY);
 	}
-
 	calc(0);		//=========	reverse transformation
 	norm();			//========= divide by length
 	//========= normalize by std dev
-	double e1=track1->avWindow, d1=track1->sdWindow;
-	double e2=track2->avWindow, d2=track2->sdWindow;
-
-	for(int i=0; i<length; i++)
-		re[i]=(re[i]-length*e1*e2)/(d1*d2*length);
 }
 
 //========== Store the cross-correlation by chromosomes
@@ -353,8 +370,11 @@ void XYCorrelation::storeByChrom(int pos, double corr){
 	double delta=0.;
 	Chromosome* chr=0;
 	if(pos>=0) chr=getChromByPos(pos);
+	double e1=track1->avWindow, d1=track1->sdWindow;
+	double e2=track2->avWindow, d2=track2->sdWindow;
+
 	for(int i=0; i<length; i++){
-		double x=re[i];
+		double x=(re[i]-length*e1*e2)/(d1*d2*length);
 		correlation[i]+=x;
 		if(chr) {
 			chr->distDens[i]+=x;

@@ -35,7 +35,6 @@ OBJS=$(od)/FourierCorr.o \
 	$(od)/householder.o \
 	$(od)/data.o \
 	$(od)/sg_utils.o \
-	$(od)/sparse.o 
 	
 objs:$(OBJS)
 
@@ -66,7 +65,6 @@ $(od)/parse_genes.o: parse_genes.cpp track_util.h util.h sg_util.h
 $(od)/householder.o: householder.cpp track_util.h util.h sg_util.h
 $(od)/data.o: data.cpp track_util.h util.h sg_util.h
 $(od)/sg_utils.o: sg_utils.cpp track_util.h util.h sg_util.h
-$(od)/sparse.o: sparse.cpp track_util.h util.h sg_util.h
 
 clean:
 	rm -f $(OBJS)

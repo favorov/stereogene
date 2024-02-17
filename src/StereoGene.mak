@@ -1,3 +1,9 @@
+#****************************************************************************#
+#SeSiMCMC. Looking - for - motifs by MCMC project. (c) A. Favorov 2001
+#$Id: gibbslfm.mak 1034 2009-04-17 14:07:27Z favorov $
+#****************************************************************************#
+
+
 exename=StereoGene
 od=./obj
 
@@ -33,7 +39,6 @@ OBJS=$(od)/FourierCorr.o \
 	$(od)/parsePrm.o \
 	$(od)/data.o \
 	$(od)/sg_utils.o \
-	$(od)/sparse.o \
 	$(od)/main_SG.o 
 	
 objs:$(OBJS)
@@ -57,7 +62,6 @@ $(od)/mann.o: mann.cpp track_util.h util.h sg_util.h
 $(od)/map.o: map.cpp track_util.h util.h sg_util.h
 $(od)/out.o: out.cpp track_util.h util.h sg_util.h
 $(od)/outLC.o: outLC.cpp track_util.h util.h sg_util.h
-$(od)/sparse.o: sparse.cpp track_util.h util.h sg_util.h
 $(od)/trackPrepare.o: trackPrepare.cpp track_util.h util.h sg_util.h
 $(od)/util.o: util.cpp track_util.h util.h sg_util.h
 $(od)/mixfft.o: mixfft.c

@@ -1,7 +1,7 @@
 /*
  * util.h
  *
- *  Created on: 05 дек. 2017 г.
+ *  Created on: 05-th of December, year 2017 AD
  *      Author: andrey
  */
 #include <stdio.h>
@@ -85,7 +85,7 @@ void zfree(void *a, const char* b);
 #define realocMem(a,n,err)  {a=(typeof a)xrealloc(a,(n+100)*sizeof(*a),err);}
 #define xfree(a,b) 		 {zfree(a,b); a=0;}
 #define zeroMem(a,n) 	 {memset(a,0,n*sizeof(*a));}
-#define xmemcpy(dest,pds, src, psrc, n) {memcpy(dest+(pds)*sizeof(*dest), src+(psrc)*sizeof(*src),(n)*sizeof(*src));}
+//#define xmemcpy(dest,pds, src, psrc, n) {memcpy(dest+(pds)*sizeof(*dest), src+(psrc)*sizeof(*src),(n)*sizeof(*src));}
 #define max(a,b) a<b ? b : a
 #define min(a,b) a>b ? b : a
 #define abs(a) ((a) < 0 ? -(a) : (a))
@@ -107,6 +107,8 @@ bool isDouble(const char *s);
 bool isUInt(const char *s);
 char *trim(char *s);
 int  keyCmp(const char *str, const char *key);
+const char* skipInt(const char *s);
+bool isfloat(const char *s);
 //=============================== Files =================================
 FILE *xopen(const char*, const char*);		// open file if exists, exit otherwise
 FILE *gopen(const char*, const char*);		// open file with parsing ~
@@ -114,7 +116,7 @@ bool fileExists(const char *fname);				// check if the file exists
 bool fileExists(const char* path, const char *fname);				// check if the file exists
 bool fileExists(const char* path, const char *fname, const char *ext); // check if the file exists
 const char *getExt(const char *fname);					// extract file extension
-char *getFnameWithoutExt(char *buf, char *fname);
+char *getFnameWithoutExt(char *buf, const char *fname);
 void makeDir(const char *path);
 unsigned long getFileTime(const char *fname);
 char *correctFname(char* s);			// remove fucking MS Widows backslash
@@ -131,9 +133,11 @@ void writeLog(const char *format, ...);
 void writeLogErr(const char *format, ...);
 void verb(const char *format, ...);
 void xverb(const char *format, ...);
+//==================== just write debug information
 void deb(int num);
 void deb(const char *format, ...);
 void deb(int num, const char *format, ...);
+//===================== write debug info with time
 void debt(int num);
 void debt(const char *format, ...);
 void debt(int num, const char *format, ...);

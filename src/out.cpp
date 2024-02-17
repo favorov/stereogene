@@ -24,7 +24,13 @@ void printCorrelations(){
 		printChrDistances(strcat(strcpy(b,outFile),".dist"));
 	if(outSpectr) XYfgCorrelation.printSpect(strcat(strcpy(b,outFile),".spect"));
 	if(outChrom ) printChomosomes(strcat(strcpy(b,outFile),".chrom"));
+	if(doAutoCorr) printAuto();
 	errStatus=0;
+}
+
+void printAuto(){
+	track1->writeAuto();
+	track2->writeAuto();
 }
 
 void printChrDistances(char *fname){
@@ -35,9 +41,7 @@ void printChrDistances(char *fname){
 	fprintf(f,"# %s vs %s\n",track1->name, track2->name);
 
 	//========================================
-	double *autoCorrX=track1->autoCorr, *autoCorrY=track2->autoCorr;
 	fprintf(f,"x");
-	if(doAutoCorr) fprintf(f,"\tAutoCorr1\tAutoCorr2");
 	fprintf(f,"\tBkg\tFg\tFgPlus\tFgMinus");
 
 	//========================================
@@ -51,7 +55,6 @@ void printChrDistances(char *fname){
 	for(int j=0; j<profWithFlanksLength; j++){
 		int k=(j + profWithFlanksLength / 2 ) % profWithFlanksLength;
 		fprintf(f,"%i",(j - profWithFlanksLength / 2) * binSize);
-		if(doAutoCorr) fprintf(f,"\t%9.5f\t%9.5f",autoCorrX[k],autoCorrY[k]);
 		fprintf(f,"\t%9.5f\t%9.5f\t%9.5f\t%9.5f", XYbgcorrelation.correlation[k]*XYCorrScale,
 				XYfgCorrelation.correlation[k]*XYCorrScale, XYfgCorrelation.corrPlus[k]*XYCorrScale, XYfgCorrelation.corrMinus[k]*XYCorrScale);
 		if(outChrom){
@@ -211,7 +214,7 @@ void XYCorrelation::printSpect(char *fname){
 	fclose(f);
 }
 
-//============================================== write the foreground distribution of the correlations
+//============================================== write the foreground and background distributions of the correlations
 void printBgDistr(){
 	char b[1024];
 	strcat(strcpy(b,outFile),".bkg");					// open file for background observations
@@ -227,9 +230,9 @@ void printFgDistr(){
 	fFgDistr=xopen(b,"w");
 	ScoredRange gp;
 	if(writeDistr==DISTR_DETAIL){
-		for(int i=0; i<nPairs; i++){
-			filePos2Pos(pairs[i].profPos,&gp,wSize);
-			fprintf(fFgDistr,"%s\t%ld\t%ld\t%f\n",gp.chrom, gp.beg,gp.end, pairs[i].d);			// write the distribution: correlation, p-value, q-value
+		for(int i=0; i<nFgPos; i++){
+			filePos2Pos(FgCorr[i].profPos,&gp,wSize);
+			fprintf(fFgDistr,"%s\t%ld\t%ld\t%f\n",gp.chrom, gp.beg,gp.end, FgCorr[i].d);			// write the distribution: correlation, p-value, q-value
 		}
 	}
 	else{
@@ -242,17 +245,22 @@ void printFgDistr(){
 //=====================================================
 //=====================================================
 //=====================================================
-const char *template1="report_r_template.Rmd";
+//=====================================================
+//=====================================================
+const char *template1="report_r_template1.Rmd";
 const char *template2="report_r_template2.Rmd";
+const char *template3="report_r_template3.Rmd";
 
 void printRmd(){
 
 	char b[2048];
+	int nPlot=1;
 	
-	if(writeDistr==DISTR_SHORT) sprintf(b,"%s%s",resPath,template1);
-	else						sprintf(b,"%s%s",resPath,template2);
+	if(writeDistr==DISTR_SHORT)  sprintf(b,"%s%s",resPath,template1);
+	else if(!doAutoCorr)		{sprintf(b,"%s%s",resPath,template2); nPlot=2;}
+	else						{sprintf(b,"%s%s",resPath,template3); nPlot=3;}
 
-	if(!fileExists(b))
+//	if(!fileExists(b))
 	{
 		FILE *f=xopen(b,"wt");
 		fprintf(f, "---	\n");
@@ -321,6 +329,11 @@ void printRmd(){
 		fprintf(f, "fg <- read.table(paste(name, \'.fg\', sep = \'\'))	\n");
 		fprintf(f, "bkg<- read.table(paste(name, \'.bkg\', sep = \'\'))	\n");
 		fprintf(f, "dist <- read.table(paste(name, \'.dist\', sep = \'\'), header=TRUE)	\n");
+		if(doAutoCorr){
+			fprintf(f, "auto1 <- read.table(paste(fname1, \'.auto\', sep = \'\'), header=FALSE)	\n");
+			fprintf(f, "auto2 <- read.table(paste(fname2, \'.auto\', sep = \'\'), header=FALSE)	\n");
+			fprintf(f, "y_lim3 <- c(min(min(auto1$V2),min(auto2$V2)),max(max(auto1$V2),max(auto2$V2)))	\n");
+		}
 		fprintf(f, "#  Define plot limits	\n");
 		fprintf(f, "\n");
 		if(writeDistr==DISTR_SHORT){
@@ -346,7 +359,7 @@ void printRmd(){
 		fprintf(f, "# save plot to pdf	\n");
 		fprintf(f, "#  create the plot	\n");
 		fprintf(f, "old.par <- par( no.readonly = TRUE )	\n");
-		fprintf(f, "par( mfrow = c( 2, 1 ), oma = c( 0, 0, 0, 0 ),mar=c(3,3,2,1),mgp=c(1.6,0.45,0))	\n");
+		fprintf(f, "par( mfrow = c( %i, 1 ), oma = c( 0, 0, 0, 0 ),mar=c(3,3,2,1),mgp=c(1.6,0.45,0))\n",nPlot);
 		fprintf(f, "\n");
 		fprintf(f, "\n");
 		const char*dens="density";
@@ -364,13 +377,21 @@ void printRmd(){
 			fprintf(f, "#lines(density(fg[,1]), col=\'green\', lwd=2)	\n");
 		else
 			fprintf(f, "#lines(density(fg[,4]), col=\'green\', lwd=2)	\n");
-		fprintf(f, "\n");
-		fprintf(f, "\n");
+		fprintf(f, "\n\n");
 		fprintf(f, "plot(dist$x/1000, dist$Fg, type=\'l\',col=\'blue\', ylim=y_lim2, xlim=x_lim2,	\n");
 		fprintf(f, "main=\'Cross-correlation function\',xlab=\'Distance (kb)\',ylab=\'density*100\',cex.axis = 0.8,  cex.lab = 1,  cex.main = 1,lwd=2)	\n");
 		fprintf(f, "lines(dist$x/1000,dist$Bkg , col=\'red\',lwd=2)	\n");
-		fprintf(f, "#plot line for chomosome	\n");
-		fprintf(f, "#lines(dist$x/1000, dist_chrom , col=\'green\',lwd=2)	\n");
+		if(doAutoCorr){
+			fprintf(f, "x_lim3=c(max(min(auto1$V1/1000),-100), min(max(auto1$V1/1000),100))\n");
+			fprintf(f, "plot( auto1$V1/1000, auto1$V2, type=\'l\',col=\'blue\',ylim=y_lim3, xlim=x_lim3, main=\'Autocorrelations\'");
+					fprintf(f, ",xlab=\'Distance (kb)\',ylab=\'autocorr\',lwd=2)\n");
+			fprintf(f, "lines(auto2$V1/1000, auto2$V2, type=\'l\',col=\'red\',lwd=2)\n");
+			fprintf(f, "dy=y_lim3[2]-y_lim3[1];  y1=y_lim3[1]+dy*0.5;  y2=y_lim3[1]+dy*0.75\n");
+
+			fprintf(f, "text(0,y1,fname1,col='blue',pos = 4)\n");
+			fprintf(f, "text(0,y2,fname2,col='red',pos = 4)\n");
+		}
+
 		fprintf(f, "\n");
 		fprintf(f, "par( old.par )	\n");
 		fprintf(f, "```	\n");
@@ -413,7 +434,10 @@ void printRreport(){
   	fprintf(f, "	pc_fname <- args[3]\n");
 	fprintf(f, "} \n\n");
 
-	const char *xtemplate=(writeDistr==DISTR_SHORT) ? template1 : template2;
+	const char *xtemplate;
+	if(doAutoCorr) 		 				xtemplate=template3;
+	else if(writeDistr == DISTR_SHORT) 	xtemplate=template1;
+	else				 				xtemplate=template2;
 
 	fprintf(f, "rmarkdown::render(\"%s\", \"html_document\", \n",xtemplate);
     fprintf(f, "              params=list(\n");
@@ -430,7 +454,6 @@ void printRreport(){
   	fprintf(f, "Bkg_sd=\"%.4f\", \n", sdBg);
   	fprintf(f, "Fg_sd=\"%.4f\",\n", sdFg);
   	fprintf(f, "tot_cor=\"%.4f\",\n", totCorr);
-//  	fprintf(f, "avCorr=\"%.4f\",\n", FgAvCorr);
   	fprintf(f, "Mann_Z=\"%.4f\",  \n", MannW->z);
   	fprintf(f, "p_value=\"%.2e\" \n", MannW->pVal);	
   	fprintf(f, "), output_file = file.path(getwd(), \"%s.html\"))\n", fname);
@@ -458,6 +481,7 @@ void printR(){
 		fprintf(f," y_lim1 <- max(max(density(bkg[,1])$y),max(density(fg[,1])$y)) \n");
 	if(writeDistr==DISTR_DETAIL)
 		fprintf(f," y_lim1 <- max(max(density(bkg[,1])$y),max(density(fg[,4])$y)) \n");
+deb(crossWidth);
 	fprintf(f," x_lim2 <- c(-%i,%i) \n\n",crossWidth,crossWidth);
 	fprintf(f," # set x scale to kilobases \n");
 	fprintf(f," x_lim2 <- x_lim2/1000 \n\n");
@@ -471,10 +495,10 @@ void printR(){
 	if(writePDF) fprintf(f," pdf(paste(name,'.pdf', sep=''), height = 9, width = 5) \n\n");
 	fprintf(f," #  create the plot \n");
 	fprintf(f," old.par <- par( no.readonly = TRUE ) \n");
-	int nPar=1; if(writeDistCorr) nPar++; if(LCExists) nPar++;
+	int nPar=1; if(writeDistCorr) nPar++;  if(doAutoCorr) nPar++; if(LCExists) nPar++;
 	fprintf(f," par( mfrow = c( %i, 1 ), oma = c( 0, 0, 0, 0 ),mar=c(3,3,3,1),mgp=c(1.6,0.45,0)) \n\n",
 			nPar);
-	char sub[1024]; if(writePDF) sub[0]=0; else sprintf(sub,"\\n%s",fname);
+	char sub[1024]; if(writePDF) sub[0]=0; else snprintf(sub,sizeof(sub),"\\n%s",fname);
 	fprintf(f," plot(density(bkg[[1]]), xlim=c(-1,1), ylim=c(0, y_lim1), xlab='correlation coefficient',ylab='density', \n");
 	fprintf(f," col='red', main='Distribution of correlations%s', \n",sub);
 	fprintf(f," cex.axis = 0.8,  cex.lab = 1,  cex.main = 1,lwd=2) \n");
@@ -495,21 +519,39 @@ void printR(){
 		fprintf(f," #plot line for chomosome \n");
 		fprintf(f," #lines(dist$x/1000, dist_chrom , col='green',lwd=2) \n\n");
 	}
-	if(LCExists){
-		const char *ss="";
-		if(LCScale==LOG_SCALE) ss="(log)";
-		fprintf(f,"\nlc=read.table(paste(name, \'.LChist\', sep = \'\'),header=TRUE)\n");
-		fprintf(f,"xmax=%.0f; xmin=%.0f; x0=xmax-150; x1=x0+20; y0=90; dy=7;\n",1000.,0.);
-		fprintf(f,"plot(lc$val, lc$r_CDF_obs*1000, col=\'blue\', lwd=2, \n");
-		fprintf(f,"type=\'l\',ylim=c(0,100), ylab=\'FDR\',");
-		fprintf(f,"xlab=\'normalized LC-values %s\',\n",ss);
-		fprintf(f,"main=\'Local correlation distributions\');\n");
-		fprintf(f,"lines(lc$val, lc$l_CDF_obs*1000, col=\'blue\', lwd=2);\n");
-//		fprintf(f,"lines(lc$val, lc$r_CDF_exp*1000, col=\'red\', lwd=2);\n");
-		fprintf(f,"lines(lc$val, lc$l_CDF_exp*1000, col=\'red\', lwd=2);\n");
-		fprintf(f,"lines(lc$val, pmin(lc$L_FDR, lc$R_FDR), col='black', lwd=2);\n");
+//======================================== What does it mean ???????????????????????????
+//	if(LCExists){
+//		const char *ss="";
+//		if(LCScale==LOG_SCALE) ss="(log)";
+//		fprintf(f,"\nlc=read.table(paste(name, \'.LChist\', sep = \'\'),header=TRUE)\n");
+//		fprintf(f,"xmax=%.0f; xmin=%.0f; x0=xmax-150; x1=x0+20; y0=90; dy=7;\n",1000.,0.);
+//		fprintf(f,"plot(lc$val, lc$r_CDF_obs*1000, col=\'blue\', lwd=2, \n");
+//		fprintf(f,"type=\'l\',ylim=c(0,100), ylab=\'FDR\',");
+//		fprintf(f,"xlab=\'normalized LC-values %s\',\n",ss);
+//		fprintf(f,"main=\'Local correlation distributions\');\n");
+//		fprintf(f,"lines(lc$val, lc$l_CDF_obs*1000, col=\'blue\', lwd=2);\n");
+//		fprintf(f,"lines(lc$val, lc$l_CDF_exp*1000, col=\'red\', lwd=2);\n");
+//		fprintf(f,"lines(lc$val, pmin(lc$L_FDR, lc$R_FDR), col='black', lwd=2);\n");
+//
+//		fprintf(f,"segments(-1000,5,1000,5,col='gray',lwd=1);");
+//	}
+	if(doAutoCorr){
+		char bqx[4096];
 
-		fprintf(f,"segments(-1000,5,1000,5,col='gray',lwd=1);");
+		fprintf(f,"nameAuto1 <- \'%s.auto\'\n",getFnameWithoutExt(bqx, track1->name));
+		fprintf(f,"nameAuto2 <- \'%s.auto\'\n",getFnameWithoutExt(bqx, track2->name));
+		fprintf(f,"Auto1<- read.table(nameAuto1, sep = \'\')\n");
+		fprintf(f,"Auto2<- read.table(nameAuto2, sep = \'\')\n");
+
+		fprintf(f,"ylim1=min(min(Auto1$V2), min(Auto2$V2))\n");
+		fprintf(f,"ylim2=max(max(Auto1$V2), max(Auto2$V2))\n");
+		fprintf(f,"x_lim3=c(max(min(auto1$V1/1000),-100), min(max(auto1$V1/1000),100))\n");
+		fprintf(f," plot  (Auto1$V1/1000,Auto1$V2,col=\'blue\',type=\'l\', xlim=x_lim3,ylim=c(ylim1,ylim2), main='Autocorrelation', xlab='distance (kb)', ylab='autocorr',lwd=2)\n");
+		fprintf(f,"lines (Auto2$V1/1000,Auto2$V2,col=\'red\',lwd=2)\n");
+		fprintf(f,"dy=ylim2-ylim1;  y1=ylim1+dy*0.5;  y2=ylim1+dy*0.75\n");
+		fprintf(f,"text(0,y1,nameAuto1,col=\'blue\',pos = 4)\n");
+		fprintf(f,"text(0,y2,nameAuto2,col=\'red\',pos = 4)\n");
+
 	}
 	fprintf(f," par( old.par ) \n\n");
 	if(writePDF) fprintf(f," dev.off() \n");

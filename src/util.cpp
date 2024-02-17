@@ -18,7 +18,7 @@ char *outFile=0;
 bool  verbose=0;
 bool  silent=0;				// inhibit stdout
 //int debugFg=0;
-int debugFg=DEBUG_LOG|DEBUG_PRINT;
+int debugFg=0;
 const char *debS=0;
 
 //======================================================================================
@@ -108,6 +108,23 @@ char *trim(char *s){
 }
 
 
+const char* skipInt(const char *s){
+	if(*s=='-' || *s=='+') s++;
+	while(isdigit(*s)) s++;
+	return s;
+}
+
+bool isfloat(const char *s){
+	s=skipInt(s);
+	if(*s==0) return true;
+	if(*s=='.') s=skipInt(s+1);
+	if(*s==0) return true;
+	if(*s != 'e' && *s !='E') return false;
+	s=skipInt(s+1);
+	if(*s==0) return true;
+	return false;
+}
+
 //============================================================
 //=======================    Logging    ======================
 //============================================================
@@ -141,6 +158,7 @@ void writeLog(const char *format, va_list args){
 	if(f) {
 		flockFile(f);
 		if(!debugFg) fprintf(f,"#%08lx-> ",id);
+		fprintf(f,"#%i-> ",getpid());
 		vfprintf(f,format,args);
 		funlockFile(f);
 		fclose(f);
@@ -410,7 +428,11 @@ int _makeDir(const char * path){
     struct stat sb;
     if (stat(path, &sb) == 0 && S_ISDIR(sb.st_mode)) return 0;
 #if defined(_WIN32)
+//#if __GNUC__ > 5
+//	return _mkdir(path);
+//#else
 	return mkdir(path);
+//#endif
 #else
 	mode_t mode=S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH;
 	return mkdir(path, mode); // notice that 777 is different than 0777
@@ -482,12 +504,12 @@ const char *getExt(const char *fname){
 	return s+1;
 }
 //=================== extract fname wothout extension
-char *getFnameWithoutExt(char *buf, char *fname){
-	char *s;
+char *getFnameWithoutExt(char *buf, const char *fname){
+	const char *s;
 	s=strrchr(fname,'/'); if(s==0) s=fname; else s++;
-	strcpy(buf,s);
+	char *pp=strcpy(buf,s);
 
-	s=strrchr(buf,'.'); if(s) *s=0;
+	pp=strrchr(pp,'.'); if(pp) *pp=0;
 	return buf;
 }
 
@@ -532,6 +554,15 @@ inline int longRand(){
 double drand(){   /* uniform distribution, (0..1] */
 	double x=(longRand()+1.0)/(LRAND_MAX+1.0);
   return x;
+}
+double drand(double xx){   /* uniform distribution, (0..1] */
+	double x=(longRand())/(LRAND_MAX+1.0)*xx;
+  return x;
+}
+
+int irand(int xx){   /* uniform distribution, (0..1] */
+	long y=drand()*xx;
+  return y;
 }
 
 double rGauss(){

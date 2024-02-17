@@ -1,3 +1,9 @@
+#****************************************************************************#
+#SeSiMCMC. Looking - for - motifs by MCMC project. (c) A. Favorov 2001
+#$Id: gibbslfm.mak 1034 2009-04-17 14:07:27Z favorov $
+#****************************************************************************#
+
+
 exename=Binner
 od=./obj
 
@@ -36,7 +42,6 @@ OBJS=\
 	$(od)/sg_utils.o \
 	$(od)/trackPrepare.o \
 	$(od)/util.o \
-	$(od)/sparse.o 
 
 	
 objs:$(OBJS)
@@ -68,7 +73,6 @@ $(od)/parsePrm.o:          parsePrm.cpp         sg_util.h track_util.h util.h
 $(od)/sg_utils.o:          sg_utils.cpp         sg_util.h track_util.h util.h
 $(od)/trackPrepare.o:      trackPrepare.cpp     sg_util.h track_util.h util.h
 $(od)/util.o:              util.cpp             sg_util.h track_util.h util.h
-$(od)/sparse.o: sparse.cpp track_util.h util.h sg_util.h
 
 clean:
 	rm -f $(OBJS)

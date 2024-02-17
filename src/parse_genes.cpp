@@ -8,15 +8,6 @@
 //#include <ctype.h>
 
 char inFile[4096];
-char g_beg[4096];
-char gene[4096];
-char g_end[4096];
-char exn[4096];
-char e_beg[4096];
-char e_end[4096];
-char ivs[4096];
-char i_beg[4096];
-char i_end[4096];
 FILE *fin;
 FILE *fgene  ;
 FILE *fg_beg ;
@@ -113,7 +104,6 @@ void pg_refseqSet::addIV(char *chrom, int from, int to, const char strand, const
 	if(n > 0){
 		pg_refseqIV *prev=ivs+n-1;
 		if(prev->chr == chrom && prev -> f <= to && prev->t >= from && prev->strand==strand){
-			if(from==14361 || from==14969)deb(1);
 			if(prev->f >= from) prev->f=from;
 			if(prev->t <= to  ) prev->t=to;
 			return;
@@ -509,6 +499,7 @@ void printProgDescr(){
 
 
 int main(int argc, char **argv) {
+	char b[5100];
 	verbose=true;
 	debugFg=DEBUG_LOG|DEBUG_PRINT;
 	parseArgs(argc, argv);
@@ -521,15 +512,15 @@ int main(int argc, char **argv) {
 	if(s) {
 		*s=0; if(keyCmp(s+1,"bed")==0) type=1;		//================ refseq
 	}
-	sprintf(gene ,"%s_gene.bed" ,inFile); fgene =fopen(gene ,"w");
-	sprintf(g_beg,"%s_g_beg.bed",inFile); fg_beg=fopen(g_beg,"w");
-	sprintf(g_end,"%s_g_end.bed",inFile); fg_end=fopen(g_end,"w");
-	sprintf(exn,"%s_exn.bed"    ,inFile); fexn  =fopen(exn  ,"w");
-	sprintf(e_beg,"%s_e_beg.bed",inFile); fe_beg=fopen(e_beg,"w");
-	sprintf(e_end,"%s_e_end.bed",inFile); fe_end=fopen(e_end,"w");
-	sprintf(ivs,"%s_ivs.bed"    ,inFile); fivs  =fopen(ivs  ,"w");
-	sprintf(i_beg,"%s_i_beg.bed",inFile); fi_beg=fopen(i_beg,"w");
-	sprintf(i_end,"%s_i_end.bed",inFile); fi_end=fopen(i_end,"w");
+	sprintf(b,"%s_gene.bed" ,inFile);  fgene =fopen(b,"w");
+	sprintf(b,"%s_g_beg.bed",inFile);  fg_beg=fopen(b,"w");
+	sprintf(b,"%s_g_end.bed",inFile);  fg_end=fopen(b,"w");
+	sprintf(b,"%s_exn.bed"  ,inFile);  fexn  =fopen(b,"w");
+	sprintf(b,"%s_e_beg.bed",inFile);  fe_beg=fopen(b,"w");
+	sprintf(b,"%s_e_end.bed",inFile);  fe_end=fopen(b,"w");
+	sprintf(b,"%s_ivs.bed"  ,inFile);  fivs  =fopen(b,"w");
+	sprintf(b,"%s_i_beg.bed",inFile);  fi_beg=fopen(b,"w");
+	sprintf(b,"%s_i_end.bed",inFile);  fi_end=fopen(b,"w");
 	if(type) parseRefSeq();
 	else parseGTF();
 

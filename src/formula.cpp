@@ -224,9 +224,9 @@ char *FNode::print(char *b){
 		{MULT,DIV,PLUS,MINUS,EQ,UMINUS,SIN,COS,TAN,EXP,LOG,SQR,ABS,SIGN,ATAN,IDENT,CONST,TRACK};
 	char oper='?';
 	for(int i=0; oprs[i]; i++) if(operation==opcodes[i]) oper=oprs[i];
-	char val[20], chL[20], chR[20];
-	if(childL <0) strcpy(chL," "); else sprintf(chL,"%i",childL);
-	if(childR <0) strcpy(chR," "); else sprintf(chR,"%i",childR);
+	char val[20], chL[10], chR[10];
+	if(childL <0) strcpy(chL," "); else snprintf(chL,sizeof(chL),"%i",childL);
+	if(childR <0) strcpy(chR," "); else snprintf(chR,sizeof(chR),"%i",childR);
 	sprintf(val,"%f",value);
 	sprintf(b,"$%i\tv=%s\t$%s\t%c\t$%s %x",id, val, chL,oper,chR,operation);
 	if(operation==IDENT){
@@ -474,14 +474,15 @@ void test_formula(){
 
 	formula.parse(input);
 
-char b[256];
-for(int i=0; i<formula.nNodes; i++){
-	deb(formula.getNode(i)->print(b));
-}
+//char b[256];
+//for(int i=0; i<formula.nNodes; i++){
+//	deb(formula.getNode(i)->print(b));
+//}
 
 double x=80;
 double y=formula.calc(x);
-deb("f(%f)=%f",x,y);
+printf("f(%f)=%f\n",x,y);
+//deb("f(%f)=%f",x,y);
 
 //for(int i=0; i<100; i++){
 //	deb("%i\t%f",i,formula.calc(i));
