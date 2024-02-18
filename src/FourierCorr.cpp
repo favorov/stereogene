@@ -333,13 +333,13 @@ void calcAutoCorr(){
 //================================================================================================
 //================================================================================================
 char *resFileName(const char* n1,const char* n2){
-	char b[2048];
+	char b[4095];
 	snprintf(b,sizeof(b),"%s~%s",n1,n2);
 	return strdup(b);
 }
 //================================================================== Make name for outfile
 char * makeOutFilename(char * prof1, char*prof2){
-	char p1Fname[4096], p2Fname[4096], b[4096];
+	char p1Fname[4500], p2Fname[4500], b[4500];
 	getFnameWithoutExt(b, prof1);
 	if(strchr(b,'~')) snprintf(p1Fname, sizeof(p1Fname),"(%s)",b);
 	else strcpy(p1Fname,b);
