@@ -2,10 +2,11 @@
  * parsePrm.cpp
  *
  *  Created on: Feb 2, 2017
- *      Author: mironov
+ *      Author: Mironov
  */
 #include "track_util.h"
 #include <unistd.h>
+
 
 #if defined(_WIN32)
 #include <conio.h>
@@ -14,6 +15,7 @@ int nHelpLines=20;
 #include <termios.h>
 int nHelpLines=2000;
 #endif
+
 
 int xpause(){
 	int c=0;
@@ -32,6 +34,7 @@ int xpause(){
 	return c;
 }
 
+
 const int PRM_INT=1;
 const int PRM_DOUBLE=2;
 const int PRM_STRING=3;
@@ -39,14 +42,17 @@ const int PRM_ENUM=4;
 const int PRM_FG=5;
 const int PRM_PATH=7;
 
+
 const int PRM_UNKNOWN=-0XFFFFFFF;
 //===================================================================
+
 
 struct Name_Value{			// symbolic name for a value
 	const char* name;		// name for the value
 	int value;				// value
 	Name_Value(const char *nm, int val){name=nm; value=val;}
 };
+
 
 struct NamedRes{
 	const char *name;
@@ -61,14 +67,17 @@ struct NamedRes{
 	char* printValue(char *buf);
 };
 
+
 NamedRes::NamedRes(const char *nm, double *v){name=nm; value=v; type=PRM_DOUBLE; f=0;}
 NamedRes::NamedRes(const char *nm, int *v){name=nm; value=v; type=PRM_INT; f=0;}
 NamedRes::NamedRes(const char *nm, char **v){name=nm; value=(void*) v; type=PRM_STRING; f=0;}
 NamedRes::NamedRes(const char *nm, char* (*ff)()){name=nm; value=0; type=PRM_STRING; f=ff;}
 NamedRes::NamedRes(const char *nm){name=nm; value=0; type=0; f=0;}
 
+
 char zfdsgfdsID[50];
 char * printId(){sprintf(zfdsgfdsID,"%08lx%s",id,idSuff); return zfdsgfdsID;}
+
 
 char* NamedRes::printValue(char *buf){
 	if(type==0) return strcpy(buf,name);
@@ -96,6 +105,7 @@ char* NamedRes::printValue(char *buf){
 	return buf;
 };
 
+
 struct Param{
 	const char* name;			// command line (cfg) argument name
 	int type;					// parameter type
@@ -115,6 +125,7 @@ struct Param{
 	Param(int prg, const char* _name, int print, char * *prm, const char* descr);
 	Param(int prg, const char* _name, int print, char*  *_prm, const char* descr, bool path);
 
+
 	void setVal();
 	void init(int prg, const char* _name,int print, void* _prm, int type, Name_Value **fg, const char* descr);
 	void printDescr();
@@ -124,6 +135,7 @@ struct Param{
 	char* printParamXML(char *buf);
 };
 
+
 const char* getNamebyVal(Name_Value **nval, int val){
 	for(; *nval!=0; nval++){
 		if((*nval)->value == val) return (*nval)->name;
@@ -131,11 +143,14 @@ const char* getNamebyVal(Name_Value **nval, int val){
 	return "NA";
 }
 
+
 //===================================================================================================
 Param *findParam(const char * name);
 void readPrm(char *s);
 void readPrm(char *key, char *val);
 void printHelp();
+
+
 
 
 //==============================================================================
@@ -153,12 +168,14 @@ Name_Value* kernelTypes[]= {
 		0
 };
 
+
 Name_Value* distrTypes[]= {
 		new Name_Value("NONE",DISTR_NONE),
 		new Name_Value("SHORT",DISTR_SHORT),
 		new Name_Value("DETAIL",DISTR_DETAIL),
 		0
 };
+
 
 Name_Value* complFlags[]={
 		new Name_Value("IGNORE_STRAND",IGNORE_STRAND),
@@ -167,8 +184,8 @@ Name_Value* complFlags[]={
 		0
 };
 Name_Value* LCFlags[]={
-		new Name_Value("BASE",BASE),
-		new Name_Value("CENTER",CENTER),
+		new Name_Value("BASE",LC_BASE),
+		new Name_Value("CENTER",LC_CENTER),
 		0
 };
 Name_Value* outWigTypes[]={
@@ -187,6 +204,7 @@ Name_Value* LCScaleTypes[]={
 		0
 };
 
+
 Name_Value* outResTypes[]={
 		new Name_Value("NONE",NONE),
 		new Name_Value("XML",XML),
@@ -194,6 +212,15 @@ Name_Value* outResTypes[]={
 		new Name_Value("BOTH",XML|TAB),
 		0
 };
+Name_Value* PlotTypes[]={
+		new Name_Value("NONE",NONE),
+		new Name_Value("R",R),
+		new Name_Value("PDF",PDF),
+		new Name_Value("HTML",HTML),
+		new Name_Value("ALL",R|PDF|HTML),
+		0
+};
+
 
 //===================================================================================================
 Param *pparams[]={
@@ -218,6 +245,7 @@ Param *pparams[]={
 		new Param(SG,"resPath" 		,1, &resPath 		,"path for results", true),
 		new Param(AP,"confounder"	,0, &confFile 		,"confounder filename"),
 
+
 		new Param(SG,"statistics"	,0, &statFileName	,"cumulative file with statistics"),
 		new Param(SG,"params" 		,0, &paramsFileName	,"cumulative file with parameters"),
 		new Param(AP,"log" 		,0, &logFileName	,"cumulative log-file"),
@@ -225,7 +253,7 @@ Param *pparams[]={
 //======================== =====================================================================================
 		new Param(AP, "input parameters"),
 		new Param(AP, "chrom"		,1, &chromFile	,"chromosome file"),
-		new Param(AP, "BufSize"	,0, &binBufSize	,"Buffer Size"),
+		new Param(AP, "BufSize"		,0, &binBufSize	,"Buffer Size"),
 		new Param(AP, "bpType" 		,1, &bpType  		,bpTypes	,"The value used as a score for BroadPeak input file"),
 		new Param(SG|PRJ,"pcorProfile" ,1, &pcorProfile	,"Track for partial correlation"),
 		new Param(PRJ,"outPrjBGr"   ,0, &outPrjBGr		,"Write BedGraph for projections"),
@@ -246,35 +274,33 @@ Param *pparams[]={
 		new Param(SG, "nShuffle"	,1, &nShuffle  	,"Number of shuffles for background calculation"),
 		new Param(SG, "noiseLevel"	,1, &noiseLevel ,0),
 		new Param(SG, "complFg"		,1, &complFg	,complFlags,0),
-		new Param(SG, "LCFg"		,1, &lcFlag		,LCFlags,0),
-		new Param(SG, "localSuffle",1, &localSuffle,1,"Use cyclic permutations"),
+		new Param(SG, "localSuffle" ,1, &localSuffle,1,"Use cyclic permutations"),
 //==============================================================================================================
 		new Param(SG, "Output parameters"),
 		new Param(SG, "outSpectr" 	,1, &outSpectr    ,"write fourier spectrums"),
 		new Param(SG, "outChrom" 	,1, &outChrom     ,"write statistics by chromosomes"),
 		new Param(SG, "writeDistr" 	,1, &writeDistr, distrTypes   ,"write foreground and background distributions"),
-		new Param(SG, "Rscript" 	,1, &RScriptFg    ,0),
-		new Param(SG, "r" 			,0, &RScriptFg    ,1,"write R script for the result presentation"),
+		new Param(SG, "Rscript" 	,1, &RScriptFg,  PlotTypes    ,0),
+		new Param(SG, "r" 			,0, &RScriptFg    ,R,"write R script for the result presentation"),
 		new Param(SG, "crossWidth" 	,0, &crossWidth   ,0,"Width of cross-correlation plot"),
 		new Param(SG, "Distances" 	,1, &writeDistCorr,1,"Write distance correlations"),
-		new Param(SG, "outLC"		,1, &outLC		  ,0),
-		new Param(SG, "lc"			,0, &outLC		  ,1,"produce profile correlation"),
-		new Param(SG, "localSuffle"	,0, &localSuffle  ,"use shuffle inside the windoww"),
+		new Param(SG, "outLC"		,1, &outLC	,LCFlags  ,0),
+		new Param(SG, "lc"			,0, &outLC		  ,	LC_BASE,"produce profile correlation"),
 		new Param(SG, "LCScale"		,0, &LCScale	  ,LCScaleTypes,"Local correlation scale: LOG | LIN"),
-		new Param(SG, "L_FDR"		,1, &LlcFDR	      ,"threshold on left FDR when write the local correlation"),
-		new Param(SG, "R_FDR"		,1, &RlcFDR	      ,"threshold on right FDR when write the local correlation"),
+		new Param(SG, "L_LC"		,1, &L_LC	      ,"threshold on left FDR when write the local correlation"),
+		new Param(SG, "R_LC"		,1, &R_LC	      ,"threshold on right FDR when write the local correlation"),
 		new Param(SG, "outRes" 		,0, &outRes 	  ,outResTypes,"format for results in statistics file"),
 		new Param(SG, "AutoCorr"  	,1, &doAutoCorr   ,0),
-		new Param(SG, "pdf"			,1, &writePDF  	  ,1, 0),	//write R plots to pdf
-		new Param(SG, "HTML"		,1, &writeHTML 	  ,1, 0),	//write report to HTML
 //======================== =================== Additional parameters (see Undocumented) ===============================
 		new Param(AP, "debug"		,0, &debugFg   	  ,0),	//debug mode
 		new Param(AP, "d"			,0, &debugFg   	  ,1, 0),	//debug mode
 		new Param(PG, "pgLevel"		,1, &pgLevel  	  ,1, 0),	//minimal level in ENCODE to be taken into account
 
+
 		new Param(AP, "Happy correlations!"),
 		0,
 };
+
 
 //=================================================================================================
 //===================================  End declaration ============================================
@@ -314,6 +340,7 @@ int Param::readEnum(char *s){
 	}
 	return PRM_UNKNOWN;
 }
+
 
 //============================ return 0 -> OK ==========================================================
 int Param::readVal(char *s){
@@ -367,6 +394,7 @@ void Param::setVal(){
 	}
 }
 
+
 //===========================================================================================================
 char *Param::printParamValue(char *buf){
 	strcpy(buf,"NONE");
@@ -386,11 +414,13 @@ char *Param::printParamValue(char *buf){
 	return buf;
 }
 
+
 char *Param::printParamXML(char *buf){
 	char bb[1024];
 	sprintf(buf,"%s=\"%s\"",name,printParamValue(bb));
 	return buf;
 }
+
 
 //===========================================================================================================
 void Param::printDescr(){
@@ -423,9 +453,11 @@ Param *findParam(const char * name){
 	return 0;
 }
 
+
 //============================================ Read Config =========================================
 void readConfig(char * cfg){
 	FILE *f=gopen(cfg,"rt");
+
 
 	if(f==0) return;
 	char b[1024], *s;
@@ -448,6 +480,7 @@ void readPrm(char *b){
 	else 		*val++=0;
 	readPrm(trim(prm), trim(val));
 }
+
 
 void readPrm(char *key, char *val){
 	if(keyCmp(key,"in")==0) {addList(val); return;}
@@ -504,8 +537,10 @@ void parseArgs(int argc, char **argv){
 	resPath	 =makePath(resPath);
 	if(verbose) silent=false;
 
+
 	PrepareParams();
 }
+
 
 //==============================================================================
 //================================================== search appropriate cfg file
@@ -539,9 +574,11 @@ NamedRes *results[]={
 		new NamedRes("Date",dateTime),
 		new NamedRes("version", (char**)&version),
 
+
 		new NamedRes("input"),
 		new NamedRes("name1",&trackName1),
 		new NamedRes("name2",&trackName2),
+
 
 		new NamedRes("res"),
 		new NamedRes("nFgr",&nFg),
@@ -577,6 +614,7 @@ void printXML(FILE *f){
 	fprintf(f,"/>\n</run>\n");
 }
 
+
 void printStatHeader(FILE *f){
 	for(int i=0; results[i]; i++){
 		if(results[i]->type==0) continue;
@@ -588,6 +626,7 @@ void printStatHeader(FILE *f){
 	}
 	fprintf(f,"\n");
 }
+
 
 void printStat(FILE *f){
 	char b[1024];
@@ -601,6 +640,7 @@ void printStat(FILE *f){
 	}
 	fprintf(f,"\n");
 }
+
 
 void printParams(FILE* f){
 	char b[256];
@@ -616,6 +656,8 @@ void printXMLparams(FILE *f){
 		if(pparams[i]->printFg && (pparams[i]->prog&progType)) fprintf(f,"%s=\"%s\" ",pparams[i]->name,pparams[i]->printParamValue(b));
 	}
 }
+
+
 
 
 void printHelp(){
@@ -635,14 +677,18 @@ void printHelp(){
 }
 
 
+
+
 void initSG(int argc, char **argv){
 	for(int i=0; i<argc; i++){strtok(argv[i],"\r\n");}
+
 
 	char *chrom=getenv("SG_CHROM");
 	if(chrom!=0) chromFile=strdup(chrom);
 	unsigned long t=time(0);	id=(unsigned int)t;	// define run id
 	parseArgs(argc, argv);
 	if(debugFg) {clearDeb(); debugFg=DEBUG_LOG|DEBUG_PRINT;}
+
 
 	makeDirs();
 //	if(strcmp(logFileName,"null")==0 || strcmp(logFileName,"NULL")==0) logFileName=0;
@@ -654,6 +700,7 @@ void initSG(int argc, char **argv){
 	readChromSizes(chromFile);							// read chromosomes
 }
 
+
 void defFlanks(int l){
 	LFlankProfSize=flankSize/binSize;
 	int ll=nearFactor(2*LFlankProfSize+l);
@@ -663,10 +710,13 @@ void defFlanks(int l){
 	kern=MakeKernel(profWithFlanksLength);
 }
 
+
 void PrepareParams(){
+
 
 	wProfSize=wSize/binSize;       		// size of widow (profile scale)
 	wProfStep=wStep/binSize;       		// window step   (profile scale)
+
 
 	//====================================================================== Prepare parameters
 	kernelProfSigma=kernelSigma/binSize;   // kernel width ((profile scale)
@@ -684,7 +734,13 @@ void PrepareParams(){
 	defFlanks(wProfSize);
 	//===================================================================== generate Kernels
 
+
 }
+
+
+
+
+
 
 
 

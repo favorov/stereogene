@@ -1,21 +1,25 @@
 /*
  * projector.cpp
  *
- *  Created on: 03 ����. 2017 �.
- *      Author: andrey
+ *  Created on: 03 Jan 2017
+ *      Author: Mironov
  */
 #include "track_util.h"
+
 
 char confTrackPath[4096];
 char confProfPath[4096];
 char confResPath[4096];
 char confDir[1024];
 
+
 bTrack *confBTrack;
 bTrack *curTrack;
 bTrack *projT;
 
+
 FILE *prjLog=0;
+
 
 void makeConfDir(char *confPath, char *path, const char*name, FILE *cfg){
 	makeFileName(confPath,path,confDir);
@@ -23,6 +27,7 @@ void makeConfDir(char *confPath, char *path, const char*name, FILE *cfg){
 	fprintf(cfg,"%s=%s\n",name, confPath);
 	strcat(confPath,"/");
 }
+
 
 void makeProj(char *fname){
 	double xa=0,aa=0;
@@ -32,6 +37,7 @@ void makeProj(char *fname){
 	char *pp=profPath; profPath=confProfPath;	// set new path
 	projT->initProfile(fname);
 	profPath=pp;								// restore path
+
 
 	for(int i=0; i<profileLength; i++){
 		if(curTrack->isNA(i,false) || confBTrack->isNA(i,false)) continue;
@@ -46,6 +52,7 @@ void makeProj(char *fname){
 		double a=confBTrack->getValue(i,false);
 		double x=curTrack->getValue(i,false);
 
+
 		double w=x-z*a;
 		fProfile->set(i,w);
 		e+=w; nn++;
@@ -53,8 +60,10 @@ void makeProj(char *fname){
 		if(w > pMax) pMax=w;
 	}
 
+
 	verb("   min=%f  max=%f e=%f  n=%i z=%f\n",pMin, pMax, e/nn, nn, z);
 	fprintf(prjLog,"<%s>\t%f\t%f\t%f\tz=%f\n",fname, pMin, pMax, e/nn,z);
+
 
 	//=================================================== Write wig
 	if(outPrjBGr){
@@ -68,20 +77,25 @@ void makeProj(char *fname){
 		fclose(f);
 	}
 
+
 	projT->trackType=BED_GRAPH;
 	projT->hasCompl=0;
 
+
 	projT->finProfile();
+
 
 	projT->writeProfilePrm(confProfPath);
 	projT->writeByteProfile();
 }
+
 
 char currFname[4096];
 void Projector(){
 	confBTrack	=new bTrack();
 	curTrack	=new bTrack();
 	projT	=new bTrack();
+
 
 	if(confFile==0) errorExit("Confounder not defined");
 	if(fProfile==0) fProfile=new FloatArray();
@@ -111,5 +125,7 @@ void Projector(){
 	fclose(prjLog);
 	del(fProfile); fProfile=0;
 }
+
+
 
 

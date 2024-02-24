@@ -174,3 +174,8 @@
 1. The background defined as cycle shifting in the window
 2. input multiple track lists
 3. Syntax control on bed files -- wrong fields ignored
+4. Fixed bug with the local correlation track
+5. The thresholds for the local correlation track: FDR replaced by the local correlation value
+6. Several params are changed and removed -- see documentation
+========== Version 2.31 ====================
+Mergin documentation, updating ccvars, etc

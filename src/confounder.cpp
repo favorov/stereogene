@@ -1,15 +1,17 @@
 /*
  * covar_mtx.cpp
  *
- *  Created on: 24 ���. 2017 �.
- *      Author: andrey
+ *  Created on: 24 May 2017
+ *      Author: Mironov
  */
 #include "track_util.h"
+
 
 bTrack **tracks;
 CovarMtx cMtx;
 Matrix *eVectors=0;
 double *eValues=0;
+
 
 //=============== SG-covariator  =================
 //================================================
@@ -29,6 +31,7 @@ void VectorX::get(int pos, double *val){
 	}
 }
 
+
 double VectorX::scalar(VectorX *x){
 	return scalar(*x);
 }
@@ -43,6 +46,7 @@ double VectorX::scalar(VectorX &x){
 	w=w/nn*n;
 	return w;
 }
+
 
 //==========================================================================================
 int VectorX::chk(int pos){
@@ -67,6 +71,7 @@ void VectorX::printH(FILE *f){
 	}
 }
 
+
 //==========================================================================================
 void VectorX::print(FILE *f){
 	for(int i=0; i<n; i++){
@@ -77,6 +82,7 @@ void VectorX::print(FILE *f){
 }
 //==========================================================================================
 //==========================================================================================
+
 
 void Confounder(){
 	bTrack *confdr=new bTrack();
@@ -94,6 +100,7 @@ void Confounder(){
 	}
 	verb("\n");
 	if(verbose) {verb("confounder: "); cnf.print(stdout);}
+
 
 	double min=1.e+100, max=-1.e+100, e=0;
 	int nn=0;
@@ -138,9 +145,11 @@ void Confounder(){
 	}
 	verb("Write confounder profile...\n");
 
+
 	writeBedGr(f,fProfile);
 	verb("\n");
 	fclose(f);
+
 
 	confdr->writeProfilePrm();
 	confdr->writeByteProfile();
@@ -148,8 +157,10 @@ void Confounder(){
 	del(confdr);
 }
 
+
 //===================================================================
 //===================================================================
+
 
 CovarMtx::CovarMtx(int nn){
 	init(nn);
@@ -163,6 +174,7 @@ void CovarMtx::init(int nn){
 	getMem(count,n2,"covar3"); 	 zeroMem(count,n2);
 }
 
+
 CovarMtx::~CovarMtx(){
 	if(cov)   xfree(cov, "free covar 1");
 	if(meani) xfree(meani, "free covar 2");
@@ -170,16 +182,19 @@ CovarMtx::~CovarMtx(){
 	if(count) xfree(count, "free covar 3");
 }
 
+
 //===================================================================================
 void CovarMtx::addCov(int itrack, int jtrack, int f, int t){
 	Track *tr1=tracks[itrack];
 	Track *tr2=tracks[jtrack];
 	double c=0, e1=0, e2=0, n=0;
 
+
 	for(int i=f; i<t; i++){
 		if(tr1->isNA(i,0) || tr1->isNA(i,0) ) continue;
 		double x1=tr1->getValue(i,0);
 		double x2=tr2->getValue(i,0);
+
 
 		if(itrack==0) e2+=x2;
 		if(jtrack==0) e1+=x1;
@@ -192,6 +207,8 @@ void CovarMtx::addCov(int itrack, int jtrack, int f, int t){
 	cov  [idx]+=c;
 	count[idx]+=n;
 }
+
+
 
 
 //===================================================================================
@@ -210,6 +227,7 @@ double CovarMtx::calc(int itrack, int jtrack){
 	return c;
 }
 
+
 //===================================================================================
 void CovarMtx::print(FILE *f){
 	for(int i=0; i<nfiles; i++) fprintf(f,"\t%s",tracks[i]->name);
@@ -223,11 +241,14 @@ void CovarMtx::print(FILE *f){
 	}
 }
 
+
 //===========================================================
+
 
 void calcCovar(){
 	int nIter=100;
 	cMtx.init(nfiles);
+
 
 	for(int i=0; i<nfiles; i++){
 		for(int j=i; j<nfiles; j++){
@@ -252,11 +273,13 @@ void calcCovar(){
 	del(x);
 }
 
+
 //================================================================================
 //================================================================================
 //================================================================================
 //================================================================================
 //================================================================================
+
 
 void Covariator(){
 	getMem(tracks, nfiles,"");
@@ -268,10 +291,13 @@ void Covariator(){
 	calcCovar();
 	Confounder();
 
+
 	for(int i=0; i<nfiles; i++) del(tracks[i]);
 	xfree(eValues,"covariator: free eValues");
 	xfree(tracks,"covariator: free tracks");
 	exit(0);
 }
+
+
 
 

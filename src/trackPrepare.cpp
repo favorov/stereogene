@@ -1,22 +1,28 @@
 //============================================================================
 // Name        : cpp.cpp
-// Author      : a
+// Author      : Mironov
 // Version     :
 // Copyright   : Your copyright notice
 //============================================================================
 
+
 #include "track_util.h"
+
 
 //float *profile =0;				// uncompressed profile array
 //float *profilec=0;				// uncompressed profile array
 
+
 FloatArray *fProfile=0, *cProfile=0;
 
+
 //=====================================================================================
+
 
 void bTrack::initProfile(){
 	initProfile(0);
 };
+
 
 void bTrack::clearFiles(){
 	char bfil[4096];
@@ -27,13 +33,18 @@ void bTrack::clearFiles(){
 }
 
 
+
+
 void bTrack::initProfile(char *tName){
 	errStatus="init Profile";
+
 
 	if(tName){
 		name=strdup(tName);
 		if(bytes) bytes->close();
 	}
+
+
 
 
 	clearFiles();
@@ -50,10 +61,12 @@ void addProfVal(FloatArray *p, int pos, float v){
 }
 
 
+
+
 int bTrack::addSgm(ScoredRange *bed, FloatArray *prof){
 	total+=bed->score*(bed->end-bed->beg+1);
 	if(!checkRange(bed)) return 0;
-	double noise=0.001;
+	double noise=0;
 	int p1=pos2filePos(bed->chrom, bed->beg);
 	int p2=pos2filePos(bed->chrom, bed->end);
 	if(p1<0 || p2<0) return 0;
@@ -76,6 +89,7 @@ int bTrack::addSgm(ScoredRange *bed, FloatArray *prof){
 	return 1;
 }
 
+
 int bTrack::addSgm(char strnd, ScoredRange *bed){
 	if(strnd=='-') 	{
 		if(cbytes==0) {
@@ -91,6 +105,7 @@ int bTrack::addSgm(char strnd, ScoredRange *bed){
 	else  return addSgm(bed, fProfile);
 }
 
+
 //=====================================================================================
 int getTypeByExt(const char *sext){
 	char bext[80];
@@ -98,19 +113,23 @@ int getTypeByExt(const char *sext){
 	if(strcmp(bext,"BED")==0) return BED_TRACK;
 	if(strcmp(bext,"WIG")==0) return WIG_TRACK;
 
+
 	if(strcmp(bext,"BEDGRAPH"	)==0) return BED_GRAPH;
 	if(strcmp(bext,"BED_GRAPH"	)==0) return BED_GRAPH;
 	if(strcmp(bext,"B_GRAPH"	)==0) return BED_GRAPH;
 	if(strcmp(bext,"BGR"		)==0) return BED_GRAPH;
+
 
 	if(strcmp(bext,"B_PEAK"		)==0) return BROAD_PEAK;
 	if(strcmp(bext,"BPEAK"		)==0) return BROAD_PEAK;
 	if(strcmp(bext,"BROAD_PEAK"	)==0) return BROAD_PEAK;
 	if(strcmp(bext,"BROADPEAK"	)==0) return BROAD_PEAK;
 
+
 	if(strcmp(bext,"MODEL"	)==0) return MODEL_TRACK;
 	if(strcmp(bext,"MOD"	)==0) return MODEL_TRACK;
 	if(strcmp(bext,"MDL"	)==0) return MODEL_TRACK;
+
 
 	return 0;
 }
@@ -136,6 +155,7 @@ void Track::trackDef(char *s){
 	if(st!=0) strcpy(trackName,st);
 }
 
+
 //=====================================================================================
 int countFields(char *b){
 	int n=0;
@@ -148,12 +168,14 @@ int countFields(char *b){
 	return n;
 }
 
+
 int checkWig(char *b){
 	if(strncmp(b,(char *)"variableStep", 12)==0) return WIG_TRACK;
 	if(strncmp(b,(char *)"fixedStep"   ,  9)==0) return WIG_TRACK;
 	if(countFields(b)==4) return BED_GRAPH;
 	return WIG_TRACK;
 }
+
 
 char * readChrom(char *s){return strtok(s," \t\n\r");}
 char* readChrom(){return strtok(0," \t\n\r");}
@@ -169,6 +191,7 @@ double readFloat(){
 	return atof(s);
 }
 
+
 void bTrack::readInputTrack(const char *fname, int cage){
 	char *chrom=0;
     int fg=-1;
@@ -183,11 +206,13 @@ void bTrack::readInputTrack(const char *fname, int cage){
 	hasCompl=1;
 	trackType=getTrackType(fname);
 
+
 	FILE *f=xopen(fname, "rt"); setvbuf ( f , NULL , _IOFBF , 65536 );
 	strcpy(curFname,fname);
 	inputErrLine=inputErr = 0;		// flag: if input track has no errors
 	BufFile input;
 	input.init(fname);
+
 
 	for(;(inputString=input.getString())!=0; iLine++){
 		inputErrLine++;
@@ -201,7 +226,9 @@ void bTrack::readInputTrack(const char *fname, int cage){
 		if(*inputString=='#' || *inputString==0) continue;							//======== comment line
 		if(trackType==WIG_TRACK) trackType=checkWig(inputString);
 
+
 		beg=-1; end=-1;
+
 
 		switch(trackType){
 			case BED_TRACK:										//======== BED
@@ -303,6 +330,7 @@ void bTrack::readInputTrack(const char *fname, int cage){
 //=====================================================================================
 //========================================================================================
 
+
 void testDistrib(){
 	float dd[1000]; memset(dd,0,sizeof(dd));
 	for(int i=0; i<profileLength; i++){
@@ -315,12 +343,14 @@ void testDistrib(){
 		}
 	}
 
+
 	FILE *f=xopen("dstr","wt");
 	for(int i=0; i<1000; i++){
 		fprintf(f,"%5.2f\t%6f\n",i*10./1000.,dd[i]);
 	}
 	fclose(f);
 }
+
 
 void bTrack::finProfile(){
 	errStatus="finProfile";
@@ -340,7 +370,6 @@ void bTrack::finProfile(){
 	int nn=0;
 	for(int i=0; i<profileLength; i++){
 		float z=fProfile->getLog(i);
-//		float q=fProfile->get(i);
 		if(z != NA){
 			// we take into account only valid profile values
 			av+=z; x2+=z*z; nn++;
@@ -348,6 +377,7 @@ void bTrack::finProfile(){
 			if(z < minP) minP=z;
 			if(z > maxP) maxP=z;
 		}
+
 
 		if(cbytes && (z=cProfile->getLog(i)) != NA){
 			// we take into account only valid profile values
@@ -358,11 +388,10 @@ void bTrack::finProfile(){
 		}
 	}
 	av/=nn;
-	if(maxP < minP){errorExit("=== !!!!  The profile contains no data:  min=%.2e max=%.2e !!!===\n",minP,maxP);}
-	if(maxP==minP){	errorExit("=== !!!!  The profile contains only zeros: min=%.2e max=%.2e  !!!===\n",minP,maxP);}
+//	if(maxP < minP){errorExit("=== !!!!  The profile contains no data:  min=%.2e max=%.2e !!!===\n",minP,maxP);}
+//	if(maxP==minP){	errorExit("=== !!!!  The profile contains only zeros: min=%.2e max=%.2e  !!!===\n",minP,maxP);}
 	x2-=av*av*nn;
 	sd=sqrt(x2/(nn-1));
-
 	scaleFactor=-minP;
 	if(scaleFactor < maxP) scaleFactor = maxP;
 	scaleFactor=(MAX_SHORT-2)/scaleFactor;
@@ -371,7 +400,7 @@ void bTrack::finProfile(){
 		if(z < minP) z=minP;
 		if(z > maxP) z=maxP;
 		if(z !=NA)  {
-			int x=int(scaleFactor*z+0.5);
+			int x=int(scaleFactor*(z-minP));
 			bytes->set(i,x);
 		}
 		else{
@@ -388,12 +417,17 @@ void bTrack::finProfile(){
 	errStatus=0;
 	bytes->writeBuff();
 	if(cbytes) cbytes->writeBuff();
+	if(maxP < minP){writeLog("=== !!!!  The profile contains no data:  min=%.2e max=%.2e !!!===\n",minP,maxP);}
+	if(maxP==minP) {writeLog("=== !!!!  The profile contains only zeros: min=%.2e max=%.2e  !!!===\n",minP,maxP);}
+
+
 };
 //=================================================================================
 //=================================================================================
 //#        Write the byte profile in two files.
 //#            *.prm - file with average min and max values
 //#            *.bprof - byte profile
+
 
 //=================================================================================
 unsigned int getChkSum(BuffArray *b, int n){
@@ -403,6 +437,7 @@ unsigned int getChkSum(BuffArray *b, int n){
 	}
 	return chksum;
 }
+
 
 void bTrack::writeProfilePrm(){
 	writeProfilePrm(profPath);
@@ -414,12 +449,15 @@ void bTrack::writeProfilePrm(const char *path){
 	verb("write prm %s...\n",prmFname);
     FILE *f=xopen(prmFname, "wt"); if(f==0)return;
 
+
 	fprintf(f,"#====== THIS IS GENERATED FILE. DO NOT EDIT!  ========\n");
 	fprintf(f,"version=%s\n",version);
 	fprintf(f,"#=== Input data ===\n");
 
+
     fprintf(f,"trackType=%i\n",trackType);
 	fprintf(f,"input=%s\n",name);
+
 
     fprintf(f,"#=== Parameters ===\n");
     fprintf(f,"bin=%i\n",binSize);
@@ -438,11 +476,14 @@ void bTrack::writeProfilePrm(const char *path){
     fprintf(f,"scale=%f\n",scaleFactor);
     fprintf(f,"total=%f\n",total);
 
+
     //==== calculate distribution
+
 
     int dstr[256];
     float cdstr[256],nn=0;
     memset(dstr,0,sizeof(dstr));
+
 
     for(int i=0; i<profileLength; i++){
     	int xx=bytes->get(i);
@@ -456,17 +497,21 @@ void bTrack::writeProfilePrm(const char *path){
     	}
     }
 
+
     cdstr[0]=0; nn=0;
     for(int i=0; i<256; i++){
     	nn+=dstr[i];
     	if(i>0) cdstr[i]=nn;
     }
-    fprintf(f,"\n#***** Distribution ***** nn=%i  pLength=%i\n",(int)nn,profileLength);
-    for(int i=0; i<256; i++){
-    	int b=(i-128.)/128.*MAX_SHORT;
-    	fprintf(f,"#%3i\t%f\t%i\t%.0f\t%5.2f\t%5.2f\n",i,getVal(b),
-    			dstr[i],cdstr[i], cdstr[i]*100./nn, (nn-cdstr[i])*100./nn);
+    if(nn > 0){
+        fprintf(f,"\n#***** Distribution ***** nn=%i  pLength=%i\n",(int)nn,profileLength);
+        for(int i=0; i<256; i++){
+        	int b=(i-128.)/128.*MAX_SHORT;
+        	fprintf(f,"#%3i\t%f\t%i\t%.0f\t%5.2f\t%5.2f\n",i,getVal(b),
+        			dstr[i],cdstr[i], cdstr[i]*100./nn, (nn-cdstr[i])*100./nn);
+        }
     }
+
 
 	fclose(f);
 }
@@ -474,11 +519,14 @@ void bTrack::writeByteProfile(){
 	clear();
 }
 
+
 //=================================================================================
 void bTrack::makeBinTrack(const char *fname){
 	name=strdup(fname);
 	makeBinTrack();
 }
+
+
 
 
 void bTrack::makeBinTrack(){
@@ -494,20 +542,26 @@ void bTrack::makeBinTrack(){
 	readInputTrack(makeFileName(pfil,trackPath,name));		//============ Read tracks
 	//======================================================================
 
+
 	verb("Finalize profiles... \n");
 	finProfile(); //============ Calculate min,max,average; convert to bytes
 	verb("Write profiles... \n");
 	writeProfilePrm();
-	writeLog("    Make binary track -> OK. Time=%s\n",tm.getTime());
 	clear();
+	if(maxP < minP){writeLog("=== !!!!  The profile contains no data:  min=%.2e max=%.2e !!!===\n",minP,maxP);}
+	if(maxP==minP) {writeLog("=== !!!!  The profile contains only zeros: min=%.2e max=%.2e  !!!===\n",minP,maxP);}
+	if(maxP > minP){writeLog("    Make binary track -> OK. Time=%s\n",tm.getTime());}
 	return;
 }
+
+
 
 
 //================================================================================
 //===================================================================================
 bTrack *tmpBTrack;
 float* tmpProf;
+
 
 bool isModel(const char *s){
 	return getTrackType(s)==MODEL_TRACK;
@@ -541,6 +595,10 @@ void prepare(const char * fname){
 
 
 
+
+
+
+
 void Preparator(){
 	Timer tm;
 	nPrepare=0;
@@ -560,6 +618,9 @@ void Preparator(){
 
 
 
+
+
+
 //=================================================================================
 void bTrack::writeBinnedProf(const char *fname){
 	if(fProfile==0) fProfile=new FloatArray();
@@ -568,28 +629,25 @@ void bTrack::writeBinnedProf(const char *fname){
 	char pfil[4096];
 	readInputTrack(makeFileName(pfil,trackPath,name));
 
+
 	//================================================= Normalize
+
 
 	errStatus="WriteBinnedProfile";
 	//============================ calculate min, max, average, std deviation
-//	for(int i=0; i<profileLength; i++){
-//		float x=fProfile->get(i);
-////		if(trackType==BED_TRACK){
-////			if(x == 0) fProfile->set(i,x=NA);
-////		}
-////		if(x!=NA) fProfile->set(i,x*1000);
-//	}
-
 	char wfil[4096];
 	makeFileName(pfil,trackPath,name);
+
 
 	char *s=strrchr(pfil,'/'); if(s==0) s=wfil;
 	s=strrchr(s,'.'); if(s) *s=0;
 	snprintf(wfil,sizeof(wfil),"%s_%i.bgr",pfil,binSize);
 
+
 	FILE *f=gopen(wfil,"w");
 	fprintf(f,"track type=bedGraph name=\"%s\" description=\"Binned track. Binsize=%i\"\n",name, binSize);
 	writeBedGr(f,fProfile, NA,  NA);
+
 
 	fclose(f);
 }

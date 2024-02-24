@@ -1,13 +1,16 @@
 /*
  * main_proj.cpp
  *
- *  Created on: 03 ����. 2017 �.
- *      Author: andrey
+ *  Created on: 03 Dec 2017
+ *      Author: Mironov
  */
 #include "track_util.h"
 
+
 const char * progName="Smoother";
 const int progType=SM;
+
+
 
 
 void printProgDescr(){
@@ -33,6 +36,8 @@ double *smoothProf=0;
 double *smTmp=0;
 
 
+
+
 void smooth(const char *fname){
 	outLC=1;
 	initOutLC();
@@ -53,9 +58,11 @@ void smooth(const char *fname){
 	char pfil[4096],wfil[4096];
 	makeFileName(pfil,trackPath,fname);
 
+
 	char *s=strrchr(pfil,'/'); if(s==0) s=wfil;
 	s=strrchr(s,'.'); if(s) *s=0;
 	snprintf(wfil,sizeof(wfil),"%s_sm.bgr",pfil);
+
 
 	//================ normalize
 	double tt=0,ee=0,dd=0,nn=0;
@@ -65,12 +72,14 @@ void smooth(const char *fname){
 	}
 	tt=ee; ee/=nn; dd=dd/nn-ee*ee; dd=sqrt(dd);
 
+
 	for(int i=0; i<l; i++) {
 		double x=lcProfile->get(i);
 		if(smoothZ){if((x-ee)/dd < smoothZ) x=0;}
 		else	   {x=x*tr->total/tt/binSize;}
 		lcProfile->set(i,x);
 	}
+
 
 	FILE *f=gopen(wfil,"w");
 	char b[4096]; strcpy(b,fname);
@@ -82,11 +91,14 @@ void smooth(const char *fname){
 	verb("   Done\n");
 }
 
+
 //=====================================================================
 void Smoother(){
 	LCorrelation.init(profWithFlanksLength);
-	lcFlag=BASE;
+	outLC=LC_BASE;
 	getMem(LCorrelation.datRe,profWithFlanksLength, "Correlator");
+
+
 
 
 	for(int i=0; i<nfiles; i++){
@@ -96,6 +108,7 @@ void Smoother(){
 	}
 }
 
+
 //=====================================================================
 int main(int argc, char **argv) {
 	if(debugFg) {clearDeb(); debugFg=DEBUG_LOG|DEBUG_PRINT;}
@@ -103,11 +116,16 @@ int main(int argc, char **argv) {
 //	if(debugFg) {debugFg=DEBUG_LOG|DEBUG_PRINT; clearDeb(); }
 	Preparator();
 
+
 	Smoother();
 	fflush(stdout);
 	fclose(stdout);
 	return 0;
 }
+
+
+
+
 
 
 

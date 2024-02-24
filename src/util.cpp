@@ -2,7 +2,7 @@
  * util.cpp
  *
  *  Created on: 17.02.2013
- *      Author: 1
+ *      Author: Mironov
  */
 #include "track_util.h"
 #include <time.h>
@@ -10,7 +10,9 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+
 #include <sys/file.h>
+
 
 char *logFileName=(char*)"./stereogene.log";
 unsigned long id;
@@ -20,6 +22,7 @@ bool  silent=0;				// inhibit stdout
 //int debugFg=0;
 int debugFg=0;
 const char *debS=0;
+
 
 //======================================================================================
 //============================    String  Parsing ======================================
@@ -31,6 +34,7 @@ int isEmpty(const char*buff){
 		if(!isspace(*s)) return 0;
 	return 1;
 }
+
 
 //==============================================================================
 bool isUInt(const char *s){
@@ -57,6 +61,7 @@ bool isDouble(const char *s){
 	return true;
 }
 
+
 //=================================== extract attribute value by attr name
 char * getAttr(char *s0, const char *name, char *buf){
 	char *s=s0;
@@ -76,11 +81,13 @@ char * getAttr(char *s0, const char *name, char *buf){
 	return 0;
 }
 
+
 //=================================== convert string to upper case
 char *strtoupper(char*s){
 	for(char *ss=s;*ss;ss++) *ss=toupper(*ss);
 	return s;
 }
+
 
 //===================== check if given string contains given key: 0 -- contains; 1 -- does not
 int keyCmp(const char *str, const char *key){
@@ -108,11 +115,14 @@ char *trim(char *s){
 }
 
 
+
+
 const char* skipInt(const char *s){
 	if(*s=='-' || *s=='+') s++;
 	while(isdigit(*s)) s++;
 	return s;
 }
+
 
 bool isfloat(const char *s){
 	s=skipInt(s);
@@ -125,6 +135,7 @@ bool isfloat(const char *s){
 	return false;
 }
 
+
 //============================================================
 //=======================    Logging    ======================
 //============================================================
@@ -132,6 +143,7 @@ const char *errStatus=0;
 void clearLog(){
 	if(logFileName) fclose(gopen(logFileName,"wt"));
 }
+
 
 FILE *openLog(){
 	if(logFileName) {
@@ -153,6 +165,7 @@ FILE *openLog(){
 	return 0;
 }
 
+
 void writeLog(const char *format, va_list args){
 	FILE *f=openLog();
 	if(f) {
@@ -164,6 +177,7 @@ void writeLog(const char *format, va_list args){
 		fclose(f);
 	}
 }
+
 
 void writeLog(const char *format, ...){
 	va_list args;
@@ -180,6 +194,7 @@ void writeLogErr(const char *format, ...){
 	writeLog(b);
 	fprintf(stderr,"%s",b);
 }
+
 
 //============================================================
 //=======================    Verbose    ======================
@@ -208,6 +223,7 @@ void xverb(const char *format, ...){
 	va_end(args);
 	fflush(stdout);
 }
+
 
 //============================================================
 //=======================    Errors    =======================
@@ -238,6 +254,8 @@ void errorExit(const char *format, ...){
 	errorExit(format, args);
 	va_end(args);
 }
+
+
 
 
 //============================================================
@@ -271,6 +289,7 @@ void _deb_(bool t, const char *format, va_list args){
 }
 //===========================================
 
+
 void deb(int num, bool t, char e){
 	if((debugFg&DEBUG_PRINT)!=0){
 		if(debS) printf("%s",debS);
@@ -289,9 +308,11 @@ void deb(int num, bool t, char e){
 	if(t) debTimer.reset();
 }
 
+
 void deb(int num){
 	deb(num, false,'\n');
 }
+
 
 void deb(const char *format, ...){
 	va_list args;
@@ -299,6 +320,7 @@ void deb(const char *format, ...){
 	_deb_(false, format, args);
 	va_end(args);
 }
+
 
 void deb(int num, const char *format, ...){
 	if(debugFg==0) return;
@@ -317,6 +339,7 @@ void debt(const char *format, ...){
 	_deb_(true, format, args);
 	va_end(args);
 }
+
 
 void debt(int num, const char *format, ...){
 	if(debugFg==0) return;
@@ -340,6 +363,7 @@ char *Timer::getTime(){
 	return bb;
 }
 
+
 Timer::Timer(){
 	reset();
 }
@@ -347,19 +371,23 @@ void Timer::reset(){
 	start=mtime();
 }
 
+
 long Timer::getTimer(){
 	long curTime=mtime();
 	return curTime-start;
 }
 
+
 long mtime()
 {
   struct timeval t;
+
 
   gettimeofday(&t, NULL);
   long mt = (long)t.tv_sec * 1000 + t.tv_usec / 1000;
   return mt;
 }
+
 
 char timerBufferQQ[256];
 char *dateTime(){
@@ -369,6 +397,7 @@ char *dateTime(){
 			t->tm_hour, t->tm_min, t->tm_sec);
 	return timerBufferQQ;
 }
+
 
 //============================================================
 //====================   Files and Paths    ==================
@@ -386,6 +415,7 @@ char* parseTilda(char *b, const char*fname){
 	return strcat(b,fname);
 }
 
+
 //================ open file with control
 FILE *xopen(const char* fname, const char *t){
 	if(fname==0) errorExit("can\'t open file <null>");
@@ -396,6 +426,7 @@ FILE *xopen(const char* fname, const char *t){
 	}
 	return f;
 }
+
 
 FILE *gopen(const char*fname, const char* type){		// open file with parsing ~
 	char b[2048];
@@ -422,6 +453,7 @@ char *makeFileName(char *b, const char *path, const char*fname, const char*ext){
 	char *s=strrchr(ss,'.'); if(s) *s=0;
 	return strcat(strcat(b,"."),ext);
 }
+
 
 //===================== platform independent Make Directory
 int _makeDir(const char * path){
@@ -469,6 +501,8 @@ void funlockFile(FILE *f){
 }
 
 
+
+
 //=================== Check if given file exists
 bool fileExists(const char *fname){
 	bool fg=false;						// The file do not exist. The header should be writen.
@@ -476,6 +510,7 @@ bool fileExists(const char *fname){
 	if(f!=0) {fg=true; fclose(f);}
 	return fg;
 }
+
 
 //=================== Check if given file exists
 bool fileExists(const char* path, const char *fname){
@@ -509,9 +544,12 @@ char *getFnameWithoutExt(char *buf, const char *fname){
 	s=strrchr(fname,'/'); if(s==0) s=fname; else s++;
 	char *pp=strcpy(buf,s);
 
+
 	pp=strrchr(pp,'.'); if(pp) *pp=0;
 	return buf;
 }
+
+
 
 
 //============================================================
@@ -541,6 +579,7 @@ void *xrealloc(void *a, size_t n, const char * err){
 	return a;
 }
 
+
 //============================================================
 //========================    Random    ======================
 //============================================================
@@ -551,6 +590,7 @@ inline int longRand(){
 	return (rand()<<15)|x;
 }
 
+
 double drand(){   /* uniform distribution, (0..1] */
 	double x=(longRand()+1.0)/(LRAND_MAX+1.0);
   return x;
@@ -560,10 +600,12 @@ double drand(double xx){   /* uniform distribution, (0..1] */
   return x;
 }
 
+
 int irand(int xx){   /* uniform distribution, (0..1] */
 	long y=drand()*xx;
   return y;
 }
+
 
 double rGauss(){
 	double phi=drand() * 2 * PI, r=0;
@@ -572,13 +614,15 @@ double rGauss(){
 	return rr;
 }
 
+
 double rExp(){
 	return -log(drand());
 }
-// random gaussian variable with given mean anf std deviation
+// random gaussian variable with given mean and std deviation
 double rGauss(double e, double sigma){
 	return rGauss()*sigma+e;
 }
+
 
 // random integer in given interval
 unsigned long randInt(unsigned long n){
@@ -587,6 +631,7 @@ unsigned long randInt(unsigned long n){
 	unsigned long rn=(unsigned long)(x*n);
 	return rn;
 }
+
 
 //============================================================
 //===================    Dynamic  Histogram    ===============
@@ -606,6 +651,7 @@ DinHistogram::~DinHistogram(){
 	xfree(cnts[1],"Dinamic histogram 4");
 }
 
+
 void DinHistogram::clear(){
 	n[0]=n[1]=0;					//number of observations
 	min=1.e+200; max=-min;			//min max values
@@ -618,6 +664,8 @@ void DinHistogram::clear(){
 }
 
 
+
+
 int DinHistogram::getIdx(double value){ //get index by value
 	if(bin==0) return 0;
 	if(value==hMax) return l-1;
@@ -627,11 +675,14 @@ double DinHistogram::getValue(int idx){	//get value by index
 	return hMin+idx*bin+bin/2;
 }
 
+
 double DinHistogram::getNormValue(int idx){
 	double v=getValue(idx);
 	v=(v-min)/(max-min);
 	return v;
 }
+
+
 
 
 int DinHistogram::compress2Left(double value){  //Compress the histogram to the Left
@@ -645,6 +696,7 @@ int DinHistogram::compress2Left(double value){  //Compress the histogram to the 
 	return getIdx(value);
 }
 
+
 int DinHistogram::compress2Right(double value){	//Compress the histogram to the Right
 	for(int i=l-1,j=l-1; i > 0; i-=2,j--){		// Compress the values
 		cnts[0][j]=cnts[0][i]+cnts[0][i-1];
@@ -656,15 +708,18 @@ int DinHistogram::compress2Right(double value){	//Compress the histogram to the 
 	return getIdx(value);
 }
 
+
 void DinHistogram::addStat(double value, int count, int type){		//add the value to the statistics
 	n[type]+=count; e[type]+=value; sd[type]+=value*value;	//count, mean, std dev.
 	if(value > max) max=value;
 	if(value < min) min=value;
 }
 
+
 void DinHistogram::add(double value, int type){			// add the value to the histogram
 	add(value,1,type);
 }
+
 
 void DinHistogram::add(double value, int count, int type){			// add the value to the histogram
 	if(count==0) return;
@@ -697,6 +752,7 @@ void DinHistogram::add(double value, int count, int type){			// add the value to
 	cnts[type][i]+=count; addStat(value,count,type);				// Put the new value
 }
 
+
 void DinHistogram::fin(){								// Normalize and calculate the statistics
 	for(int t=0; t<2; t++){
 		for(int i=0; i<l; i++) hist[t][i]=(double) cnts[t][i]/n[t]/bin;
@@ -705,6 +761,7 @@ void DinHistogram::fin(){								// Normalize and calculate the statistics
 		sd[t]=sqrt(sd[t]);
 	}
 }
+
 
 void DinHistogram::print(FILE* f){						// print the histogram
 	fprintf(f,"#  min=%.3f max=%.3f \n",min,max);
@@ -719,6 +776,8 @@ void DinHistogram::print(FILE* f){						// print the histogram
 }
 
 
+
+
 //===================== Normalize the function to mean and sigma
 double norm(double *x, int l){
 	double d=0,e=0,dd,ee;
@@ -730,6 +789,9 @@ double norm(double *x, int l){
 	return dd;
 }
 
+
 //======================================================================
+
+
 
 

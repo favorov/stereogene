@@ -2,10 +2,12 @@
  * mann.cpp
  * Mann-whitney test
  *  Created on: Feb 26, 2013
- *      Author: mironov
+ *      Author: Mironov
  */
 
+
 #include "track_util.h"
+
 
 //==================================================== Testing
 const int nSet1=200;
@@ -26,6 +28,7 @@ void writeSet(double *set, int nSet, const char*fname){
 	fclose(f);
 }
 
+
 //==================================================== Normal distribution
 int stdLength=71;
 double stdNormal[71] = {
@@ -45,6 +48,7 @@ double stdNormal[71] = {
                        4.035794E-11, 2.066525E-11, 1.047862E-11, 5.261569E-12, 2.616130E-12, //6.4-6.9
                        1.288081E-12, //7.0
  };
+
 
 double pisq = sqrt(2 * PI);
 //==================================================== Normal density
@@ -71,6 +75,8 @@ double normalProbGrater(double x) {
   }
 
 
+
+
 //================================================ comparator for sort double
 int doubleCmp(const void *dd1, const void *dd2){
 	double *d1=(double *)dd1;
@@ -79,6 +85,7 @@ int doubleCmp(const void *dd1, const void *dd2){
 	if(*d1<*d2) return -1;
 	return 0;
 }
+
 
 //double *sample(double *set, int nset,int nSample){
 //	double *subset;
@@ -101,6 +108,7 @@ statTest *MannWhitney0( double *set1, int nSet1, double *set2,int nSet2){
 	if(nSet2==0) {writeLog("No foreground data"); return 0;}
 	qsort((void *)set1,nSet1,sizeof(double),doubleCmp);
 	qsort((void *)set2,nSet2,sizeof(double),doubleCmp);
+
 
 	double u=0;								//=== Mann-Whithey statistics
 	for(int i1=0, i2=0; i1<nSet1; i1++){
@@ -125,6 +133,8 @@ statTest *MannWhitney0( double *set1, int nSet1, double *set2,int nSet2){
 }
 
 
+
+
 //======================================================= main for testing
 int zxmain(int argc, char *argv[]){
 	makeSets();
@@ -133,4 +143,5 @@ int zxmain(int argc, char *argv[]){
 	MannWhitney(set1, nSet1, set2, nSet2);
 	return 0;
 }
+
 

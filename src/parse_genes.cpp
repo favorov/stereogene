@@ -1,11 +1,13 @@
 #include "track_util.h"
 
+
 //#include <stdio.h>
 //#include <stdlib.h>
 //#include <string.h>
 //#include <math.h>
 //#include <cmath>
 //#include <ctype.h>
+
 
 char inFile[4096];
 FILE *fin;
@@ -20,8 +22,13 @@ FILE *fi_beg ;
 FILE *fi_end ;
 
 
+
+
 const int progType=PG;
 const char * progName="parse_genes";
+
+
+
 
 
 
@@ -33,11 +40,13 @@ struct nameList{
 	nameList();
 };
 
+
 nameList::nameList(){
 	maxNames=100;
 	names=(char **)malloc(maxNames*sizeof(char*));
 	nNames=0;
 }
+
 
 char * nameList::getName(char *s){
 	for(int i=0; i<nNames; i++){
@@ -50,8 +59,11 @@ char * nameList::getName(char *s){
 	return (names[nNames++]=strdup(s));
 }
 
+
 nameList chromosomes=nameList();
 nameList genetypes  =nameList();
+
+
 
 
 long readInt_pg(){
@@ -66,6 +78,7 @@ double readFloat_pg(){
 	return atof(s);
 }
 
+
 //================================ PARSE REFSEQ.BED ==========================
 //============================================================================
 struct pg_refseqIV{
@@ -76,9 +89,12 @@ struct pg_refseqIV{
 	void print(FILE *f);
 };
 
+
 void pg_refseqIV::print(FILE *ff){
 	fprintf(ff,"%s\t%i\t%i\t%s\t1\t%c\n",chr,f,t, name ,strand);
 }
+
+
 
 
 const int CAPAS=100000;
@@ -92,6 +108,7 @@ struct pg_refseqSet{
 	void print(FILE*f);
 };
 
+
 pg_refseqSet::pg_refseqSet(const char *sn){
 	setName=strdup(sn);
 	capacity=CAPAS;
@@ -99,7 +116,9 @@ pg_refseqSet::pg_refseqSet(const char *sn){
 	n=0;
 }
 
+
 void pg_refseqSet::addIV(char *chrom, int from, int to, const char strand, const char *name){
+
 
 	if(n > 0){
 		pg_refseqIV *prev=ivs+n-1;
@@ -122,9 +141,11 @@ void pg_refseqSet::addIV(char *chrom, int from, int to, const char strand, const
 	n++;
 }
 
+
 int rsIvCmp(const void *r1, const void *r2){
 	pg_refseqIV *iv1=(pg_refseqIV *) r1;
 	pg_refseqIV *iv2=(pg_refseqIV *) r2;
+
 
 	int x=strcmp(iv1->chr, iv2->chr);
 	if(x) return x;
@@ -134,6 +155,7 @@ int rsIvCmp(const void *r1, const void *r2){
 	}
 	return iv1->f-iv2->f;
 }
+
 
 void pg_refseqSet::print(FILE *f){
 	qsort(ivs,n,sizeof(pg_refseqIV),rsIvCmp);
@@ -156,6 +178,8 @@ void pg_refseqSet::print(FILE *f){
 }
 
 
+
+
 pg_refseqSet rs_Genes=pg_refseqSet("genes");
 pg_refseqSet rs_G_beg=pg_refseqSet("g_beg");
 pg_refseqSet rs_G_end=pg_refseqSet("g_end");
@@ -165,6 +189,8 @@ pg_refseqSet rs_Exn_e=pg_refseqSet("e_end");
 pg_refseqSet rs_Ivs  =pg_refseqSet("ivs");
 pg_refseqSet rs_Ivs_b=pg_refseqSet("i_beg");
 pg_refseqSet rs_Ivs_e=pg_refseqSet("i_end");
+
+
 
 
 void parseRefSeq(){
@@ -177,6 +203,7 @@ void parseRefSeq(){
 		if(strncmp(inputString,"track"    ,5)==0) continue;
 		if(*inputString=='#' || *inputString==0) continue;
 
+
 		char *chrom=chromosomes.getName(strtok(inputString,"\t\n"));
 		int beg=readInt_pg();									//======== find beg field
 		int end=readInt_pg();
@@ -187,6 +214,7 @@ void parseRefSeq(){
 			rs_G_end.addIV(chrom,end,end+1,'.',".");
 			continue;
 		}
+
 
 		sx=strtok(0,"\t\n"); if(sx==0) continue;			//======== take score field
 		sx=strtok(0,"\t\n"); if(sx==0) continue;			//======== take strand field
@@ -206,6 +234,7 @@ void parseRefSeq(){
 		sx=strtok(0,"\t"); if(sx==0) continue;			//======== skip rgb
 		sx=strtok(0,"\t"); if(sx==0) continue;			//======== number of exons
 
+
 		//======================= read gene structure
 		int nn=atoi(sx);
 		if(nn<2) {
@@ -217,17 +246,20 @@ void parseRefSeq(){
 		int lExn[nn];
 		int posExn[nn];
 
+
 		for(int i=0; i<nn; i++) {
 			sx=strtok(0,",\t");
 			if(sx==0){beg=-1; break;}
 			lExn[i]=atoi(sx);
 		}
 
+
 		for(int i=0; i<nn; i++) {
 			sx=strtok(0,",\t");
 			if(sx==0){beg=-1; break;}
 			posExn[i]=atoi(sx);
 		}
+
 
 		int genePos=beg;
 //===== now 'beg' and 'end' are positions relative to gene beg/
@@ -264,6 +296,9 @@ void parseRefSeq(){
 
 
 
+
+
+
 	verb("print genes\n"); rs_Genes.print(fgene);
 	verb("print g_beg\n"); rs_G_beg.print(fg_beg);
 	verb("print g_end\n"); rs_G_end.print(fg_end);
@@ -278,6 +313,7 @@ void parseRefSeq(){
 const int PG_TRASCR=1;
 const int PG_EXON=3;
 
+
 struct GenecodeRecord{
 	char *chrom;
 	int type;
@@ -290,13 +326,17 @@ struct GenecodeRecord{
 	int exonNo;
 	int parse(char *b);
 
+
 	void print(FILE *f);
 };
+
 
 void GenecodeRecord::print(FILE *f){
 	fprintf(f,"%s\t%i\t%i\t%i\t%c\t%s\t%s\t%i\t%i\n",
 			chrom,type,from,to,strand,geneName,genetype,level,exonNo);
 }
+
+
 
 
 int GenecodeRecord::parse(char *b){
@@ -315,8 +355,10 @@ int GenecodeRecord::parse(char *b){
 	sx=strtok(0,"\t");	strand=*sx;	// strand
 	strtok(0,"\t");		// skip '.'
 
+
 	sx=strtok(0,"\t");		// read description
 	sx=strtok(sx,";");
+
 
 	for(;sx!=0; sx=strtok(0,";")){
 		while(*sx==' ') sx++;
@@ -333,13 +375,16 @@ int GenecodeRecord::parse(char *b){
 		if(strcmp(name,"exon_number"  )==0) exonNo=atoi(value);
 		if(strcmp(name,"level"        )==0) level=atoi(value);
 
+
 	}
 	return 1;
 }
 
+
 struct gp_interval{
 	int f,t;
 	char strand;
+
 
 };
 struct gp_intervals{
@@ -357,11 +402,13 @@ struct gp_intervals{
 	void printPos(FILE *f,  int pos[], int n, char *chrom, char *name, char strand);
 };
 
+
 void gp_intervals::printPos(FILE *f, int pos[], int n, char *chrom, char *name, char strand){
 	for(int i=0; i<n; i++){
 		fprintf(f,"%s\t%i\t%i\t%s\t1\t%c\n",chrom,pos[i],pos[i]+1, name ,strand);
 	}
 }
+
 
 int pg_iv_cmp(const void* ivx1, const void *ivx2){
 	gp_interval* iv1=(gp_interval*)ivx1;
@@ -374,6 +421,7 @@ int pg_pos_cmp(const void* px1, const void *px2){
 	int *p2=(int*)px2;
 	return *p1-*p2;
 }
+
 
 void gp_intervals::print(FILE *fiv, FILE *fbeg,  FILE *fend, char *chrom, char *name, char strand){
 	qsort(interv, n_ivs,sizeof(gp_interval),pg_iv_cmp);
@@ -396,6 +444,9 @@ void gp_intervals::print(FILE *fiv, FILE *fbeg,  FILE *fend, char *chrom, char *
 	printPos(fend,ends, n_end, chrom, name, strand);
 	printPos(fbeg,begs, n_beg, chrom, name, strand);
 }
+
+
+
 
 
 
@@ -425,6 +476,7 @@ void gp_intervals::addIv(int f, int t, char strand){
 	}
 }
 
+
 gp_intervals givTranscr=gp_intervals();
 gp_intervals givExn    =gp_intervals();
 gp_intervals givIvs    =gp_intervals();
@@ -434,16 +486,19 @@ void parseGTF(){
 	char *inputString;
 	GenecodeRecord record;
 
+
 	char curGName[256]="";
 	char curChr[256]="";
 	char curStrand='.';
 	int ne=0;
 	int exn_end=0;
 
+
 	for(int iLine=0; (inputString=fgets(bb,SG_BUFEXT,fin))!=0; iLine++){
 		if(iLine % 10000 ==0) printf("%i\n", iLine);
 		inputString=trim(inputString);
 		if(*inputString=='#') continue;
+
 
 		if(record.parse(inputString)){
 //			record.print(fgene);
@@ -452,6 +507,8 @@ void parseGTF(){
 				givTranscr.print(fgene, fg_beg, fg_end, curChr, curGName, curStrand);
 				givExn.print(fexn, fe_beg, fe_end, curChr, curGName, curStrand);
 				givIvs.print(fivs, fi_beg, fi_end, curChr, curGName, curStrand);
+
+
 
 
 				givTranscr.clean(); givExn.clean(); givIvs.clean();
@@ -475,6 +532,7 @@ void parseGTF(){
 	}
 }
 
+
 //============================================================================
 //============================================ Print Help page =========================================
 void printMiniHelp(){
@@ -489,6 +547,7 @@ void printMiniHelp(){
 	exit(0);
 }
 
+
 void printProgDescr(){
 	printf("\n");
 	printf("The parse_genes program creates bed files for genes/exons/introns starts/bodies/ends\n");
@@ -498,6 +557,8 @@ void printProgDescr(){
 }
 
 
+
+
 int main(int argc, char **argv) {
 	char b[5100];
 	verbose=true;
@@ -505,6 +566,7 @@ int main(int argc, char **argv) {
 	parseArgs(argc, argv);
 	if(nfiles < 1) {printf("no input file defined"); return 0;}
 	strcpy(inFile, trim(files[0].fname));
+
 
 	fin=xopen(argv[1], "r");
 	int type=0;	//======================== gencode
@@ -524,6 +586,7 @@ int main(int argc, char **argv) {
 	if(type) parseRefSeq();
 	else parseGTF();
 
+
 	verb("close files\n");
 	fclose(fin);
 	fclose(fgene);
@@ -536,4 +599,5 @@ int main(int argc, char **argv) {
 	fclose(fi_beg);
 	fclose(fi_end);
 }
+
 

@@ -2,18 +2,21 @@
  * bTrack.cpp
  *
  *  Created on: Feb 20, 2013
- *      Author: mironov
+ *      Author: Mironov
  */
 #include "track_util.h"
+
 
 void failParam(const char* s){
 	verb("parameter \'%s\' failed\n",s);
 }
 
+
 int chkVersion(char *ver){
 	char ver1[1024], ver0[1024];
 	return strcmp(getMajorVer(version,ver0), getMajorVer(ver,ver1));
 }
+
 
 bool bTrack::check(const char *fname){
 	if(clearProfile){
@@ -47,6 +50,7 @@ bool bTrack::check(const char *fname){
 		char *s2=strtok(0,"=\r\n");
 		if(b[0]=='#') continue;
 
+
 		else if(strcmp(s1,"version")==0){
 			strcpy(bver,s2);
 		}
@@ -66,6 +70,8 @@ bool bTrack::check(const char *fname){
 	}
 	return fg;
 }
+
+
 
 
 //=============================================================================
@@ -91,11 +97,13 @@ bool bTrack::readPrm(){
 	return true;
 }
 
+
 //=============================================================================
 void BuffArray::init(Track *bbt, bool cmpl, bool wrr){		// Prepare
 	if(bbt->name==0) return;
 	bufBeg=bufEnd=-1; offset=0; wr=false; f=0;
 	bt=bbt;
+
 
 	getMem0(bval,binBufSize+2*wProfSize, "Read bTrack");
 	char binFile[4096];
@@ -121,6 +129,7 @@ void BuffArray::init(Track *bbt, bool cmpl, bool wrr){		// Prepare
 	}
 }
 
+
 void BuffArray::readBuff(int pos){
 	bufBeg=(pos/binBufSize)*binBufSize-wProfSize;
 	if(bufBeg < 0) bufBeg=0;
@@ -131,11 +140,14 @@ void BuffArray::readBuff(int pos){
 	fread(bval, sizeof(BINVAL), l, f);
 }
 
+
 BINVAL BuffArray::get(int pos){
 	if(pos < bufBeg || pos >= bufEnd)  {readBuff(pos);}
 	BINVAL x=bval[pos-bufBeg];
 	return x;
 }
+
+
 
 
 void BuffArray::writeBuff(){
@@ -146,6 +158,7 @@ void BuffArray::writeBuff(){
 	}
 }
 
+
 void BuffArray::set(int pos, BINVAL v){
 	if(pos < bufBeg || pos >= bufEnd){
 		if(bufBeg >= 0) writeBuff();
@@ -154,13 +167,16 @@ void BuffArray::set(int pos, BINVAL v){
 	bval[pos-bufBeg]=v; wr=true;
 }
 
+
 BuffArray::BuffArray(){
 	bval=0; f=0; offset=0;	bufBeg=-1; bufEnd=-1; bt=0; wr=false;
 }
 
+
 void BuffArray::close(){
 	if(f!=0) {fclose(f);} f=0;
 }
+
 
 BuffArray::~BuffArray(){
 	xfree(bval,"~BuffArray");
@@ -181,6 +197,7 @@ void FloatArray::init(int na){
 	}
 }
 
+
 FloatArray::~FloatArray(){
 	xfree(val,"float profile");
 	if(f==0) return;
@@ -188,6 +205,7 @@ FloatArray::~FloatArray(){
 	remove(fname);
 	xfree(fname,"~FloatArray file");
 }
+
 
 FloatArray::FloatArray(){
 	bufBeg=bufEnd=-1; wr=false; f=0; val=0;
@@ -201,6 +219,7 @@ FloatArray::FloatArray(){
 	fname=strdup(binFile);
 	f=xopen(binFile,"w+b"); if(f==0) return;
 }
+
 
 void FloatArray::readBuf(int pos){
 	if(f==0) return;
@@ -216,6 +235,7 @@ void FloatArray::readBuf(int pos){
 	l=fread(val, sizeof(*val), l, f);
 	wr=false;
 }
+
 
 float FloatArray::get(int pos){
 	//=============================================read the value
@@ -235,6 +255,10 @@ float FloatArray::getLog(int pos){
 }
 
 
+
+
+
+
 void FloatArray::writeBuf(){
 	if(wr && f){		//=========== file exists & the buffer changed
 		fseek(f,bufBeg*sizeof(*val),SEEK_SET);
@@ -242,6 +266,7 @@ void FloatArray::writeBuf(){
 		fwrite(val, sizeof(*val), l, f);
 	}
 }
+
 
 void FloatArray::set(int pos, float v){
 	if(pos < bufBeg || pos >= bufEnd){	//=== position to write outside the buffer
@@ -258,6 +283,7 @@ float FloatArray::add(int pos, float v){
 	return x;
 }
 
+
 //=============================================================================
 bool bTrack::readBin(){
 	//============================================= get file length
@@ -272,6 +298,7 @@ bool bTrack::readBin(){
 	}
 	return true;
 }
+
 
 bool Track::openTrack(const char *fname){
 	if(!readTrack(fname)) return false;
@@ -297,6 +324,7 @@ bool bTrack::readTrack(const char *fname){
 	return true;
 }
 
+
 //===============================================================================
 double Track::addStatistics(){
 	double avv=0, sdd=0;
@@ -316,6 +344,7 @@ void Track::finStatistics(){
 	}
 }
 
+
 //========================================================================
 bool bTrack::isNA(int i, bool cmpl){
 	return getBVal(i,cmpl)==NA;
@@ -323,6 +352,8 @@ bool bTrack::isNA(int i, bool cmpl){
 bool bTrack::isZero(int i, bool cmpl){
 	return getBVal(i,cmpl)<=threshold;
 }
+
+
 
 
 //=======================================================================================
@@ -359,6 +390,7 @@ void Track::makeIntervals(bool cmpl, IVSet *iv){
 	}
 }
 
+
 bool Track::makeIntervals(){
 	makeIntervals(0, ivs);
 	if(hasCompl) makeIntervals(1, ivsC);
@@ -370,12 +402,14 @@ bool Track::makeIntervals(){
 	ivs->fin();
 	if(ivsC->nIv) ivsC->fin();
 
+
 	int l0=profileLength; if(hasCompl) l0*=2;
 	int l1=ivs->totLength; if(hasCompl) l1+=ivsC->totLength;
 	av0=av0*l0/l1;
 	sd0=sd0*sqrt(l0/l1);
 	return true;
 }
+
 
 //========================================================================
 //==================================== get random position in the interval
@@ -386,11 +420,14 @@ int Track::getRnd(bool cmpl){
 }
 
 
+
+
 //========================================================================
 void Track::clear(){
 	ivs->clear();
 	if(name) xfree(name,"clear btrack");
 }
+
 
 void bTrack::clear(){
 	Track::clear();
@@ -415,6 +452,7 @@ int  Track::countNA(int pos, bool cmpl){
 	return c;
 }
 
+
 //========================================================================
 int  Track::countZero(int pos, bool cmpl){
 	int c=pos+wProfSize >= profileLength ? wProfSize+pos-profileLength-1 : 0;
@@ -436,6 +474,7 @@ int  Track::countZero(int pos, bool cmpl){
 	return c;
 }
 
+
 void Track::init(){
 	name=0;
 	profWindow=0;
@@ -455,6 +494,7 @@ void bTrack::initBtr(){
 	cbytes=bytes=0;
 }
 
+
 bTrack::bTrack(){
 	initBtr();
 }
@@ -463,9 +503,11 @@ bTrack::bTrack(const char* fname){
 	openTrack(fname);
 }
 
+
 Track::Track(){
 	init();
 }
+
 
 Track::~Track(){
 	if(profWindow) xfree(profWindow,"~Track 1");
@@ -488,10 +530,12 @@ double bTrack::getVal(BINVAL b){
 		}
 		else return 0;
 	}
-	if(b <= threshold  && b >= - threshold) return 0;
 	double x=b < 0 ? 1-exp(-b/scaleFactor): exp(b/scaleFactor)-1;
+	x+=minP;
+	if(x <= threshold  && x >= - threshold) return 0;
 	return x;
 }
+
 
 //======================================= decode binary value at certain position
 int    bTrack::getBVal(int pos, int cmpl){
@@ -504,6 +548,7 @@ int    bTrack::getBVal(int pos, int cmpl){
 	return bv;
 }
 
+
 double bTrack::getValue(int pos, int cmpl){
 	BINVAL b=getBVal(pos,cmpl);
 	if(b==NA){
@@ -515,9 +560,11 @@ double bTrack::getValue(int pos, int cmpl){
 		else return 0;
 	}
 	if(b <= threshold  && b >= - threshold) return 0;
-	double x=exp(b/scaleFactor)-1;
+	double x=b/scaleFactor+minP;
+	x= x>=0 ? exp(x)-1 : exp(-x)+1;
 	return x;
 }
+
 
 //====================================== calculate projection to orthogonal subspace
 void Track::ortProject(){
@@ -538,6 +585,7 @@ void Track::ortProject(){
 	projCoeff=xy/xx;
 }
 
+
 //================================================= Get projected value
 double Track::getProjValue(int pos, bool cmpl){
 	if(pos <0 || pos >= profileLength) return 0;
@@ -545,6 +593,7 @@ double Track::getProjValue(int pos, bool cmpl){
 	if(projCoeff) x-=projCoeff*projTrack->getValue(pos,cmpl);
 	return x;
 }
+
 
 //================================================= decode the values to an array
 double * Track::getProfile(double *prof, int pos, int l, bool cmpl){ //====== pos - profile position; l -- fragment length without flanks
@@ -566,8 +615,10 @@ double * Track::getProfile(double *prof, int pos, int l, bool cmpl){ //====== po
 			x += getProjValue(pos+i,false);
 		*a=x;
 
+
 		avWindow+=x; sdWindow+=x*x;
 	}
+
 
 	//======================================= Window Statistics
 	avWindow/=l;
@@ -582,6 +633,7 @@ double * Track::getProfile(double *prof, int pos, int l, bool cmpl){ //====== po
 	int x0=l+LFlankProfSize;
 	int x1=x0+LFlankProfSize+RFlankProfSize;
 
+
 //=========================================	fill flanks
 	for(int x=x0; x<x1; x++){
 		double xq=rGauss(0,sdWindow)*noiseLevel;
@@ -590,12 +642,14 @@ double * Track::getProfile(double *prof, int pos, int l, bool cmpl){ //====== po
 	return prof;
 }
 
+
 double * Track::getProfile(int pos, bool cmpl){ //====== pos - profile position; cmpl=true <=> +strand
 	return getProfile(profWindow, pos, wProfSize, cmpl);
 }
 //======================================================
 //======================================================
 //======================================================
+
 
 void Track::writeAuto(){
 	if(autoCorr==0) return;
@@ -609,12 +663,14 @@ void Track::writeAuto(){
 	fclose(f);
 }
 
+
 //================================================================================
 //================================================================================
 //================================================================================
 Model::Model(){
 	definition=0; form=0; trackType=MODEL_TRACK;
 }
+
 
 //================================================================================
 void Model::readModel(const char *fnam){
@@ -636,6 +692,7 @@ void Model::readModel(const char *fnam){
 	}
 }
 
+
 //================================================================================
 bool   Model::readTrack(const char *fname){
 	char b[2048];
@@ -643,6 +700,7 @@ bool   Model::readTrack(const char *fname){
 	readModel(fname);
 	return true;
 }
+
 
 //================================================================================
 bool   Model::isNA(int pos, bool cmpl){
@@ -661,6 +719,7 @@ double Model::getValue(int pos, int cmpl){
 	return form->calc(pos);
 }
 
+
 //================================================================================
 void  Model::clear(){
 	for(int i=0; i<form->nTracks; i++){
@@ -669,11 +728,13 @@ void  Model::clear(){
 	}
 }
 
+
 //================================================================================
 Model::~Model(){
 	if(definition) xfree(definition,"definition");
 	del(form);
 }
+
 
 //================================================================================
 //================================================================================
@@ -686,6 +747,9 @@ Track * trackFactory(const char* fname){
 	bTrack *bt=new bTrack(fname);
 	return bt;
 }
+
+
+
 
 
 

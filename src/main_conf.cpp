@@ -1,7 +1,9 @@
 #include "track_util.h"
 
+
 const char * progName="Confounder";
 const int progType=SG;
+
 
 void printProgDescr(){
 	printf("\n");
@@ -10,6 +12,8 @@ void printProgDescr(){
 	printf("$ ./parse_genes [-parameters] [RefSeq or GENECODE file]\n");
 	printf("\n");
 }
+
+
 
 
 void printMiniHelp(){
@@ -24,9 +28,11 @@ void printMiniHelp(){
 	exit(0);
 }
 
+
 int main(int argc, char **argv) {
 	initSG(argc, argv);
 	if(debugFg) clearDeb();
+
 
 	Preparator();
 	if(confFile==0) confFile=strdup("confounder");

@@ -1,8 +1,8 @@
 /*
  * util.h
  *
- *  Created on: 05-th of December, year 2017 AD
- *      Author: andrey
+ *  Created on: 05 Dec. 2017
+ *      Author: Mironov
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,11 +13,14 @@
 #include <time.h>
 #include <sys/time.h>
 
+
 #ifndef UTIL_H_
 #define UTIL_H_
 
+
 const  int DEBUG_PRINT=1;
 const  int DEBUG_LOG=2;
+
 
 const  int BED_TRACK=1;
 const  int BED_GRAPH=2;
@@ -26,13 +29,18 @@ const  int BROAD_PEAK=4;
 const  int MODEL_TRACK=8;
 const  int CAGE_MIN=16;
 
+
 const int LRAND_MAX=(RAND_MAX > 0XFFFFF)?RAND_MAX : 0x3fffffff;
+
 
 extern unsigned long id;
 extern char *logFileName;	// output filename
 extern char *outFile;		// output filename
 extern bool silent;				// inhibit stdout
 extern bool verbose;				// number of suffle
+
+
+
 
 
 
@@ -49,6 +57,7 @@ struct Timer{
 	char *getTime();
 };
 
+
 //=========================================================================
 struct DinHistogram{		// Dynamic histogram for two variables
 	int l;					//number of bins
@@ -59,6 +68,7 @@ struct DinHistogram{		// Dynamic histogram for two variables
 	int    *cnts[2];		//counts
 	double *hist[2];		//counts
 	double e[2],sd[2];		//mean and std deviation
+
 
 	DinHistogram(int ll);				//constructor
 	~DinHistogram();
@@ -96,6 +106,8 @@ extern const char *debS;
 extern int debugFg;
 
 
+
+
 //=============================== Parsing ===========================
 char *getAttr(char *s0, const char *name, char *buf); // find attribute by name in the string and return attribute value
 char *skipSpace(char *s);		// skip space characters
@@ -123,8 +135,10 @@ char *correctFname(char* s);			// remove fucking MS Widows backslash
 void flockFile(FILE *f);
 void funlockFile(FILE *f);
 
+
 //============================================ Arrays
 double norm(double *x, int l);			// normalize to z-score
+
 
 //============================================ Debugging and logging
 void errorExit(const char *format, ...);
@@ -143,6 +157,10 @@ void debt(const char *format, ...);
 void debt(int num, const char *format, ...);
 void debt(); 										//reset timer
 void clearDeb();
+
+
+
+
 
 
 

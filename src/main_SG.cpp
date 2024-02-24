@@ -14,8 +14,11 @@
 // ....
 // deb("OK");
 
+
 const char * progName="StereoGene";
 const int progType=SG;
+
+
 
 
 void printMiniHelp(){
@@ -30,6 +33,7 @@ void printMiniHelp(){
 	exit(0);
 }
 
+
 void printProgDescr(){
 	printf("\n");
 	printf("The StereoGene program compares pairs of tracks and calculates kernel correlations\n");
@@ -38,13 +42,30 @@ void printProgDescr(){
 	printf("\n");
 }
 
-//============================================ Print Help page =========================================
+
+//============================================ Tests =========================================
+void FakeDat(){
+	totCorr=0.034;
+	avFg=0.123;
+	sdFg=0.117;
+	BgTotal=0.234;
+	avBg=0.346;
+	sdBg=0.123;
+	mannW_p=1.e-18;
+}
+void testHTML(){
+	FakeDat();
+	printHTML();
+	exit(0);
+}
+
 
 int main(int argc, char **argv) {
-
 	initSG(argc, argv);
-
+//testIsFloat();
+//testHTML();
 	writeLog("====== Start ====== deb=%i\n",debugFg);
+
 
 //===========================================
 	Preparator();

@@ -2,11 +2,13 @@
  * kernel.cpp
  *
  *  Created on: Aug 30, 2013
- *      Author: mironov
+ *      Author: Mironov
  */
 #include "track_util.h"
 
+
 double Complex::Mod(){return sqrt(re*re+im*im);}
+
 
 Complex Complex::scalar(Complex otherC){
 	Complex res=Complex();
@@ -15,9 +17,12 @@ Complex Complex::scalar(Complex otherC){
 	return res;
 }
 
+
 Fourier::Fourier(int n){init(n);}
 
+
 Fourier::Fourier(){re=im=datRe=datIm=0; length=0; err=0; spectrum=0; autocorr=0;}
+
 
 void Fourier::init(int len){
 	if(length==len) return;
@@ -35,15 +40,19 @@ void Fourier::init(int len){
 }
 
 
+
+
 Fourier::~Fourier(){
 	freeMem();
 }
+
 
 void Fourier::freeMem(){
 	if(re!=0) xfree(re,"re");
 	if(im!=0) xfree(im,"im");
 	if(datIm) xfree(datIm,"datIm");
 }
+
 
 void Fourier::setDat(double *reD){
 	datRe=reD;
@@ -64,9 +73,11 @@ void Fourier::calc(double *dRe, int deriv){
 	calc0(deriv);
 }
 
+
 void Fourier::norm(){
 	for(int i=0; i<length; i++) {re[i]/=length; im[i]/=length;}
 }
+
 
 void Fourier::calc(int deriv){
 	if(err) return;
@@ -81,13 +92,18 @@ void Fourier::calc0(int deriv){
 }
 
 
+
+
 void Fourier::calc(double *dRe,double *dIm,double *rRe,double *rIm){
 	fftl(length, dRe, dIm, rRe, rIm);
 }
 
+
 void Fourier::derivat(int deriv){
 	for(int i=0; i<deriv; i++) derivat();
 }
+
+
 
 
 void Fourier::derivat(){
@@ -98,6 +114,7 @@ void Fourier::derivat(){
 	}
 }
 
+
 float *Fourier::getSpectrum(){
 	getMem(spectrum,length,"Spectrum");
 	for(int i=0; i<length; i++)
@@ -105,14 +122,17 @@ float *Fourier::getSpectrum(){
 	return spectrum;
 }
 
+
 //================== calculate autocorrelations ====================
 double *tmpDRe=0, *tmpDIm=0, *tmpIm=0;
+
 
 double *Fourier::getAutoCorr(){
 	getMem0(autocorr,length,"AutoCorr #1");
 	getMem0(tmpDRe,length,"AutoCorr #2");
 	getMem0(tmpDIm,length,"AutoCorr #3");
 	getMem0(tmpIm,length,"AutoCorr #4");
+
 
 	tmpDRe[0]=0;
 	for(int i=1; i<length; i++){
@@ -122,6 +142,7 @@ double *Fourier::getAutoCorr(){
 	calc(tmpDRe, tmpDIm, autocorr, tmpIm);
 	return autocorr;
 }
+
 
 //=================================================================
 //============================   Kernel ===========================
@@ -142,6 +163,7 @@ Kernel *MakeKernel(int l){
 	return kern;
 }
 
+
 void Kernel::init(int n){
 	length=n;
 	errStatus="kernel init";
@@ -156,11 +178,14 @@ void Kernel::init(int n){
 	fy.init(n);
 }
 
+
 //============================== Calculate FFT
 void Kernel::fftx(double* x, int deriv){
 	fx.calc(x,deriv);
 }
 void Kernel::ffty(double* y, int deriv){fy.calc(y,deriv);}
+
+
 
 
 //============================== Calculate FFT for direct & compl
@@ -169,12 +194,14 @@ void Kernel::fft(){
 	cft.calc(ckern,0);
 }
 
+
 //============================== Kerneled scalar prod =\int f(x+phi) \rho(x-y) g(y) / Length
 double Kernel::scalar(Fourier *f1, Fourier *f2, Complex *c, bool complem, int delta){ //phi -- shuffle phase
 	if(f1->length !=length) return 0;
 	if(f2->length !=length) return 0;
 	double re=0, im=0;
 	Fourier *zft=complem ? &cft : &ft;
+
 
 	for(int i=0; i<length/2; i++){
 		int idelta=(i+delta)%length;
@@ -185,8 +212,10 @@ double Kernel::scalar(Fourier *f1, Fourier *f2, Complex *c, bool complem, int de
 		double ReF1 =f1->re[i] * RePhi - f1->im[i] *ImPhi;
 		double ImF1 =f1->re[i] * ImPhi + f1->im[i] *RePhi;
 
+
 		f1->re[i]=ReF1;
 		f1->im[i]=ImF1;
+
 
 		double RaRb_plus_IaIb =ReF1*f2->re[i] + ImF1*f2->im[i]; //==== Re(a)*Re(b)+Im(a)*Im(b)
 		double RaIb_minus_IaRb=ReF1*f2->im[i] - ImF1*f2->re[i]; //==== Re(a)*Im(b)-Im(a)*Re(b)
@@ -194,6 +223,7 @@ double Kernel::scalar(Fourier *f1, Fourier *f2, Complex *c, bool complem, int de
 		re+=(zft->re[i]*RaRb_plus_IaIb + zft->im[i]*RaIb_minus_IaRb)/length;
 		//==  Im=SUM Im(kern)(Re(a)*Re(b)+Im(a)*Im(b)) - Re(kern)*(Re(a)*Im(b)-Im(a)*Re(b))
 		im+=(zft->im[i]*RaRb_plus_IaIb - zft->re[i]*RaIb_minus_IaRb)/length;
+
 
 //		int id=(i+delta)%length;
 //		double ReF1 = f1->re[id];
@@ -208,10 +238,13 @@ double Kernel::scalar(Fourier *f1, Fourier *f2, Complex *c, bool complem, int de
 	}
 	if(c!=0) {c->re=re; c->im=im;}
 
+
 //	return sqrt(re*re+im*im);
+
 
 	return re;
 }
+
 
 //======================================== Calculate distance (correlation)
 double Kernel::dist(bool complem, int delta){
@@ -219,14 +252,18 @@ double Kernel::dist(bool complem, int delta){
 }
 
 
+
+
 //======================================== Calculate distance (correlation)
 double Kernel::dist(Fourier *f1, Fourier *f2, bool complem, int delta){
 	Complex c0=Complex(), c1=Complex(), c2=Complex();
+
 
 	double d12=scalar(f1,f2, &c0, complem, delta);
 	double d11=scalar(f1,f1, &c1, true);
 	double d22=scalar(f2,f2, &c2, true);
 	Fourier *zft=complem ? &cft : &ft;
+
 
 	dx11=d11; dx12=d12; dx22=d22; ex1=f1->re[0]; ex2=f2->re[0];
 	//================================================ we should subtract the means
@@ -247,8 +284,10 @@ double Kernel::dist(Fourier *f1, Fourier *f2, bool complem, int delta){
 	if(d22==0) return -500;
 	double cc=d12/sqrt(d11*d22);
 
+
 	return cc;
 }
+
 
 //=========== inhibit Zero position of the kernel
 double Kernel::NSCorrection(double x, double val){
@@ -259,6 +298,7 @@ double Kernel::NSCorrection(double x, double val){
 	}
 	return val;
 }
+
 
 //================================ General Kernel initiation
 void Kernel::makeKernel(int n){
@@ -273,6 +313,7 @@ void Kernel::makeKernel(int n){
 	fft();
 }
 
+
 //======================== Normal Kernel ==============================
 NormKernel::NormKernel():Kernel(){sigma=1; e=0; name= strdup("Normal_Kernel");}
 NormKernel::NormKernel(double ee,double sgm, int l):Kernel(){
@@ -280,12 +321,14 @@ NormKernel::NormKernel(double ee,double sgm, int l):Kernel(){
 	makeKernel(l);name= strdup("Normal_Kernel");
 }
 
+
 double NormKernel::kernVal(double x){
 	double x0=x;
 	x-=e; x/=sigma;
 	double val=exp(-x*x/2);
 	return NSCorrection(x0,val);
 }
+
 
 //======================== Left exp  Kernel ==============================
 LeftExpKernel::LeftExpKernel():Kernel(){sigma=1; e=0; name= strdup("Left_Exp_Kernel");}
@@ -298,6 +341,8 @@ double LeftExpKernel::kernVal(double x){
 	x-=e; x/=sigma; hasCompl=true;
 	return NSCorrection(x0,(x>0)?0 : exp(x));
 }
+
+
 
 
 //======================== Right exp  Kernel ==============================
@@ -341,12 +386,14 @@ void XYCorrelation::initXY(){
 	spectrumX=0; spectrumY=0;
 }
 
+
 //============================= Calculate XYCorrelation ======================
 void XYCorrelation::calcXYCorr(int pos, bool cmpl1, bool cmpl2,  double cc){
 	if(cc < -10) return;
 	calcXYCorr(cmpl1, cmpl2);
 	storeByChrom(pos, cc);
 }
+
 
 void XYCorrelation::calcXYCorr(bool cmpl1, bool cmpl2){
 	for(int i=0; i<length; i++){
@@ -365,6 +412,7 @@ void XYCorrelation::calcXYCorr(bool cmpl1, bool cmpl2){
 	//========= normalize by std dev
 }
 
+
 //========== Store the cross-correlation by chromosomes
 void XYCorrelation::storeByChrom(int pos, double corr){
 	double delta=0.;
@@ -372,6 +420,7 @@ void XYCorrelation::storeByChrom(int pos, double corr){
 	if(pos>=0) chr=getChromByPos(pos);
 	double e1=track1->avWindow, d1=track1->sdWindow;
 	double e2=track2->avWindow, d2=track2->sdWindow;
+
 
 	for(int i=0; i<length; i++){
 		double x=(re[i]-length*e1*e2)/(d1*d2*length);
@@ -390,6 +439,7 @@ void XYCorrelation::storeByChrom(int pos, double corr){
 	nCorr++;
 }
 
+
 //================== Normalize the XY cross-correlation ====================
 void XYCorrelation::normilize(){
 	min=1.e+18; max=-1.e+18; av=sd=0;
@@ -400,12 +450,14 @@ void XYCorrelation::normilize(){
 		if(nPlus) corrPlus [i]=corrPlus [i]/nPlus;
 		if(nMinus) corrMinus[i]=corrMinus[i]/nMinus;
 
+
 		if(min > x) min=x;
 		if(max < x) max=x;
 		av+=x; sd+=x*x; n++;
 	}
 	av/=n; sd=sd-av*av*n; sd/=n-1; sd=sqrt(sd);
 }
+
 
 void normChromDist(){
 	for(int i=0; i<profWithFlanksLength; i++){
@@ -424,6 +476,12 @@ void XYCorrelation::makeSpectrum()	{
 		spectrumY[i] += spY[i];
 	}
 }
+
+
+
+
+
+
 
 
 

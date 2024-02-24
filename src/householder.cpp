@@ -1,6 +1,8 @@
 //https://rosettacode.org/wiki/QR_decomposition#C
 
+
 #include "track_util.h"
+
 
 //=========================================
 Matrix::Matrix(int nn, double *a){
@@ -20,10 +22,12 @@ void Matrix::init(int nn){
 	getMem(values,n*n,"aaaa"); zeroMem(values,n*n);
 }
 
+
 //=========================================
 void Matrix::init(int nn, double *a){
 	init(nn); set(a);
 }
+
 
 //=========================================
 void Matrix::transpose(){
@@ -51,6 +55,7 @@ void Matrix::printMtx(){
 }
 //=========================================
 
+
 void mult(Matrix *res, Matrix *x, Matrix *y){
 	double z=0;
 	for (int i = 0; i < x->n; i++){
@@ -71,6 +76,7 @@ Matrix *mult(Matrix *x, Matrix *y){
 	return res;
 }
 
+
 //=================  matrix minor ============
 Matrix *minorMtx(Matrix *mtx, int d){
 	Matrix* m = new Matrix(mtx->n);
@@ -82,12 +88,14 @@ Matrix *minorMtx(Matrix *mtx, int d){
 	return m;
 }
 
+
 //=========== take c-th column of m, put in v
 double* mcol(Matrix *mtx, double *v, int c){
 	for (int i = 0; i < mtx->n; i++)
 		v[i] = mtx->get(i,c);
 	return v;
 }
+
 
 //=============================== m = I - v v^T
 Matrix *vmul(double v[], int n){
@@ -100,12 +108,14 @@ Matrix *vmul(double v[], int n){
 	return xxx;
 }
 
+
 //============================== c = a + b * s
 double *vecMultAdd(double a[], double b[], double s, double c[], int n){
 	for (int i = 0; i < n; i++)
 		c[i] = a[i] + s * b[i];
 	return c;
 }
+
 
 //=============================== ||x||
 double vecNorm(double x[], int n){
@@ -120,6 +130,7 @@ double* vecDiv(double x[], double d, double y[], int n){
 	for (int i = 0; i < n; i++) y[i] = x[i] / d;
 	return y;
 }
+
 
 //========================================================
 void householder(Matrix *mtx, Matrix **R, Matrix **Q){
@@ -139,6 +150,7 @@ void householder(Matrix *mtx, Matrix **R, Matrix **Q){
 			e[i] = (i == k) ? 1 : 0;
 		vecMultAdd(x, e, a, e, mm);
 		vecDiv(e, vecNorm(e, mm), e, mm);
+
 
 		q[k] = vmul(e, mm);
 		z1 = mult(q[k], z);
@@ -192,8 +204,10 @@ Matrix * eigenVectors(Matrix *x, double *EValues, int nIter, double precsision){
 	delete Q; Q=0;
 	delete EVal; EVal=0;
 
+
 return Vect;
 }
+
 
 //=========================================================
 //===============  Eigen Vectors ==========================
@@ -204,16 +218,20 @@ double in[] = {
 	 1   ,1  ,-1  , 9,
 	};
 
+
 void hh_test(){
 	int n=4;
 	int nIter=200;
 //	for(int i=0; i<n*n; i++) in[i]/=10;
 	Matrix *x = new Matrix(n,in);
 
+
 	puts("input"); x->printMtx();
+
 
 	double eValues[n];
 	Matrix *Vect=eigenVectors(x,eValues,nIter,1.e-3);
+
 
 	puts("Vect"); Vect->printMtx();
 	puts("EVal");
@@ -225,6 +243,7 @@ void hh_test(){
 	exit(0);
 	}
 
+
 /*
 Output:
 Q
@@ -234,12 +253,14 @@ Q
    -0.071    0.014   -0.001    0.980   -0.184
     0.141   -0.017   -0.106   -0.171   -0.969
 
+
 R
    14.177   20.667  -13.402
    -0.000  175.043  -70.080
     0.000    0.000  -35.202
    -0.000   -0.000   -0.000
     0.000    0.000   -0.000
+
 
 Q * R
    12.000  -51.000    4.000

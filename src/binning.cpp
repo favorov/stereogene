@@ -1,13 +1,16 @@
 /*
  * main_proj.cpp
  *
- *  Created on: 03 ����. 2017 �.
- *      Author: andrey
+ *  Created on: 03 Jan. 2017
+ *      Author: Mironov
  */
 #include "track_util.h"
 
+
 const char * progName="Binning";
 const int progType=SG;
+
+
 
 
 void printProgDescr(){
@@ -32,17 +35,24 @@ void printMiniHelp(){
 
 
 
+
+
+
+
 void binning(const char *fname){
 	bTrack *tmp=new bTrack();
 	tmp->writeBinnedProf(fname);
+
 
 	del(tmp);
 	if(fProfile) del(fProfile);
 }
 
+
 int main(int argc, char **argv) {
 	initSG(argc, argv);
 	if(debugFg) {clearDeb(); debugFg=DEBUG_LOG|DEBUG_PRINT;}
+
 
 	for(int i=0; i<nfiles; i++){
 		char *fname=files[i].fname;
@@ -50,10 +60,15 @@ int main(int argc, char **argv) {
 		binning(fname);
 	}
 
+
 	fflush(stdout);
 	fclose(stdout);
 	return 0;
 }
+
+
+
+
 
 
 

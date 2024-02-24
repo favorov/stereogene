@@ -1,8 +1,8 @@
 /*
  * formula.cpp
  *
- *  Created on: 24 ����. 2017 �.
- *      Author: andrey
+ *  Created on: 24 Jan 2017
+ *      Author: Mironov
  */
 #include "track_util.h"
 #include <math.h>
@@ -26,10 +26,13 @@ const int ABS	=0x16;
 const int SIGN	=0x17;
 const int ATAN	=0x18;
 
+
 const int TRACK =0x30;	  	// node is track
+
 
 const int CONST =0x80;	  	// node is a  constant
 const int IDENT =0x81;	  	// node is an identifier
+
 
 const int FunBeg  =0x81;  	// codes for functions
 const int FunEnd  =0x100;  	// codes for functions
@@ -38,18 +41,22 @@ const int TrackEnd=0x201;  	// codes for tracks
 const int NodeBeg=0x1001;		// shift if nodes name
 const int FunBBB =0x10;			// used in encoding b-formula
 
+
 struct BFormula{
 	static const char *functions[];
 	static const char *shortFun;
+
 
 	short bf[1024];
 	int len;
 	Formula *form;
 	int root;
 
+
 	BFormula(){init(0);}
 	BFormula(Formula *ff){init(ff); }
 	BFormula(BFormula *bf, int from, int to);
+
 
 	void init(Formula *ff){len=0; form=ff;}
 	void parseTerms(const char* s);
@@ -74,9 +81,11 @@ struct BFormula{
 };
 const char *BFormula::functions[]={"sin","cos","log","exp","tan","sqrt","abs","sign","atan",0};
 
+
 const char *BFormula::shortFun="_sctelqag";
 //===================================================================
 //===================================================================
+
 
 //===================================================================
 //===================================================================
@@ -99,12 +108,14 @@ TrackNode::TrackNode(Formula *frm, const char * trackName){
 	frm->tracks[frm->nTracks++]=this;
 }
 
+
 double TrackNode::getValue(int p){
 	if(p==pos) return value;
 	pos=p;
 	value=btr->getValue(pos,0);
 	return value;
 }
+
 
 //===================================================================
 char *TrackNode::print(char *b){
@@ -122,6 +133,7 @@ void Formula::init(){
 	e  	  = fNodes[addIdent("e")];
 	sigma = fNodes[addIdent("sigma")];
 }
+
 
 Formula::~Formula(){
 	if(formula!=0) {free(formula);} formula=0;
@@ -145,12 +157,14 @@ void Formula::setArg(double x){
 	}
 }
 
+
 //===================================================================
 void Formula::setValue(const char* ident, double v){
 	Identifier *idx=getIdentificator(ident);
 	int fnId= (idx==0) ? addIdent(ident) : idx->nodeID;
 	fNodes[fnId]->value=v;
 }
+
 
 //===================================================================
 Identifier *Formula::getIdentificator(const char *ident){
@@ -200,6 +214,7 @@ double Formula::calc(double x){
 }
 //===================================================================
 double Formula::calc(){
+
 
 	for(int i=0; i<nroots; i++) {
 		getNode(roots[i])->calc();
@@ -279,6 +294,7 @@ const char *BFormula::readIdent(const char *s, char*ident){//=== read identifier
 	for(char *ss=ident; *s && (*s=='_' || isalnum(*s));) {*ss++=*s++; *ss=0;}
 	return s;
 }
+
 
 const char *BFormula::readTrack(const char *s, char*ident){//=== read track
 	s++;
@@ -377,6 +393,7 @@ bool BFormula::isTrack(int pos){//================= is the element function
 	return (bf[pos] >= TrackBeg) && (bf[pos] < TrackEnd);
 }
 
+
 //=====================================================================
 bool BFormula::isNode(int pos){//================= is the element Node
 	return bf[pos] >= NodeBeg;
@@ -390,6 +407,7 @@ void BFormula::parseOper(int pos, int oper){//=========== parse operation
 	if(oper==EQ){
 		FNode *left=form->getNode(fn->childL);
 		if(left->operation!=IDENT) 	errorExit("Formula syntax error #4 (left to \'=\' is not identifier): \"%s\"",form->formula);
+
 
 	}
 	replace(pos-1,pos+2,codeNode(fn->id));
@@ -420,6 +438,7 @@ int BFormula::parse(){
 			replace(i,i+2,codeNode(fn->id));
 		}
 	}
+
 
 	for(int i=0; i < len-1; i++){//======== parse tracks
 		if(isTrack(i)){
@@ -466,27 +485,36 @@ void 	frmlSetValue(Formula* f, const char* txt, double val){f->setValue(txt,val)
 double 	frmlGetValue(Formula* f, const char* txt){return f->getValue(txt);}
 
 
+
+
 void test_formula(){
 	const char *input="a=2; [h3k4](x+3)+a";
 //	const char *input="s1=0.5; s2=1; m1=1; m2=-1; y1=(x-m1)/s1; y2=(x-m2)/s2; 1/s1*exp(-y1*y1) + 1/s2*exp(-y2*y2)";
 
+
 	Formula formula;
 
+
 	formula.parse(input);
+
 
 //char b[256];
 //for(int i=0; i<formula.nNodes; i++){
 //	deb(formula.getNode(i)->print(b));
 //}
 
+
 double x=80;
 double y=formula.calc(x);
 printf("f(%f)=%f\n",x,y);
 //deb("f(%f)=%f",x,y);
 
+
 //for(int i=0; i<100; i++){
 //	deb("%i\t%f",i,formula.calc(i));
 //}
+
+
 
 
 //	formula.setValue("sigma",0.2);
@@ -511,4 +539,5 @@ printf("f(%f)=%f\n",x,y);
 //	}
 exit(0);
 }
+
 

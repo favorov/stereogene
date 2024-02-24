@@ -1,9 +1,10 @@
 /*
  * sg_utils.cpp
  *
- *  Created on: 05-th of December, year 2017 AD
- *      Author: andrey
+ *  Created on: 05 Dec. 2017
+ *      Author: Mironov
  */
+
 
 #include "track_util.h"
 unsigned int hashx(unsigned int h,char c){
@@ -32,6 +33,7 @@ unsigned int hashx(unsigned int h,double c){
 	return hashx(h,f);
 }
 
+
 void makeId(){
 	id=0;
 	id=hashx(id,chromFile);
@@ -48,6 +50,7 @@ void makeId(){
 	id=hashx(id,outFile);
 	id=hashx(id,mtime());
 }
+
 
 //====================================================================================
 ScoredRange::ScoredRange(){
@@ -68,6 +71,8 @@ void ScoredRange::printBGraph(FILE *f){
 }
 
 
+
+
 //====================================================================================
 //===============================================  Chromosomes
 Chromosome::Chromosome(char *chr, long l, int bb){
@@ -79,6 +84,7 @@ Chromosome::Chromosome(char *chr, long l, int bb){
     distDens=0;
 }
 
+
 void Chromosome::clear(){
     av1=av2=corr=lCorr=count=0; densCount=0;
     if(profWithFlanksLength) {
@@ -87,6 +93,7 @@ void Chromosome::clear(){
     }
 }
 
+
 void clearChromosomes(){
 	for(int i=0; i<n_chrom; i++){
 		chrom_list[i].clear();
@@ -94,9 +101,13 @@ void clearChromosomes(){
 }
 
 
+
+
 int CHROM_BUFF=300;
 
+
 int readChromSizes(char *fname){
+
 
 	if(fname==0) errorExit("Chromosome file undefined");
 	FILE *f=xopen(fname,"rt");
@@ -107,9 +118,11 @@ int readChromSizes(char *fname){
 	chrom_list=(Chromosome *)malloc(max_chrom*sizeof(Chromosome));
 	char *s1,*s2;
 
+
 	for(char *s; (s=fgets(buff,2048,f))!=0;){
 		s=trim(buff);
 		if(*s==0 || *s=='#') 	continue;
+
 
 		if(n_chrom>=max_chrom) {
 			max_chrom+=CHROM_BUFF;
@@ -118,18 +131,23 @@ int readChromSizes(char *fname){
 	    if((s1=strtok(s," \t\r\n"))==NULL) continue;
 	    if((s2=strtok(0," \t\r\n"))==NULL) continue;
 
+
 	    chrom_list[n_chrom]=Chromosome(strdup(s1), atol(s2), profileLength);
+
 
 		int filLen=(chrom_list[n_chrom].length+binSize-1)/binSize;
 		profileLength+=filLen;
 
+
 		GenomeLength+=chrom_list[n_chrom].length;
 	    n_chrom++;
+
 
 	}
 	curChrom=chrom_list;
 	return 1;
 };
+
 
 Chromosome* findChrom(char *ch){
 	if(strcmp(curChrom->chrom, ch) ==0) return curChrom;
@@ -149,6 +167,7 @@ long pos2filePos(char*chrom,long pos){
 	return p;
 }
 
+
 //========================================================================================
 Chromosome *getChromByPos(int pos){
 	Chromosome *ch0=chrom_list;
@@ -159,9 +178,11 @@ Chromosome *getChromByPos(int pos){
 	return ch0;
 }
 
+
 //========================================================================================
 void filePos2Pos(int pos, ScoredRange *gr, int length){
 	Chromosome *ch0=getChromByPos(pos);
+
 
 	if(ch0==0) return;
 	pos-=ch0->base;
@@ -173,15 +194,18 @@ void filePos2Pos(int pos, ScoredRange *gr, int length){
 	return;
 }
 
+
 //========================================================================================
 int inputErr;		// flag: if input track has errors
 int inputErrLine;	// Error line in the input
 char curFname[4048];	// current input file
 
+
 //========================================================================================
 Chromosome *checkRange(ScoredRange *gr){
 	Chromosome* chr=findChrom(gr->chrom);
 	if(chr==0) return 0;
+
 
 	if(gr->beg < 0){
 		if(inputErr == 0){ inputErr=1;
@@ -201,11 +225,13 @@ Chromosome *checkRange(ScoredRange *gr){
 	return chr;
 }
 
+
 //======================================================================
 BufFile::~BufFile(){
 	if(f!=0) fclose(f);
 	if(buffer) xfree(buffer,"buff file");
 }
+
 
 void BufFile::init(const char *fname){
 	f=fopen(fname,"rb"); buffer=0;
@@ -214,6 +240,8 @@ void BufFile::init(const char *fname){
 	if(n <= 0) {curString=0;}
 	else {curString=buffer; buffer[n]=0;}
 }
+
+
 
 
 char *BufFile::getString(){
@@ -234,6 +262,7 @@ char *BufFile::getString(){
 //	*ss=0;
 	return s0;
 }
+
 
 // get major version number (1.64.2 -> 1.64)
 char * getMajorVer(const char *ver, char *buf){
@@ -266,6 +295,8 @@ const char*getKernelType(){
 }
 
 
+
+
 //================== make path - add '/' if necessary
 char* makePath(char* pt){
 	if(pt==0) return pt;
@@ -274,6 +305,7 @@ char* makePath(char* pt){
 	if(*s=='/') *s=0;
 	return strdup(strcat(strcpy(b,pt),"/"));
 }
+
 
 //================= Create directories
 void makeDirs(){
@@ -284,6 +316,8 @@ void makeDirs(){
 	if(trackPath!=0) makeDir(trackPath);
 	else trackPath=strdup("./");
 }
+
+
 
 
 //======================================================================
@@ -300,6 +334,7 @@ int nearPow2(int n){
 	return nearPow2(n,z);
 }
 
+
 int nearFactor(int n){
 	int qMin;
 	int pow2=nearPow2(n);
@@ -315,6 +350,7 @@ int nearFactor(int n){
 return qMin;
 }
 
+
 //===================== convert text flag to a binary
 int getFlag(char*s){
 	int fg=0;
@@ -327,9 +363,11 @@ int getFlag(char*s){
 //============================= File list =========================
 //=================================================================
 
+
 void addTracks(char* fname, int list_id){
 	fname=trim(fname);
 	if(strlen(fname)==0) return;
+
 
 	for (int i = 0; i < nfiles; i++) {
 		if(strcmp(fname,files[i].fname)==0) return;
@@ -338,6 +376,7 @@ void addTracks(char* fname, int list_id){
 	files[nfiles].listId=list_id;
 	nfiles++;
 }
+
 
 int listID=0;	//ID of the list from where the tack is taken
 void addList(char* fname){
@@ -365,6 +404,9 @@ void addList(char* fname){
 		addTracks(fname,listID++);
 	}
 }
+
+
+
 
 
 

@@ -2,15 +2,19 @@
  * map.cpp
  *
  *  Created on: 09.03.2013
- *      Author: 1
+ *      Author: Mironov
  */
 #include "track_util.h"
+
+
+
 
 
 
 //===============================================================================
 	MapRange::MapRange(){f=0; t=0; cumLength=0;}
 	MapRange::MapRange(int ff, int tt){f=ff; t=tt; cumLength=0;}
+
 
 //===============================================================================
 IVSet::IVSet(){
@@ -20,10 +24,13 @@ IVSet::IVSet(){
 	errStatus=0;
 }
 
+
 IVSet::~IVSet(){
 	for(int i=0; i<nIv; i++) delete ivs[i];
 	xfree(ivs,"~ivs");
 }
+
+
 
 
 void IVSet::clear(){
@@ -35,6 +42,7 @@ void IVSet::clear(){
 void IVSet::addIv(int f, int t){
 	if(f < 0) {f = 0;}    if(t > profileLength) {t = profileLength;}
 	if(t <= f) return;
+
 
 	if(nIv > 0 && f < ivs[nIv-1]->t){//================ Overlaps: collect with previous
 		if(ivs[nIv-1]->f >=f) ivs[nIv-1]->f=f;
@@ -50,8 +58,10 @@ void IVSet::addIv(int f, int t){
 	}
 }
 
+
 void IVSet::fin(){
 	totLength=0;
+
 
 	for(int i=0; i<nIv; i++){
 		if(i > 0 && ivs[i]->f < ivs[i-1]->t) {
@@ -65,12 +75,14 @@ void IVSet::fin(){
 }
 //===============================================================================
 
+
 //===============================================================================
 void IVSet::write(FILE*f){
 	for(int i=0; i<nIv; i++){
 		fprintf(f,"%i .. %i   %i   %i\n",ivs[i]->f,ivs[i]->t,ivs[i]->t-ivs[i]->f,ivs[i]->cumLength);
 	}
 }
+
 
 int IVSet::randPos(){		// get a random position in the intervals
 	int p=randInt(totLength);
@@ -83,6 +95,7 @@ int IVSet::randPos(){		// get a random position in the intervals
 		pp=ivs[i1]->f+pp;	// position of rnd on the genome
 		return pp;
 	}
+
 
 	while(1){				// binary search
 		int i=(i0+i1)/2;
@@ -101,9 +114,12 @@ int IVSet::randPos(){		// get a random position in the intervals
 	return 0;
 }
 
+
 void IVSet::print(int f, int t){
 	for(int i=f; i<t && i<nIv; i++)
 		printf("$iv$ %i..%i\n",ivs[i]->f,ivs[i]->t);
 }
+
+
 
 

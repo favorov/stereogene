@@ -3,14 +3,16 @@
  * Module does output of the local correlations into wig file.
  *
  *  Created on: Dec 11, 2013
- *      Author: mironov
+ *      Author: Mironov
  */
 #include "track_util.h"
+
 
 double *smoothProf2=0, *smoothProf1=0;
 double *lcTmp=0;
 FloatArray *lcProfile=0;
-float L_lcTreshold,R_lcTreshold;
+//float L_lcTreshold,R_lcTreshold;
+
 
 struct ProfileHist:DinHistogram{
 	double *lFDR;		// left lFDR
@@ -20,22 +22,27 @@ struct ProfileHist:DinHistogram{
 	double *lCDF_obs;	// CDF
 	double *lCDF_exp;
 
+
 	ProfileHist(int l);
 	~ProfileHist();
 	void print(FILE*f);
 	void fin();
 };
 
+
 ProfileHist dHist(100000);
 ProfileHist NormWHist(500);
 
+
 double LClogScale=1000;
+
 
 float normLC(float lc){	//normalize Local correlation with LCScale parameter
 	if(LCScale==LOG_SCALE)
 		return lc >=0 ? log(1+lc) : -log(1-lc);
 	return lc;
 }
+
 
 void renormDistrib(){	// Produce a NormWHist distribution using dHist
 	for(int i=0; i<dHist.l; i++){
@@ -49,16 +56,18 @@ void renormDistrib(){	// Produce a NormWHist distribution using dHist
 	}
 	NormWHist.fin();
 	//================================== Calculate thresholds ==========================
-	L_lcTreshold=NormWHist.getValue(0); R_lcTreshold=NormWHist.getValue(NormWHist.l-1);
-	for(int i=0; i<NormWHist.l; i++){
-		if(NormWHist.rFDR[i] >= RlcFDR)  R_lcTreshold=NormWHist.getValue(i);
-		else break;
-	}
-	for(int i=NormWHist.l-1; i>=0; i--){
-		if(NormWHist.lFDR[i] >= LlcFDR)  L_lcTreshold=NormWHist.getValue(i);
-		else break;
-	}
+//	L_lcTreshold=NormWHist.getValue(0); R_lcTreshold=NormWHist.getValue(NormWHist.l-1);
+//	for(int i=0; i<NormWHist.l; i++){
+//		if(NormWHist.rFDR[i] >= RlcFDR)  R_lcTreshold=NormWHist.getValue(i);
+//		else break;
+//	}
+//	for(int i=NormWHist.l-1; i>=0; i--){
+//		if(NormWHist.lFDR[i] >= LlcFDR)  L_lcTreshold=NormWHist.getValue(i);
+//		else break;
+//	}
 }
+
+
 
 
 ProfileHist::ProfileHist(int l):DinHistogram(l){//========= profile histogrgamm initiation
@@ -77,6 +86,7 @@ ProfileHist::~ProfileHist(){
 	xfree(rCDF_obs,	"WigHist:getFDR 5");
 	xfree(rCDF_exp,	"WigHist:getFDR 6");
 }
+
 
 //====================================================================================
 void ProfileHist::fin(){
@@ -99,20 +109,23 @@ void ProfileHist::fin(){
 	}
 }
 
+
 //====================================================================================
+
 
 void ProfileHist::print(FILE* f){						// print the histogram
 	fprintf(f,"#  min=%.3f max=%.3f \n",min,max);
 	fprintf(f,"#  hMin=%.2ef  hMax=%.2ef bin=%.3f\n",hMin,hMax,bin);
 	fprintf(f,"#  Observed: e0=%.3f sd0=%.3f n0=%i\n",e[0],sd[0],n[0]);
 	fprintf(f,"#  Expected: e1=%.3f sd1=%.3f n1=%i\n",e[1],sd[1],n[1]);
-	fprintf(f,"value\tobs\tnObs\texp\tnExp\tr_CDF_obs\tr_CDF_exp\tR_FDR");
+	fprintf(f,"corr\tobs\tnObs\texp\tnExp\tr_CDF_obs\tr_CDF_exp\tR_FDR");
 	fprintf(f,"\tl_CDF_obs\tl_CDF_exp\tL_FDR\n");
 	int i0=0, i1=l;
 	for(int i=0; i<l; i++){
 		if(i1==l && (hist[0][i]!=0 || hist[1][i]!=0)) i0=i;
 		if(hist[0][i]!=0 || hist[1][i]!=0) i1=i;
 	}
+
 
 	for(int i=i0; i<=i1; i++){
 		double h0=hist[0][i];
@@ -123,6 +136,7 @@ void ProfileHist::print(FILE* f){						// print the histogram
 		fprintf(f,"\t%.2e\t%.2e\t%.2f\n", lCDF_obs[i], lCDF_exp[i],fdrL);
 	}
 }
+
 
 //==========================================================================
 //=== put the data to the Local correlation profile.
@@ -139,6 +153,8 @@ void addLCProf(double *f, int pos){
 }
 
 
+
+
 //===================== Write the local correlation into the bedGraph file =====
 void writeLC(){
 	char bf[1024];
@@ -150,7 +166,7 @@ void writeLC(){
 	}
 	verb("\nwrite Local Correlations\n");
 	renormDistrib();
-	writeBedGr(outFile, lcProfile, L_lcTreshold,R_lcTreshold);
+	writeBedGr(outFile, lcProfile, L_LC,R_LC);
 	//========================================== Write histograms ===============
 	if(writeDistr) {
 		sprintf(bf,"%s.LChist",outFile);
@@ -168,16 +184,19 @@ void initOutLC(){
 	lcProfile->init(NA);
 }
 
+
 void finOutLC(){
 	if(!outLC) return;
 	//====================== write correlation
 	writeLC();
 }
 
+
 void freeLC(){
 	if(lcProfile) del(lcProfile);
 	if(smoothProf1) xfree(smoothProf1,"free LC 1");
 	if(lcTmp)    	xfree(lcTmp,      "free LC 2");
+
 
 	lcProfile=0;
 }
@@ -192,10 +211,11 @@ void calcSmoothProfile(Fourier *fx, int k, bool cmpl){
 		LCorrelation.datRe[i]= (ReX*ReY+ImX*ImY);
 		LCorrelation.datIm[i]= (ReX*ImY-ImX*ReY);
 	}
-	if(lcFlag == CENTER){
+	if(outLC == LC_CENTER){
 		LCorrelation.datRe[0]=0;
 		LCorrelation.datIm[0]=0;
 	}
+
 
 	LCorrelation.calc(0);				//reverse transformation
 }
@@ -205,6 +225,7 @@ void calcSmoothProfile(int k, bool cmpl){
 	calcSmoothProfile(fx,k,cmpl);
 }
 //==================== Make correlation track
+
 
 double LocalCorrTrack(int pos1, int pos2, bool cmpl1, bool cmpl2, bool rnd){
 	if(!outLC) return 0;
@@ -216,11 +237,13 @@ double LocalCorrTrack(int pos1, int pos2, bool cmpl1, bool cmpl2, bool rnd){
 	smoothProf2=LCorrelation.re;
 	double av=0;
 
+
 	double sd=track1->sd0*track2->sd0;
 	for(int i=LFlankProfSize; i<profWithFlanksLength-RFlankProfSize; i++){
 		double x=smoothProf1[i]	/profWithFlanksLength;					//the smoothed profile for x
 		double y=smoothProf2[i]	/profWithFlanksLength;					//the smoothed profile for y
 		double lc=0;													//local correlation
+
 
 		lc=x*y/sd;
 		lc=normLC(lc);
@@ -232,11 +255,13 @@ double LocalCorrTrack(int pos1, int pos2, bool cmpl1, bool cmpl2, bool rnd){
 	return av;
 }
 
+
 //====== write bed graph file. lTreshold,rTreshold -- thresholds (NA allowed).
 //       The value will be written if it is OUTSIDE the threshold interval
 void writeBedGr(FILE* f, FloatArray *array){
 	writeBedGr(f,array,NA,NA);
 }
+
 
 void writeBedGr(const char *fname, FloatArray *array, float lTreshold, float rTreshold){
 	char b[1024];
@@ -246,10 +271,11 @@ void writeBedGr(const char *fname, FloatArray *array, float lTreshold, float rTr
 	char bname[1024];
 	strcpy(bname,outFile);
 	char *s=strrchr(bname,'/'); s= s==0 ? bname : s+1;
-	fprintf(f,"track type=bedGraph name=\"%s\" description=\"Local correlation. FDR=%.1f%%\"\n", s, RlcFDR*100);
+	fprintf(f,"track type=bedGraph name=\"%s\" description=\"Local correlation. FDR=%.1f%%\"\n", s, R_LC*100);
 	writeBedGr(f,array, lTreshold,  rTreshold);
 	fclose(f);
 }
+
 
 void writeBedGr(FILE* f, FloatArray *array, float lTreshold, float rTreshold){
 	ScoredRange pos, pos0;
@@ -272,5 +298,7 @@ void writeBedGr(FILE* f, FloatArray *array, float lTreshold, float rTreshold){
 	}
 	if(pos0.chrom !=0) pos0.printBGraph(f);
 }
+
+
 
 

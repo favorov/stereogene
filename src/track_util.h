@@ -2,8 +2,9 @@
  * track_util.h
  *
  *  Created on: 17.02.2013
- *      Author: 1
+ *      Author: Mironov
  */
+
 
 #ifndef errno
 #include <errno.h>
