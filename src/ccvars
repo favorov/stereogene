@@ -88,7 +88,11 @@ ifndef PROFFLAG
 endif
 
 CCFLAGS:=-c -pipe -Wall $(includeflags)
-CPPFLAGS:=-c -pipe -ffor-scope -Wall $(includeflags)
+CPPFLAGS:=-c -pipe -Wall $(includeflags)
+#CPPFLAGS:=-c -pipe -Wall -Wno-format-truncation  $(includeflags)
+#CPPFLAGS:=-c -pipe -Wall --std=c++11  $(includeflags)
+#CPPFLAGS:=-c -pipe -ffor-scope -Wall $(includeflags)
+#2024: g++: warning: switch ‘-ffor-scope’ is no longer supported
 
 ifdef PARANOIC
  CCFLAGS:=$(CCFLAGS) $(PARANOIC_FLAG) 

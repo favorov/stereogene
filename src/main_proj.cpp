@@ -34,12 +34,11 @@ void printMiniHelp(){
 
 
 int main(int argc, char **argv) {
+	clearDeb(); debugFg=DEBUG_LOG|DEBUG_PRINT;
+	confounder=strdup("confounder.bgraph");
 	initSG(argc, argv);
-	if(debugFg) {clearDeb(); debugFg=DEBUG_LOG|DEBUG_PRINT;}
-
 
 	Preparator();
-
 
 	Projector();
 	fflush(stdout);

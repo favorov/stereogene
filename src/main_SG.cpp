@@ -1,4 +1,9 @@
 #include "track_util.h"
+
+#include <dirent.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+
 //==============================================================================
 // for debugging :
 // set debugFg=DEBUG_LOG|DEBUG_PRINT
@@ -17,8 +22,6 @@
 
 const char * progName="StereoGene";
 const int progType=SG;
-
-
 
 
 void printMiniHelp(){
@@ -44,28 +47,33 @@ void printProgDescr(){
 
 
 //============================================ Tests =========================================
-void FakeDat(){
-	totCorr=0.034;
-	avFg=0.123;
-	sdFg=0.117;
-	BgTotal=0.234;
-	avBg=0.346;
-	sdBg=0.123;
-	mannW_p=1.e-18;
-}
-void testHTML(){
-	FakeDat();
-	printHTML();
-	exit(0);
+void test(const char* path){
+	clearDeb();
+	debugFg=DEBUG_LOG|DEBUG_PRINT;
+
+	readInt("99");
+	readInt("99kb");
+	readInt("99 kb");
+	readInt("99 kb");
+	readInt("99 k");
+	readInt("99Mb");
+
+exit(0);
 }
 
+//=========================================================================
+//=========================================================================
+//=========================================================================
+//=========================================================================
+//=========================================================================
+//=========================================================================
 
 int main(int argc, char **argv) {
-	initSG(argc, argv);
-//testIsFloat();
-//testHTML();
-	writeLog("====== Start ====== deb=%i\n",debugFg);
+//	test("../Tracks/RCDB_all_to_all");
+	clearDeb();	debugFg=DEBUG_LOG|DEBUG_PRINT;
 
+	initSG(argc, argv);
+	writeLog("====== Start ====== deb=%i\n",debugFg);
 
 //===========================================
 	Preparator();

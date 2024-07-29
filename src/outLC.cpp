@@ -157,7 +157,7 @@ void addLCProf(double *f, int pos){
 
 //===================== Write the local correlation into the bedGraph file =====
 void writeLC(){
-	char bf[1024];
+	char bf[TBS];
 	LCExists=outLC && dHist.n[0] && dHist.n[1];
 	if(dHist.n[0]==0 || dHist.n[1]==0){
 		verb("\nLocal Correlations contains no data\n");
@@ -169,7 +169,7 @@ void writeLC(){
 	writeBedGr(outFile, lcProfile, L_LC,R_LC);
 	//========================================== Write histograms ===============
 	if(writeDistr) {
-		sprintf(bf,"%s.LChist",outFile);
+		snprintf(bf,sizeof(bf), "%s.LChist",outFile);
 		FILE *lcHistF=fopen(bf,"wt");
 		NormWHist.print(lcHistF);
 		fclose(lcHistF);
@@ -238,7 +238,7 @@ double LocalCorrTrack(int pos1, int pos2, bool cmpl1, bool cmpl2, bool rnd){
 	double av=0;
 
 
-	double sd=track1->sd0*track2->sd0;
+	double sd=track1->sd*track2->sd;
 	for(int i=LFlankProfSize; i<profWithFlanksLength-RFlankProfSize; i++){
 		double x=smoothProf1[i]	/profWithFlanksLength;					//the smoothed profile for x
 		double y=smoothProf2[i]	/profWithFlanksLength;					//the smoothed profile for y
@@ -264,14 +264,14 @@ void writeBedGr(FILE* f, FloatArray *array){
 
 
 void writeBedGr(const char *fname, FloatArray *array, float lTreshold, float rTreshold){
-	char b[1024];
+	char b[TBS];
 	strcpy(b,fname);
 	strcat(strcat(b,"."),BGR_EXT);
 	FILE *f=fopen(b,"w");
-	char bname[1024];
+	char bname[TBS];
 	strcpy(bname,outFile);
-	char *s=strrchr(bname,'/'); s= s==0 ? bname : s+1;
-	fprintf(f,"track type=bedGraph name=\"%s\" description=\"Local correlation. FDR=%.1f%%\"\n", s, R_LC*100);
+	fprintf(f,"track type=bedGraph name=\"%s~%s\" description=\"Local correlation. threshold=%.1f < %f\"\n",
+			track1->name, track2->name, lTreshold,	rTreshold);
 	writeBedGr(f,array, lTreshold,  rTreshold);
 	fclose(f);
 }

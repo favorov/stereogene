@@ -12,11 +12,16 @@
 #include <ctype.h>
 #include <time.h>
 #include <sys/time.h>
+#include <dirent.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+
 
 
 #ifndef UTIL_H_
 #define UTIL_H_
 
+const int TBS=4096;			//(Temporary Buffer Size) size of buffers for filenames etc
 
 const  int DEBUG_PRINT=1;
 const  int DEBUG_LOG=2;
@@ -26,6 +31,7 @@ const  int BED_TRACK=1;
 const  int BED_GRAPH=2;
 const  int WIG_TRACK=3;
 const  int BROAD_PEAK=4;
+const  int NARROW_PEAK=5;
 const  int MODEL_TRACK=8;
 const  int CAGE_MIN=16;
 
@@ -34,10 +40,10 @@ const int LRAND_MAX=(RAND_MAX > 0XFFFFF)?RAND_MAX : 0x3fffffff;
 
 
 extern unsigned long id;
-extern char *logFileName;	// output filename
-extern char *outFile;		// output filename
-extern bool silent;				// inhibit stdout
-extern bool verbose;				// number of suffle
+extern char *logFileName;
+extern char *repFile;		// reports filename
+extern bool  silent;				// inhibit stdout
+extern bool  verbose;				// number of suffle
 
 
 
@@ -57,8 +63,18 @@ struct Timer{
 	char *getTime();
 };
 
-
 //=========================================================================
+struct Alias{
+	char*	old;		// Pattern
+	char*	rpl;		// Replace
+	int 	l_rpl;		// rpl length
+	int		l_old;		// old length
+
+	Alias(const char *o, const char *r);
+	int	replace(char *txt);
+};
+//=========================================================================
+
 struct DinHistogram{		// Dynamic histogram for two variables
 	int l;					//number of bins
 	int    n[2];			//number of observations
@@ -89,8 +105,9 @@ void *xmalloc(size_t n, const char * err);
 void *xrealloc(void *a, size_t n, const char * err);
 void zfree(void *a, const char* b);
 //============================================ MACROS
-#define getMem0(a,n,err) {if(a==0) a=(typeof a)xmalloc((n+100)*sizeof(*a),err);}
-#define getMem(a,n,err)  {a=(typeof a)xmalloc((n+100)*sizeof(*a),err);}
+#define getMem0(a,n,err)  {if(a==0) a=(typeof a)xmalloc((n+100)*sizeof(*a),err);}
+#define getMem(a,n,err)   {a=(typeof a)xmalloc((n+100)*sizeof(*a),err);}
+#define getMemZ(a,n,err)  {a=(typeof a)xmalloc((n+100)*sizeof(*a),err); memset(a,0,n*sizeof(*a));}
 #define del(a)  {delete a; a=0;}
 #define realocMem(a,n,err)  {a=(typeof a)xrealloc(a,(n+100)*sizeof(*a),err);}
 #define xfree(a,b) 		 {zfree(a,b); a=0;}
@@ -112,6 +129,10 @@ extern int debugFg;
 char *getAttr(char *s0, const char *name, char *buf); // find attribute by name in the string and return attribute value
 char *skipSpace(char *s);		// skip space characters
 char *skipNoSpace(char *s);		// skip non-space characters
+char* skipInt(char *s);
+char *lastChar(char *s);
+int  readInt(const char* val);
+double readDouble(const char *s);
 char *strtoupper(char*s);		// convert string to upper-case
 int  isEmpty(const char*buff);
 bool isInt(const char *s);
@@ -119,9 +140,9 @@ bool isDouble(const char *s);
 bool isUInt(const char *s);
 char *trim(char *s);
 int  keyCmp(const char *str, const char *key);
-const char* skipInt(const char *s);
-bool isfloat(const char *s);
+bool isfloat(char *s);
 //=============================== Files =================================
+int isDirectory(const char *path) ;
 FILE *xopen(const char*, const char*);		// open file if exists, exit otherwise
 FILE *gopen(const char*, const char*);		// open file with parsing ~
 bool fileExists(const char *fname);				// check if the file exists
@@ -129,11 +150,15 @@ bool fileExists(const char* path, const char *fname);				// check if the file ex
 bool fileExists(const char* path, const char *fname, const char *ext); // check if the file exists
 const char *getExt(const char *fname);					// extract file extension
 char *getFnameWithoutExt(char *buf, const char *fname);
+char *getFnameWithoutPath(char *buf, const char *fname);
 void makeDir(const char *path);
 unsigned long getFileTime(const char *fname);
 char *correctFname(char* s);			// remove fucking MS Widows backslash
 void flockFile(FILE *f);
 void funlockFile(FILE *f);
+char *makeFileName(char *b, int siz,const char *path, const char*fname);	// make filename using path and name
+char *makeFileName(char *b, int siz, const char *path, const char*fname, const char*ext);	// make filename using path, name and extension
+char *MakeFname(char *b, const char*fname, const char*ext); // Make Fname without path and new ext
 
 
 //============================================ Arrays

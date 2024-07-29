@@ -18,6 +18,9 @@
 #include <ctype.h>
 #include <time.h>
 #include <sys/time.h>
+#include <unistd.h>
+#include <unistd.h>
+
 
 
 struct Track;
@@ -29,12 +32,13 @@ struct BuffArray;
 
 
 extern const int progType;	//type of the program
-const int SG =1;
-const int PRJ=2;
-const int CNF=4;
-const int PG =8;
-const int SM =8;
-const int AP=SG|PRJ|CNF|PG|SM;
+const int SG =1;	//=== Stereogene
+const int PRJ=2;	//=== Projector
+const int CNF=4;	//=== Confounder
+const int PG =8;	//=== Gene Parser
+const int SM =16;	//=== Smoother
+const int BN =32;	//=== Binner
+const int AP=SG|PRJ|CNF|PG|SM|BN;
 
 
 #define PRM_EXT "prm"
@@ -111,6 +115,9 @@ const  int WIG_BASE=1;
 const  int WIG_CENTER=2;
 const  int WIG_SUM=0x10;
 const  int WIG_MULT=0x20;
+
+const int MAX_FILES=1024;
+
 extern int binBufSize;
 
 
@@ -131,24 +138,37 @@ extern int 	bpType;			   // type of the input data in BroadPeak file
 
 
 
-extern char trackName[4096];   	// current track name
+extern char trackName[TBS];   	// current track name
 extern char *profPath;		// path to binary profiles
 extern char *trackPath;		// path to GBrowse track files
-extern char *resPath;		// path to results files (tracks and distributions)
+extern char *binPath;		// path for Binned tracks
+extern char *smoothPath;	// path for smoother output
+
+extern char *resPath;		// path to the results files (tracks and distributions)
+extern char *reportPath;	// path to the report files relative to the resPath
+extern const char*defaultConfig;
 extern char *cfgFile;		// config file name
-extern char *confFile;		// confounder file name
+extern char *confounder;		// confounder file name
 extern char *statFileName;	// File name for cummulative statistics
 extern char *paramsFileName; // Filename for save parameters of runs
-extern char *idSuff;
+//extern char *idSuff;
 extern int nHelpLines;
-
 
 extern int inputErr;		// flag: if input track has errors
 extern int inputErrLine;	// Error line in the input
-extern char curFname[4048];	// current input file
+
+extern char outFile    	[TBS];	// output filename
+extern char curOutFname	[TBS];	// current output file without ext
+extern char curOutPath 	[TBS];	// current output path
+extern char curRepPath 	[TBS];  //current path to the report
+extern char curReport  	[TBS];	// fille pathname for reports relative to curOutPath
+extern char reportPDF	[TBS];	// PDF  report
+extern char reportHTML	[TBS];	// HTML report
 
 
 //============================ Output params
+
+
 extern bool outPrjBGr;
 extern bool writeDistCorr;		// write BroadPeak
 extern int  writeDistr;		// flag: write distributions
@@ -159,8 +179,10 @@ extern int	RScriptFg;
 extern bool outSpectr;
 extern int 	outRes;
 extern bool outChrom;
-//extern bool writePDF;
-//extern bool writeHTML;
+extern char* Rscript;
+extern int  plotH;
+extern int  plotW;
+
 
 
 //============================ Local Correlations
@@ -185,7 +207,7 @@ extern float total;			// total count over the track
 
 
 
-extern char *pcorProfile;    	// partial correlation profile file name
+//extern char *pcorProfile;    	// partial correlation profile file name
 extern float *outTrackProfile;  // correlation track
 
 
@@ -200,8 +222,8 @@ extern int wSize;        // size of widow (nucleotides)
 extern int wStep;        // window step   (nucleotides)
 extern int wProfSize;    // size of widow (profile scale)
 extern int wProfStep;    // window step (profile scale)
-extern double kernelSigma;    	// kernel width (nucleotides)
-extern double kernelShift;    	// Kernel mean (for Gauss) or Kernel start for exponent
+extern int kernelSigma;    	// kernel width (nucleotides)
+extern int kernelShift;    	// Kernel mean (for Gauss) or Kernel start for exponent
 extern double kernelNS;			// Correction for non-specifisity
 extern double kernelProfSigma;  // kernel width (profile scale)
 extern double kernelProfShift;  // Kernel shift (profile scale)
@@ -231,7 +253,6 @@ extern bool syntax;				// Strong syntax control
 
 
 extern bool	localSuffle;		// use shuffle inside the windoww
-extern int cage;
 extern bool clearProfile; //Force profile recalculation
 extern int scoreType;
 extern double smoothZ;
@@ -245,7 +266,8 @@ extern double totCorr,BgTotal;
 extern int nBkg, nFg;					// size of background and foreground sets of data
 extern double *BkgSet, *FgSet;			// background and foreground sets of the correlations
 extern bool LCExists;
-extern int  pgLevel;
+extern int  pgLevel;					// ParseGenes max level
+extern char *biotypes;					// ParseGenes biotypes filter
 
 
 //================================================== Formula function
@@ -396,12 +418,18 @@ struct IVSet{
 struct Track{		        // Binary track
 	double *profWindow;		// decoded profile with flanks
 	char   *name;			// track name
-	double  av,				// average score
-			sd, 			// score standard deviation
-			minP, 			// min score value
-			maxP, 			// max score value
-			av0,
-			sd0,
+	char   *path;			// path to the track file starting with track directory. ENDS WITH '/'
+	char   *fname;			// filename without path
+	double  av,				// average log score
+			sd, 			// log score standard deviation
+			minP, 			// min log score value
+			maxP, 			// max log score value
+
+			nativeAv,			// average native value
+			nativeSd,			// sd native value
+			nativeMin,			// min native value
+			nativeMax,			// max native value
+
 			total;			// total count
 	int		nObs;
 	double avWindow, sdWindow;// mean and stdDev in current window
@@ -418,6 +446,17 @@ struct Track{		        // Binary track
 	virtual ~Track();						// empty constructor
 	void init();
 
+	void makePath(		char *pahx);
+	void getPath(		char*b, char *pathx);
+	void getPath(		char*b, char *path1, char *path2);
+	void makeFname(		char *b, char *pathx, char *path1, const char *ext);
+	void makeFname(		char *b, char *pathx, const char *ext);
+	void makeExtFname(	char *b, char* pathx, const char *ee, const char* ext); // make extended fname
+	void makeExtFname(	char *b, char* pathx, int k, const char* ext); // make extended fname
+	void makeFname(		char *b, char *pathx);
+	void makeInputFname(char *b);
+	void makePrmFname(	char *prmFile);
+	void makeBinFname(	char *b);
 
 	bool   openTrack(const char *fname);	// read file
 	virtual bool   readTrack(const char *fname)=0;	// read file
@@ -442,8 +481,7 @@ struct Track{		        // Binary track
 	bool makeIntervals();
 	void makeIntervals(bool cmpl, IVSet *iv);
 	int  getRnd(bool cmpl1);
-	void writeAuto();
-
+	void writeAuto(char* outP);
 
 };
 //============================== Model =======================================
@@ -459,7 +497,9 @@ struct bTrack:Track{
 
 
 	void initBtr();
+	void setName(const char *inFname);
 	virtual bool readTrack(const char *fname);	// read file
+
 	virtual bool isNA(int pos, bool cmpl);
 	virtual bool isZero(int pos, bool cmpl);
 	virtual double getValue(int pos, int cmpl);
@@ -470,11 +510,9 @@ struct bTrack:Track{
 	bool readPrm();
 	bool readBin();
 	void makeBinTrack(const char *fname);
-	void makeBinTrack();
 	void writeBinnedProf(const char *fname);
 	void writeByteProfile();
 	void writeProfilePrm();
-	void writeProfilePrm(const char *path);
 	void readInputTrack(const char *fname, int cage=0); //cage: if cage>0 : end=beg+cage; cage<0: beg=end+cage.
 	int addSgm(ScoredRange *bed, FloatArray *prof);
 	int addSgm(char strnd, ScoredRange *bed);
@@ -709,8 +747,19 @@ struct FgEntry{			//==== correlation for pair of windows
 
 //===================================================================
 //===============================================================
+const int maxAL=50;
+struct AliasTable{
+	Alias *at[maxAL];
+	int nAl=0;
+	AliasTable(const char *fname);
+	void add(char* pat,char* repl);
+	int replace(char *txt);
+};
 
-
+extern AliasTable *aliases;
+extern char* aliasFile;
+//===============================================================
+struct VectorX;
 struct Matrix{
 	int n;
 	double * values;
@@ -736,41 +785,108 @@ struct Matrix{
 	void transpose();
 	void printMtx(FILE *f);
 	void printMtx();
+	void mult(Matrix *m);
+	double eigen(VectorX *v);
 };
 
 
 struct CovarMtx:Matrix{
-	double *cov, *meani, *meanj;
+	double *cov, *mean, *sd;
 	int *count;
 	CovarMtx(int n);
 	void init(int n);
-	CovarMtx(){;cov=0; meani=0; meanj=0; count=0;}
+	CovarMtx(){;cov=0; mean=0; count=0; sd=0;}
 	~CovarMtx();
 	double calc(int i, int j);
-	void addCov(int itrack, int jtrack, int f, int t);
+	void addCov(int itrack, int jtrack);
 	void print(FILE *f);
 };
+
 struct VectorX{
-	double *v;
 	int n;
+	double *v;
 	VectorX();
-	VectorX(int nn);
+	VectorX(int n);
+	VectorX(int n, double *a);
+	~VectorX(){free(v);}
+
 	void init(int nn);
-
-
-	void random(int nz);
-	void get(int pos, double *b);
-	void get(int pos);
-	int chk(int pos);
-	int chk();
+	void norm();
+	void set(int i, double x);
+	double get(int i);
 	double scalar(VectorX *v);
 	double scalar(VectorX &v);
+	void mult(Matrix *mtx);
 	void print(FILE *f);
+	void print() ;
 	void printH(FILE *f);
 };
+
+//struct VectorX:Vector1{
+//	VectorX(int nn);
+//
+//	int chk(int pos);
+//	int chk();
+//	void print(FILE *f);
+//	void printH(FILE *f);
+//};
 Matrix * eigenVectors(Matrix *x, double *EValues, int nIter, double precsision);
 
+//==================================================================================================
+//==================================================================================================
 
+struct Name_Value{			// symbolic name for a value
+	const char* name;		// name for the value
+	int value;				// value
+	Name_Value(const char *nm, int val){name=nm; value=val;}
+};
+
+struct Param{
+	const char* name;			// command line (cfg) argument name
+	int type;					// parameter type
+	Name_Value **enums;			// array of aviable values
+	void *prm;					// pointer to the argument value
+	int value;					// a value that should be set if -prm is used in a command line
+	int printFg;				// the param should be printed to PRM file (1) or in statistics (3)
+	int prog;					// the parameter relevant to the program of given type
+	const char *description;
+	Param(int prg, const char* descr);
+	Param(int prg, const char* _name, int print, int    *prm, const char* descr);
+	Param(int prg, const char* _name, int print, int    *prm, int val, const char* descr);
+	Param(int prg, const char* _name, int print, int    *prm, Name_Value **fg, const char* descr);
+	Param(int prg, const char* _name, int print, bool   *prm, const char* descr);
+	Param(int prg, const char* _name, int print, bool   *prm, bool val, const char* descr);
+	Param(int prg, const char* _name, int print, double *prm, const char* descr);
+	Param(int prg, const char* _name, int print, char * *prm, const char* descr);
+	Param(int prg, const char* _name, int print, char*  *_prm, const char* descr, bool path);
+
+
+	void setVal();
+	void init(int prg, const char* _name,int print, void* _prm, int type, Name_Value **fg, const char* descr);
+	void printDescr();
+	int readVal(char *s);
+	int readEnum(char *s);
+	char* printParamValue(char *buf);
+	int   printParamValue(FILE *out);
+	char* printParamXML(char *buf, int siz);
+};
+
+struct NamedRes{
+	const char *name;
+	void *value;
+	int type;					// parameter type
+	char* (*f)();
+	NamedRes(const char *nm, double *v);
+	NamedRes(const char *nm, int *v);
+	NamedRes(const char *nm, char **v);
+	NamedRes(const char *nm, char* (*ff)());
+	NamedRes(const char *nm);
+	char* printValue(char *buf);
+	int printValue(FILE* f);
+};
+
+extern Param *pparams[];
+extern NamedRes *results[];
 //=====================================================================
 //=====================================================================
 extern Chromosome *chrom_list;       // list of chromosomes
@@ -782,7 +898,7 @@ extern char *trackName2;
 
 
 extern Kernel *kern;			// current kernel
-extern FileListEntry files[256];
+extern FileListEntry files[MAX_FILES];
 extern int   nfiles;
 
 
@@ -815,7 +931,7 @@ Chromosome *getChromByPos(int pos);			// get Chromosome by file position
 long pos2filePos(char*chrom,long pos);		// transform genome position to byte-profile position
 void filePos2Pos(int pos, ScoredRange *gr, int length); // transform byte-profile position to genome position
 Chromosome* findChrom(char *ch);			// Find chromosome record by name
-Chromosome *checkRange(ScoredRange *gr);    // check if genome range is valid
+Chromosome *checkRange(ScoredRange *gr, char * fname);    // check if genome range is valid
 void clearChromosomes();
 void addChromStat(int pos, bool cmpl1,bool cmpl2,double corr);
 
@@ -824,8 +940,7 @@ char* getMajorVer(const char *ver, char *buf);
 int  getFlag(char*s);
 //=============================== File names ===========================
 void parseArgs(int argc, char **argv);
-char *makeFileName(char *b, const char *path, const char*fname);	// make filename using path and name
-char *makeFileName(char *b, const char *path, const char*fname, const char*ext);	// make filename using path, name and extension
+//char *makeFileName0(char *b, const char *path, const char*fname, const char*ext);	// make filename using path, name and extension
 char *cfgName(char* p, char* ext);			// Make config file name
 char *makePath(char* pt);					// Make path - add '/' to the end of pathname
 void makeDirs();

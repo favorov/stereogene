@@ -149,7 +149,7 @@
 3. A possibility to add a suffix to the ID introduced
 4. For very sparse tracks a number of shuffles reduced. 
 ========== Version 2.10 ====================
-1. A module parse_genes introduced The module takes bed (refseq) or gtf (GENCODE) files. This module creates a bed tracks for gene/exons/introns starts/bodies/ends
+1. A module parse_genes introduced. The module takes bed (refseq) or gtf (GENCODE) files. This module creates a bed tracks for gene/exons/introns starts/bodies/ends
 2. The interval parameters such as gene_beg, gene_end, etc. removed.  
 ========== Version 2.11 ====================
 1. Two new program added: binning -- binning of the input track and smoother -- smooth the input track with given kernel.
@@ -175,7 +175,19 @@
 2. input multiple track lists
 3. Syntax control on bed files -- wrong fields ignored
 4. Fixed bug with the local correlation track
-5. The thresholds for the local correlation track: FDR replaced by the local correlation value
-6. Several params are changed and removed -- see documentation
-========== Version 2.31 ====================
-Mergin documentation, updating ccvars, etc
+========== Version 2.40 ====================
+1. The thresholds for the local correlation track: FDR replaced by the local correlation value
+2. Several params are changed and removed -- see documentation
+3. Introduced aliases -- the way to give shorter names of the output files.
+4. Possibility to call R from the program.
+========== Version 2.41 ====================
+1. Narrow peak format added.
+2. Fixed bug with dot in the input track name.
+========== Version 2.42 ====================
+1. New feature: a directory can be used as input
+2. List file can contain references with paths relative to the tracks directory
+3. A report subdirectory can be defined in the results. A PDF and/or HTML file will be placed in the report directory instead of the result directory. 
+========== Version 2.50 ====================
+1. Canged and verified the documentation
+2. A lot of small changes in the code
+3. Changed algorithm for eigenvectors

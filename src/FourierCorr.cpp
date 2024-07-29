@@ -40,8 +40,10 @@ int nFgPos;						// number of foreground observations
 
 void clear(){
 	writeLog("clear Correlator\n");
-	if(FgSet) xfree(FgSet,"FgSet"); FgSet=0;
-	if(FgCorr) xfree(FgCorr,"pairs"); FgCorr=0;
+	xfree(FgSet ,"free FgSet");
+	xfree(BkgSet,"free BkgSet");
+	xfree(FgCorr,"free FgCorr");
+
 	nBkg=0; nFg=0; nFgPos=0;
 }
 
@@ -54,16 +56,6 @@ double scalar(double *px, double *py, int l){	//partial correlation variant 1
 	}
 	return res;
 }
-
-
-//void minusProf(double *profx, double *profz, double pcorCoef){	//partial correlation variant 1
-//
-//	for (int i = LFlankProfSize; i < LFlankProfSize + profileLength; i++){
-//		profx[i] -= profz[i]*pcorCoef;
-//	}
-//}
-//
-
 
 //============================================== Calculate correlation for given pair of windows
 //============================================== Add statistics to chromosome
@@ -99,11 +91,12 @@ double calcCorelations(int pos1, int pos2, bool cmpl1, bool cmpl2, bool rnd, int
 	if(nz1 > maxZero) return -201; 					// too many zeros in the profiles
 	if(nz2 > maxZero) return -202; 					// too many zeros in the profiles
 
-
 	double *pr1=track1->getProfile(pos1,cmpl1);		// decode the first profile. Decoder uses hasCompl and complFg flags and combines profiles
 	double *pr2=track2->getProfile(pos2,cmpl2);		// decode the second profile
 	//======================== cycle pr2 ======================
+//bool fg=pos1==26776000 && delta==27774001;
 	if(delta){
+
 		//=========== Get memory for shuffled window ==========
 		int ll=wProfSize+LFlankProfSize+RFlankProfSize;
 		if(ll!= lCycle && cycleTmp!=0) 	{
@@ -123,8 +116,8 @@ double calcCorelations(int pos1, int pos2, bool cmpl1, bool cmpl2, bool rnd, int
 	kern->fftx(pr1,track1->deriv);					// do fft for the profiles
 	kern->ffty(pr2,track2->deriv);
 
-
 	double corr=kern->dist(cmpl1);					// Kernel strand is selected by the first profile
+
 	double lCorr=0, av1, av2;
 	if(corr > -10){									// Error in the correlation => skip the pair of the windows
 		if(outLC){				                    // Make local correlation track
@@ -134,8 +127,6 @@ double calcCorelations(int pos1, int pos2, bool cmpl1, bool cmpl2, bool rnd, int
 			//======= Calc the correlation
 			if(writeDistCorr) XYfgCorrelation.calcXYCorr(pos1,cmpl1, cmpl2,corr);
 			if(outSpectr    ) XYfgCorrelation.makeSpectrum();
-
-
 			av1=track1->addStatistics();
 			av2=track2->addStatistics();
 			addChromStat(pos1,corr,lCorr, av1,av2);	// Add data to chromosome statistics
@@ -147,6 +138,7 @@ double calcCorelations(int pos1, int pos2, bool cmpl1, bool cmpl2, bool rnd, int
 			}
 		}
 	}
+
 	return corr;
 }
 //======================================================= Calculate the total correlation
@@ -208,7 +200,8 @@ void distrBkg(){
 	double cc=calcCC();
 	avBg/=nBkg;
 	BgTotal=cc;
-	xverb("\nbg_cc=%f \nbg_average=%f\n",cc,avBg);
+	xverb("\nbg_cc%f\n",avBg);
+//	xverb("\nbg_cc=%f \nbg_average=%f\n",cc,avBg);
 	errStatus=0;
 }
 
@@ -247,7 +240,6 @@ void distrBkgCycle(){
 	int l=profileLength;
 	int nSh=nFg*WnSh;
 
-
 	cleanCummulative();
 	avBg=0;
 
@@ -270,16 +262,17 @@ void distrBkgCycle(){
 	double cc=calcCC();
 	avBg/=nBkg;
 	BgTotal=cc;
-	xverb("\nbg_cc=%f \nbg_average=%f\n",cc,avBg);
+	xverb("\nbg_cc=%f\n",avBg);
+//	xverb("\nbg_cc=%f \nbg_average=%f\n",cc,avBg);
 	errStatus=0;
 }
 //============================================ Store foreground distribution
 inline void storePair(int i, double d){
 	FgSet[nFg++]=d;
-	if(writeDistr==DISTR_DETAIL){
+//	if(writeDistr==DISTR_DETAIL){
 		FgEntry *pe=FgCorr+(nFgPos++);						//== store pair of positions
 		pe->profPos=i; pe->d=(float)d;						//== define the pair
-	}
+//	}
 }
 
 
@@ -299,7 +292,8 @@ int distrCorr(){
 
 	int siz=(maxPairs+100);
 	getMem0(FgSet, siz, "Corr #1");	zeroMem(FgSet, siz);		//== array for foreground distribution
-	if(writeDistr==DISTR_DETAIL) {getMem0(FgCorr, siz, "Corr #2");	zeroMem(FgCorr, siz);}		//== array for pairs
+//	if(writeDistr==DISTR_DETAIL)
+	{getMem0(FgCorr, siz, "Corr #2");	zeroMem(FgCorr, siz);}		//== array for pairs
 	cleanCummulative();
 
 
@@ -312,7 +306,6 @@ int distrCorr(){
 		d=100.*k/(l/wProfStep);
 		if(k%10000 ==0) verb("\ncoherent: %4.1f%% (%6i/%i) ",d,k,l/wProfStep);
 		else if(k%1000 ==0) verb(".");
-
 
 		if((complFg==IGNORE_STRAND)||(!track1->hasCompl && !track2->hasCompl)){ // no direction defined
 			if((d=calcCorelations(i,i, false,false,false)) >=-10){
@@ -337,7 +330,6 @@ int distrCorr(){
 		}
 	}					// end for
 
-
 	//=================================================== Define rank for q-value calculation
 	if(n_corr==0){
 		xverb( "\nno non-zero windows pairs: <%s> <%s>\n",track1->name, track2->name);
@@ -349,7 +341,8 @@ int distrCorr(){
 		avFg/=n_corr;
 		finOutLC();
 		totCorr=calcCC();
-		xverb("\nCorrelation=%f\naverage Corrrelation=%f\n",totCorr, avFg);
+//		xverb("\nCorrelation=%f\naverage Corrrelation=%f\n",totCorr, avFg);
+		xverb("\nCorrelation=%f\n", avFg);
 	}
 	errStatus=0;
 	return n_corr;
@@ -368,26 +361,37 @@ void calcAutoCorr(){
 
 //================================================================================================
 //================================================================================================
-//================================================================================================
-//================================================================================================
-char *resFileName(const char* n1,const char* n2){
-	char b[2048];
-	snprintf(b,sizeof(b),"%s~%s",n1,n2);
-	return strdup(b);
-}
 //================================================================== Make name for outfile
-char * makeOutFilename(char * prof1, char*prof2){
-	char p1Fname[4096], p2Fname[4096], b[4096];
-	getFnameWithoutExt(b, prof1);
-	if(strchr(b,'~')) snprintf(p1Fname, sizeof(p1Fname),"(%s)",b);
-	else strcpy(p1Fname,b);
-	getFnameWithoutExt(b, prof2);
-	if(strchr(b,'~')) snprintf(p2Fname,sizeof(p2Fname),"(%s)",b);
-	else strcpy(p2Fname,b);
+char * makeOutFilename(Track *tr1, Track *tr2){
+	char p1Fname[TBS], p2Fname[TBS];
 
+	if(strchr(tr1->name,'~'))
+		snprintf(p1Fname, sizeof(p1Fname),"(%s)",tr1->name);
+	else strcpy(p1Fname, tr1->name);
+	if(strchr(tr2->name,'~'))
+		snprintf(p2Fname, sizeof(p2Fname),"(%s)",tr2->name);
+	else strcpy(p2Fname, tr2->name);
+	if(aliases){
+		char p1F[TBS], p2F[TBS]; strcpy(p1F,p1Fname); strcpy(p2F,p2Fname);
+		aliases->replace(p1Fname);
+		aliases->replace(p2Fname);
+		writeLog("Replace out name %s -> %s\n",p1F, p1Fname);
+		writeLog("Replace out name %s -> %s\n",p2F, p2Fname);
+	}
 
-	sprintf(b,"%s%s",resPath,p1Fname);
-	return resFileName(b,p2Fname);
+	tr1->getPath(curOutPath,resPath);
+	makeDir(curOutPath);
+	sprintf(curOutFname,"%s~%s",p1Fname,p2Fname);
+
+	snprintf(outFile,sizeof(outFile),"%s%s",curOutPath,curOutFname);
+	repFile=outFile;
+	if(reportPath){
+		snprintf(curRepPath,sizeof(curRepPath), "%s%s",curOutPath,reportPath);
+		makeDir(curRepPath);
+		snprintf(curReport,sizeof(curReport), "%s%s",reportPath,curOutFname);
+	}
+	else strcpy(curReport, curOutFname);
+	return outFile;
 }
 
 
@@ -422,16 +426,16 @@ int Correlator(){
 	Timer timer;
 
 
-	srand(314);									// random seed
+	if(debugFg) srand(314);									// random seed
 
 
 	id=0;	// id is undefined yet
 	//================================================================== print parameters
 	verb("========== Parameters ===========\n");
-	if (pcorProfile != 0) verb("==         pcorProfile=<%s>\n", pcorProfile);
+	if (confounder != 0) verb("==         pcorProfile=<%s>\n", confounder);
 	verb("===        bin=%i\n",binSize);
 	verb("==         wSize=%i\n",wSize);
-	verb("==         kernelSigma=%.0f\n",kernelSigma);
+	verb("==         kernelSigma=%i\n",kernelSigma);
 	verb("==         nShuffle=%i\n",nShuffle);
 
 
@@ -439,10 +443,10 @@ int Correlator(){
 	//============ Read Map File
 
 
-	if(pcorProfile) {
+	if(confounder) {
 		projTrack=new bTrack();
 		verb("read confounder...\n");
-		projTrack->openTrack(pcorProfile);
+		projTrack->openTrack(confounder);
 	}
 	int n_cmp=0;
 	int nnf=nfiles; if(nnf>1) nnf--;
@@ -463,7 +467,6 @@ int Correlator(){
 	//============================================== Do comparison
 	FileListEntry *fil1=0, *fil2=0;
 
-
 	for(int i=0; i<nFPairs; i++){
 		if(fPairs[i]->fil1 != fil1){
 			fil1=fPairs[i]->fil1;
@@ -471,7 +474,8 @@ int Correlator(){
 			verb("read profile1 <%s>\n", trackName1);
 			if(track1) {del(track1); track1=0;}
 			track1=trackFactory(trackName1);
-			if(pcorProfile) track1->ortProject();
+			trackName1=track1->name;
+			if(confounder) track1->ortProject();
 			if(!track1->makeIntervals()){continue;}
 		}
 
@@ -482,17 +486,17 @@ int Correlator(){
 			verb("read profile2 <%s>\n", trackName2);
 			if(track2) {del(track2); track2=0;}
 			track2=trackFactory(trackName2);
-			if(pcorProfile) track2->ortProject();
+			trackName2=track2->name;
+			if(confounder) track2->ortProject();
 			if(!track2->makeIntervals()) {continue;}
 		}
 
 
 
-
 		Timer thisTimer;
-		outFile=makeOutFilename(trackName1, trackName2);
+		makeOutFilename(track1, track2);
 		makeId();
-		writeLog("Correlations:   wSize=%i   kernelType=\"%s\"   kernelSigma=%.0f\n",
+		writeLog("Correlations:   wSize=%i   kernelType=\"%s\"   kernelSigma=%i\n",
 				wSize,getKernelType(),kernelSigma);
 		writeLog("  in1=<%s> in2=<%s> out=<%s>\n", trackName1, trackName2, outFile);
 
@@ -508,25 +512,17 @@ int Correlator(){
 		XYbgcorrelation.initXY();
 		initOutLC();
 
-
 		writeLog("Foreground\n");
-		if(distrCorr()==0) continue;						// Calculate correlations
+		if(distrCorr()==0) continue;			// Calculate correlations
 		writeLog("Background\n");
-		if(localSuffle) distrBkgCycle();	// Make background distribution with cycling window
-		else 			distrBkg();			// Make background distribution with shuffling windows
+		if(localSuffle) distrBkgCycle();		// Make background distribution with cycling window
+		else 			distrBkg();				// Make background distribution with shuffling windows
 		writeLog("Correlations -> Done\n");
-
-
-		printStat();							// write report
+		printStat();							// write report. The avCoor & avSD defined here!
 		if(nFg && nBkg){
 			printCorrelations();				// write correlations
 			if(RScriptFg) {
 				printR();
-//				if(RScriptFg & HTML){
-//deb(1);
-//					printRreport();
-//					printRmd();
-//				}
 			}
 		}
 		else{
@@ -534,10 +530,8 @@ int Correlator(){
 		}
 		n_cmp++;
 		if(outLC) finOutLC();
-		clear();
-
-
 		writeLog("<%s> => Done  time=%s\n",outFile,thisTimer.getTime());
+		clear();
 	}
 	freeLC();
 	verb("***   calculation time for %i comparisons = %s\n",n_cmp, timer.getTime());

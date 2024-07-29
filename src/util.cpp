@@ -16,7 +16,8 @@
 
 char *logFileName=(char*)"./stereogene.log";
 unsigned long id;
-char *outFile=0;
+//char *outPath=0;
+char *repFile=0;		// output filename
 bool  verbose=0;
 bool  silent=0;				// inhibit stdout
 //int debugFg=0;
@@ -28,7 +29,7 @@ const char *debS=0;
 //============================    String  Parsing ======================================
 //======================================================================================
 char *skipSpace(char *s)  {while(*s!=0 &&  isspace(*s)) s++; return s;}
-char *skipNoSpace(char *s){while(*s!=0 && !isspace(*s)) s++; return s;}
+const char *skipNoSpace(const char *s){while(*s!=0 && !isspace(*s)) s++; return s;}
 int isEmpty(const char*buff){
 	for(const char*s=buff; *s!=0; s++)
 		if(!isspace(*s)) return 0;
@@ -37,11 +38,22 @@ int isEmpty(const char*buff){
 
 
 //==============================================================================
+//==============================================================================
+char* lastChar(char *s){
+	if(s==0 ||*s==0) return 0;
+	return s+strlen(s)-1;
+}
+//==============================================================================
 bool isUInt(const char *s){
 	for(;*s;s++) {
-		if(!isdigit(*s)) return false;
+		if(!isdigit(*s)) break;
 	}
-	return true;
+	if(*s==0) return true;
+	if(s[1]==0){
+		if(toupper(*s)=='K') return true;
+		if(toupper(*s)=='M') return true;
+	}
+	return false;
 }
 //==============================================================================
 bool isInt(const char *s){
@@ -52,6 +64,10 @@ bool isInt(const char *s){
 //==============================================================================
 bool isDouble(const char *s){
 	char b[256]; strcpy(b,s);
+	char *last=lastChar(b);
+	char c=toupper(*last);
+	if(c=='K' || c=='M') last=0;
+
 	char *s0=strtok(b,"eE");
 	char *s1=strtok(0,"");
 	if(s1!=0 && strlen(s1)!=0 && !isInt(s1)) return false;
@@ -59,6 +75,23 @@ bool isDouble(const char *s){
 	if(!isInt(s0)) return false;
 	if(s1!=0 && strlen(s1)!=0 && !isUInt(s1)) return false;
 	return true;
+}
+
+int readInt(const char* val){
+
+	return int(readDouble(val));
+}
+
+double readDouble(const char *s){
+	char b[256]; strcpy(b,s);
+	double k=1;
+	char *last=lastChar(b);
+	char c=toupper(*last);
+	if(c=='K') {k=1000; *last=0;}
+	if(c=='M') {k=1000000; *last=0;}
+
+	double v=atof(b)*k;
+	return v;
 }
 
 
@@ -114,17 +147,14 @@ char *trim(char *s){
 	return s;
 }
 
-
-
-
-const char* skipInt(const char *s){
+char* skipInt(char *s){
 	if(*s=='-' || *s=='+') s++;
 	while(isdigit(*s)) s++;
 	return s;
 }
 
 
-bool isfloat(const char *s){
+bool isfloat(char *s){
 	s=skipInt(s);
 	if(*s==0) return true;
 	if(*s=='.') s=skipInt(s+1);
@@ -135,6 +165,26 @@ bool isfloat(const char *s){
 	return false;
 }
 
+//==================================================================
+Alias::Alias(const char *o, const char *r){
+	old=strdup(o);
+	rpl=strdup(r);
+	l_rpl=strlen(rpl);
+	l_old=strlen(old);
+}
+int Alias::replace(char *txt){
+	char *s;
+	for(int n=0;;n++){
+		s=strstr(txt,old);
+		if(s==0) return n;
+		char b[4096];
+		strcpy(b,s+l_old);
+		strcpy(s,rpl);
+		strcat(s,b);
+		txt=s+l_rpl;
+	}
+	return 0;
+}
 
 //============================================================
 //=======================    Logging    ======================
@@ -147,16 +197,7 @@ void clearLog(){
 
 FILE *openLog(){
 	if(logFileName) {
-		char b[2048];
-		if(*logFileName=='$'){
-			if(outFile && *outFile){
-				sprintf(b,"%s%s",outFile,logFileName+1);
-			}
-			else
-				sprintf(b,"log%s",logFileName+1);
-		}
-		else strcpy(b,logFileName);
-		FILE *f=gopen(b,"at");
+		FILE *f=gopen(logFileName,"at");
 		if(f!=0) return f;
 		else{
 			fprintf(stderr, "Error in opening log file%s Error code=%i\n", logFileName, errno);
@@ -186,7 +227,7 @@ void writeLog(const char *format, ...){
 	va_end(args);
 }
 void writeLogErr(const char *format, ...){
-	char b[2048];
+	char b[TBS];
 	va_list args;
 	va_start(args, format);
 	vsprintf(b, format,args);
@@ -271,7 +312,7 @@ void clearDeb(){
 }
 //===========================================
 void _deb_(bool t, const char *format, va_list args){
-	char b[2048];
+	char b[TBS];
 	vsprintf(b, format, args);
 	if((debugFg&DEBUG_PRINT)!=0){
 		printf("%s",b);
@@ -359,7 +400,7 @@ char *Timer::getTime(){
 	long dt=getTimer();
 	int ms=(int)(dt%1000);
 	int s=(int)(dt/1000);
-	sprintf(bb,"%i.%is",s,ms);
+	snprintf(bb, sizeof(bb), "%i.%is",s,ms);
 	return bb;
 }
 
@@ -393,7 +434,7 @@ char timerBufferQQ[256];
 char *dateTime(){
 	time_t lt=time(NULL);
 	tm *t=localtime(&lt);
-	sprintf(timerBufferQQ,"%02i.%02i.%02i %02i:%02i:%02i",t->tm_mday, t->tm_mon+1, t->tm_year%100,
+	snprintf(timerBufferQQ,sizeof(timerBufferQQ),"%02i.%02i.%02i %02i:%02i:%02i",t->tm_mday, t->tm_mon+1, t->tm_year%100,
 			t->tm_hour, t->tm_min, t->tm_sec);
 	return timerBufferQQ;
 }
@@ -401,6 +442,13 @@ char *dateTime(){
 
 //============================================================
 //====================   Files and Paths    ==================
+//============================================================
+int isDirectory(const char *path) {
+   struct stat statbuf;
+   if (stat(path, &statbuf) != 0)
+       return 0;
+   return S_ISDIR(statbuf.st_mode);
+}
 //============================================================
 char* parseTilda(char *b, const char*fname){
 	if(*fname=='~'){
@@ -429,7 +477,7 @@ FILE *xopen(const char* fname, const char *t){
 
 
 FILE *gopen(const char*fname, const char* type){		// open file with parsing ~
-	char b[2048];
+	char b[TBS];
 	return fopen(parseTilda(b,fname),type);
 }
 // remove fucked backslash
@@ -439,19 +487,44 @@ char *correctFname(char* s){
 	return s;
 }
 //================= create filename using path and name
-char* makeFileName(char *b, const char *path, const char*fname){
-	if(path==0) return strcpy(b,fname);
-	if(*fname=='/' || *fname=='~') return strcpy(b,fname);
-	if(path && path[strlen(path)-1]=='/') sprintf(b,"%s%s",path,fname);
-	else								  sprintf(b,"%s/%s",path,fname);
+char* makeFileName(char *b, int siz, const char *path, const char*fname){
+	char fn[TBS]; parseTilda(fn,fname);
+	if(path==0) return strcpy(b,fn);
+	char pt[TBS];
+	parseTilda(pt,path);
+
+	char *ff=fn;
+	if(*(lastChar(pt))=='/') snprintf(b, siz, "%s%s",path,ff);
+	else					 snprintf(b, siz, "%s/%s",path,ff);
 	return b;
 }
 //================= create filename using path and name
-char *makeFileName(char *b, const char *path, const char*fname, const char*ext){
-	makeFileName(b,path,fname);
-	char *ss=strrchr(b,'/'); if(ss==0) ss=b;
-	char *s=strrchr(ss,'.'); if(s) *s=0;
-	return strcat(strcat(b,"."),ext);
+char *makeFileName(char *b, int siz, const char *path, const char*fname, const char*ext){
+	char bb[TBS];
+	makeFileName(bb,sizeof(bb), path,fname);
+	char *s=strrchr(bb,'/'); if(s==0) s=bb;
+	char *sp=strrchr(s,'.'); if(sp) *sp=0;
+	snprintf(b,siz, "%s.%s",bb,ext);
+	return b;
+}
+//=================== extract fname wothout path
+char *getFnameWithoutPath(char *buf, const char *fname){
+	const char *s;
+	s=strrchr(fname,'/'); if(s==0) s=fname; else s++;
+	strcpy(buf,s);
+	return buf;
+}
+//=================== extract fname wothout path and extension
+char *getFnameWithoutExt(char *buf, const char *fname){
+	getFnameWithoutPath(buf,fname);
+	char *pp=strrchr(buf,'.');
+	if(pp) *pp=0;
+	return buf;
+}
+//================ Make Fname without path
+char *MakeFname(char *b, const char*fname, const char*ext){
+	char *s=getFnameWithoutExt(b,fname);
+	return strcat(strcat(s,"."), ext);
 }
 
 
@@ -472,7 +545,8 @@ int _makeDir(const char * path){
 }
 //===================== platform independent Make Directory
 void makeDir(const char *path){
-	char b[2048];
+	if(path==0 || *path==0) return;
+	char b[TBS];
 	parseTilda(b,path);
 	char *s=b+strlen(b)-1;
 	if(*s=='/') *s=0;
@@ -514,14 +588,14 @@ bool fileExists(const char *fname){
 
 //=================== Check if given file exists
 bool fileExists(const char* path, const char *fname){
-	char b[4096];
-	makeFileName(b,path,fname);
+	char b[TBS];
+	makeFileName(b, sizeof(b), path,fname);
 	return fileExists(b);
 }
 //==================== check if the file exists
 bool fileExists(const char* path, const char *fname, const char *ext){
-	char b[4096];
-	makeFileName(b,path,fname,ext);
+	char b[TBS];
+	makeFileName(b, sizeof(b), path,fname,ext);
 	return fileExists(b);
 }
 //====================
@@ -538,17 +612,6 @@ const char *getExt(const char *fname){
 	if(s==0) return 0;
 	return s+1;
 }
-//=================== extract fname wothout extension
-char *getFnameWithoutExt(char *buf, const char *fname){
-	const char *s;
-	s=strrchr(fname,'/'); if(s==0) s=fname; else s++;
-	char *pp=strcpy(buf,s);
-
-
-	pp=strrchr(pp,'.'); if(pp) *pp=0;
-	return buf;
-}
-
 
 
 

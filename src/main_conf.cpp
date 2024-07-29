@@ -1,6 +1,30 @@
 #include "track_util.h"
 
 
+//=========================================
+//=========================================
+//=========================================
+//==========================================================================================
+
+
+
+void testMtx(){
+	int n=3;
+	double mm[]={	1,   -0.2,	0.3,
+				 -0.2,    1,	0.1,
+				  0.3,	0.1,	1
+	};
+	VectorX *v=new VectorX(n);
+	Matrix *m=new Matrix(n,mm);
+	m->printMtx();
+
+	m->eigen(v);
+	v->print();
+
+	exit(0);
+}
+
+
 const char * progName="Confounder";
 const int progType=SG;
 
@@ -12,8 +36,6 @@ void printProgDescr(){
 	printf("$ ./parse_genes [-parameters] [RefSeq or GENECODE file]\n");
 	printf("\n");
 }
-
-
 
 
 void printMiniHelp(){
@@ -30,12 +52,14 @@ void printMiniHelp(){
 
 
 int main(int argc, char **argv) {
+	debugFg=3; if(debugFg) clearDeb();
+//	testMtx();
+
+
 	initSG(argc, argv);
-	if(debugFg) clearDeb();
 
 
 	Preparator();
-	if(confFile==0) confFile=strdup("confounder");
 	Covariator();
 	fflush(stdout);
 	fclose(stdout);

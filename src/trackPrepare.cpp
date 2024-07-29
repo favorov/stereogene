@@ -25,10 +25,10 @@ void bTrack::initProfile(){
 
 
 void bTrack::clearFiles(){
-	char bfil[4096];
-	makeFileName(bfil,profPath, name, BPROF_EXT);
+	char bfil[TBS];
+	makeBinFname(bfil);
 	if(fileExists(bfil)) remove(bfil);
-	makeFileName(bfil,profPath, name, PRM_EXT);
+	makePrmFname(bfil);
 	if(fileExists(bfil)) remove(bfil);
 }
 
@@ -37,22 +37,17 @@ void bTrack::clearFiles(){
 
 void bTrack::initProfile(char *tName){
 	errStatus="init Profile";
-
-
 	if(tName){
+		setName(tName);
 		name=strdup(tName);
 		if(bytes) bytes->close();
 	}
-
-
-
 
 	clearFiles();
 	if(bytes==0) bytes=new BuffArray();
 	bytes->init(this,0,1);
 	if(fProfile==0) fProfile=new FloatArray();
 	fProfile->init(NA);
-//	makeFileName(b,profPath, fname, PRM_EXT);
 	errStatus=0;
 };
 //================================================================= Add segment
@@ -65,7 +60,7 @@ void addProfVal(FloatArray *p, int pos, float v){
 
 int bTrack::addSgm(ScoredRange *bed, FloatArray *prof){
 	total+=bed->score*(bed->end-bed->beg+1);
-	if(!checkRange(bed)) return 0;
+	if(!checkRange(bed, fname)) return 0;
 	double noise=0;
 	int p1=pos2filePos(bed->chrom, bed->beg);
 	int p2=pos2filePos(bed->chrom, bed->end);
@@ -105,7 +100,6 @@ int bTrack::addSgm(char strnd, ScoredRange *bed){
 	else  return addSgm(bed, fProfile);
 }
 
-
 //=====================================================================================
 int getTypeByExt(const char *sext){
 	char bext[80];
@@ -125,6 +119,10 @@ int getTypeByExt(const char *sext){
 	if(strcmp(bext,"BROAD_PEAK"	)==0) return BROAD_PEAK;
 	if(strcmp(bext,"BROADPEAK"	)==0) return BROAD_PEAK;
 
+	if(strcmp(bext,"N_PEAK"		)==0) return NARROW_PEAK;
+	if(strcmp(bext,"NPEAK"		)==0) return NARROW_PEAK;
+	if(strcmp(bext,"NARROW_PEAK")==0) return NARROW_PEAK;
+	if(strcmp(bext,"NARROWPEAK"	)==0) return NARROW_PEAK;
 
 	if(strcmp(bext,"MODEL"	)==0) return MODEL_TRACK;
 	if(strcmp(bext,"MOD"	)==0) return MODEL_TRACK;
@@ -208,7 +206,6 @@ void bTrack::readInputTrack(const char *fname, int cage){
 
 
 	FILE *f=xopen(fname, "rt"); setvbuf ( f , NULL , _IOFBF , 65536 );
-	strcpy(curFname,fname);
 	inputErrLine=inputErr = 0;		// flag: if input track has no errors
 	BufFile input;
 	input.init(fname);
@@ -304,6 +301,21 @@ void bTrack::readInputTrack(const char *fname, int cage){
 				sx=strtok(0," \t\n"); if(sx==0) break;			//======== take pval field
 				if(bpType==BP_LOGPVAL) {score=atof(sx); break;}
 				break;
+			case NARROW_PEAK:
+				chrom=readChrom(inputString);	//======== find chrom field
+				beg=readInt();					//======== find beg field
+				end=readInt();					//======== find end field
+				strtok(0," \t\n\r");							//======== skip name
+				sx=strtok(0," \t\n\r"); if(sx==0) break;
+				if(bpType==BP_SCORE) score=atof(sx);			//======== find score field
+				sx=strtok(0," \t\n"); if(sx==0) break;			//======== take strand field
+				if(*sx!=0 && *sx!='.') {strand=*sx; nStrand++;}
+				if(bpType==BP_SCORE) break;
+				sx=strtok(0," \t\n"); if(sx==0) break;			//======== take signal field
+				if(bpType==BP_SIGNAL) {score=atof(sx); break;}
+				sx=strtok(0," \t\n"); if(sx==0) break;			//======== take pval field
+				if(bpType==BP_LOGPVAL) {score=atof(sx); break;}
+				break;
 			default:
 				errorExit("track type undefined or unknown"); break;
 		}
@@ -355,10 +367,10 @@ void testDistrib(){
 void bTrack::finProfile(){
 	errStatus="finProfile";
 	double lprof=0.;
-	av=0.;            // Average profile value
-	sd=1.;          // Standard deviation
-	minP= 5.e+20;      // Minimal profile value
-	maxP=-5.e+20;      // Maximal profile value
+	nativeAv= av=0.;            	// Average profile Log value
+	nativeSd= sd=1.;         		// Standard Log deviation
+	nativeMin=minP= 5.e+20;      	// Minimal profile Log value
+	nativeMax=maxP=-5.e+20;      	// Maximal profile Log value
 	//============================ calculate min, max, average, std deviation
 	double x2=0;
 	if(trackType==BED_TRACK){
@@ -369,11 +381,14 @@ void bTrack::finProfile(){
 	}
 	int nn=0;
 	for(int i=0; i<profileLength; i++){
-		float z=fProfile->getLog(i);
+		float z=fProfile->getLog(i), x=fProfile->get(i);
 		if(z != NA){
 			// we take into account only valid profile values
 			av+=z; x2+=z*z; nn++;
+			nativeAv+=x; nativeSd+=x*x;
 			lprof+=1;
+			if(x < nativeMin) nativeMin=x;
+			if(x > nativeMax) nativeMax=x;
 			if(z < minP) minP=z;
 			if(z > maxP) maxP=z;
 		}
@@ -382,16 +397,21 @@ void bTrack::finProfile(){
 		if(cbytes && (z=cProfile->getLog(i)) != NA){
 			// we take into account only valid profile values
 			av+=z; x2+=z*z; nn++;
+			nativeAv+=x; nativeSd+=x*x;
 			lprof+=1;
+			if(x < nativeMin) nativeMin=x;
+			if(x > nativeMax) nativeMax=x;
 			if(z < minP) minP=z;
 			if(z > maxP) maxP=z;
 		}
 	}
-	av/=nn;
-//	if(maxP < minP){errorExit("=== !!!!  The profile contains no data:  min=%.2e max=%.2e !!!===\n",minP,maxP);}
-//	if(maxP==minP){	errorExit("=== !!!!  The profile contains only zeros: min=%.2e max=%.2e  !!!===\n",minP,maxP);}
+	av/=nn; nativeAv/=nn;
+	if(maxP < minP){errorExit("=== !!!!  The profile contains no data:  min=%.2e max=%.2e !!!===\n",minP,maxP);}
+	if(maxP==minP){	errorExit("=== !!!!  The profile contains only zeros: min=%.2e max=%.2e  !!!===\n",minP,maxP);}
 	x2-=av*av*nn;
+	nativeSd-=nativeAv*nativeAv*nn;
 	sd=sqrt(x2/(nn-1));
+	nativeSd=sqrt(nativeSd/(nn-1));
 	scaleFactor=-minP;
 	if(scaleFactor < maxP) scaleFactor = maxP;
 	scaleFactor=(MAX_SHORT-2)/scaleFactor;
@@ -440,31 +460,30 @@ unsigned int getChkSum(BuffArray *b, int n){
 
 
 void bTrack::writeProfilePrm(){
-	writeProfilePrm(profPath);
-}
-void bTrack::writeProfilePrm(const char *path){
     //============================================= Write parameters
-	char prmFname[4096];
-	makeFileName(prmFname,path,name,PRM_EXT);
+	char prmFname[TBS];
+	makePrmFname(prmFname);
 	verb("write prm %s...\n",prmFname);
     FILE *f=xopen(prmFname, "wt"); if(f==0)return;
-
 
 	fprintf(f,"#====== THIS IS GENERATED FILE. DO NOT EDIT!  ========\n");
 	fprintf(f,"version=%s\n",version);
 	fprintf(f,"#=== Input data ===\n");
 
-
     fprintf(f,"trackType=%i\n",trackType);
-	fprintf(f,"input=%s\n",name);
-
+	fprintf(f,"input=%s\n",fname);
 
     fprintf(f,"#=== Parameters ===\n");
     fprintf(f,"bin=%i\n",binSize);
     fprintf(f,"strand=%i\n",hasCompl);
     if(trackType == BROAD_PEAK)  fprintf(f,"bpType=%i\n",bpType);
-    if(cage) fprintf(f, "cage=%i\n", cage);
-    fprintf(f,"#=== Statistics ===\n");
+    fprintf(f,"#=== Native Statistics Log ===\n");
+
+    fprintf(f,"nativeMin=%g\n",nativeMin);
+    fprintf(f,"nativeMax=%g\n",nativeMax);
+    fprintf(f,"nativeAv=%g\n",nativeAv);
+    fprintf(f,"nativeSd=%g\n",nativeSd);
+    fprintf(f,"#=== Log Statistics Log ===\n");
     fprintf(f,"min=%g\n",minP);
     fprintf(f,"max=%g\n",maxP);
     fprintf(f,"average=%g\n",av);
@@ -476,9 +495,7 @@ void bTrack::writeProfilePrm(const char *path){
     fprintf(f,"scale=%f\n",scaleFactor);
     fprintf(f,"total=%f\n",total);
 
-
     //==== calculate distribution
-
 
     int dstr[256];
     float cdstr[256],nn=0;
@@ -521,27 +538,22 @@ void bTrack::writeByteProfile(){
 
 
 //=================================================================================
-void bTrack::makeBinTrack(const char *fname){
-	name=strdup(fname);
-	makeBinTrack();
-}
+void bTrack::makeBinTrack(const char *inFname){
+	setName(inFname);
 
-
-
-
-void bTrack::makeBinTrack(){
 	Timer tm;
 	verb ("******   Make binary track <%s>   ******\n", name);
 	writeLog("    Make binary track <%s>\n",name);
 	//===================================================== prepare track file name
-	if (pcorProfile!=0)	 verb("===          pcorProfile=  <%s>\n",pcorProfile);
-	trackType=getTrackType(name);
+	if (confounder!=0)	 verb("===          pcorProfile=  <%s>\n",confounder);
+	trackType=getTrackType(fname);
 	//=====================================================================================
-	initProfile();                   					//============ Allocate arrays
-	char pfil[4096];
-	readInputTrack(makeFileName(pfil,trackPath,name));		//============ Read tracks
+	initProfile();                   					    //============ Allocate arrays
+	char pfil[TBS];
+	snprintf(pfil,sizeof(pfil), "%s%s",trackPath,fname);
+	readInputTrack(pfil);		//============ Read tracks
+//	readInputTrack(makeFileName(pfil,trackPath,fname));		//============ Read tracks
 	//======================================================================
-
 
 	verb("Finalize profiles... \n");
 	finProfile(); //============ Calculate min,max,average; convert to bytes
@@ -592,12 +604,7 @@ void prepare(const char * fname){
 	del(tmp);
 }
 
-
-
-
-
-
-
+//====================================================================
 
 void Preparator(){
 	Timer tm;
@@ -607,8 +614,8 @@ void Preparator(){
 		if(fname==0 || strlen(trim(fname))==0) continue;
 		prepare(fname);
 	}
-	if(pcorProfile){
-		prepare(pcorProfile);
+	if(confounder){
+		prepare(confounder);
 	}
 	if(fProfile) del(fProfile);
 	if(cProfile) del(cProfile);
@@ -618,36 +625,25 @@ void Preparator(){
 
 
 
-
+//void bTrack::
 
 
 //=================================================================================
 void bTrack::writeBinnedProf(const char *fname){
+	errStatus="WriteBinnedProfile";
 	if(fProfile==0) fProfile=new FloatArray();
 	fProfile->init(NA);
-	name=strdup(fname);
-	char pfil[4096];
-	readInputTrack(makeFileName(pfil,trackPath,name));
+	setName(fname);
+	char pfil[TBS];	// input track
+	makeInputFname(pfil);
+	readInputTrack(pfil);
 
-
-	//================================================= Normalize
-
-
-	errStatus="WriteBinnedProfile";
-	//============================ calculate min, max, average, std deviation
-	char wfil[4096];
-	makeFileName(pfil,trackPath,name);
-
-
-	char *s=strrchr(pfil,'/'); if(s==0) s=wfil;
-	s=strrchr(s,'.'); if(s) *s=0;
-	snprintf(wfil,sizeof(wfil),"%s_%i.bgr",pfil,binSize);
-
-
-	FILE *f=gopen(wfil,"w");
+	//=================================================  Create Directory
+	makePath(binPath);
+	char b[TBS];
+	makeExtFname(b,binPath,binSize,"bgr");
+	FILE *f=xopen(b,"w");
 	fprintf(f,"track type=bedGraph name=\"%s\" description=\"Binned track. Binsize=%i\"\n",name, binSize);
 	writeBedGr(f,fProfile, NA,  NA);
-
-
 	fclose(f);
 }

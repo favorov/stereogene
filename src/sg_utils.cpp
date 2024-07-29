@@ -7,6 +7,7 @@
 
 
 #include "track_util.h"
+
 unsigned int hashx(unsigned int h,char c){
 	return h+(c-32)+1234;
 }
@@ -155,7 +156,7 @@ Chromosome* findChrom(char *ch){
 		curChrom=chrom_list+i;
 		if(strcmp(curChrom->chrom, ch) ==0) return curChrom;
 	}
-	fprintf(stderr,"Chromosome %s not found\n",ch);
+	if(syntax) 	fprintf(stderr,"Chromosome %s not found\n",ch);
 	return 0;
 }
 //========================================================================================
@@ -198,26 +199,24 @@ void filePos2Pos(int pos, ScoredRange *gr, int length){
 //========================================================================================
 int inputErr;		// flag: if input track has errors
 int inputErrLine;	// Error line in the input
-char curFname[4048];	// current input file
 
 
 //========================================================================================
-Chromosome *checkRange(ScoredRange *gr){
+Chromosome *checkRange(ScoredRange *gr, char * fname){
 	Chromosome* chr=findChrom(gr->chrom);
 	if(chr==0) return 0;
-
 
 	if(gr->beg < 0){
 		if(inputErr == 0){ inputErr=1;
 			writeLogErr(
-					"File <%s> line #%d: incorrect segment start: chrom=%s  beg=%ld.  Ignored\n",curFname, inputErrLine,gr->chrom, gr->beg);
+					"File <%s> line #%d: incorrect segment start: chrom=%s  beg=%ld.  Ignored\n", fname, inputErrLine,gr->chrom, gr->beg);
 		}
 		return 0;
 	}
 	if(gr->end  >= chr->length){
 		if(inputErr == 0){ inputErr=1;
 			writeLogErr(
-					"File <%s> line #%d: incorrect segment end: chrom=%s  end=%ld.  Ignored\n",curFname, inputErrLine,gr->chrom, gr->end);
+					"File <%s> line #%d: incorrect segment end: chrom=%s  end=%ld.  Ignored\n", fname, inputErrLine,gr->chrom, gr->end);
 		}
 		return 0;
 	}
@@ -284,11 +283,11 @@ const char*getKernelType(){
 	else return "X";
 	char b[80];
 	if(kernelShift >0){
-		sprintf(b,"%s_%.1fR",type,kernelShift/1000);
+		snprintf(b,sizeof(b),"%s_%.1fR",type,kernelShift/1000.);
 		return strcpy(kernType,b);
 	}
 	else if(kernelShift <0){
-		sprintf(b,"%s_%.1fL",type,-kernelShift/1000);
+		snprintf(b,sizeof(b),"%s_%.1fL",type,-kernelShift/1000.);
 		return strcpy(kernType,b);
 	}
 	else return type;
@@ -299,8 +298,8 @@ const char*getKernelType(){
 
 //================== make path - add '/' if necessary
 char* makePath(char* pt){
-	if(pt==0) return pt;
-	char b[2048];
+	if(pt==0 || *pt==0) return pt;
+	char b[TBS];
 	char *s=pt+strlen(pt)-1;
 	if(*s=='/') *s=0;
 	return strdup(strcat(strcpy(b,pt),"/"));
@@ -309,12 +308,22 @@ char* makePath(char* pt){
 
 //================= Create directories
 void makeDirs(){
-	if(profPath!=0) makeDir(profPath);
-	else profPath=strdup("./");
-	if(resPath!=0) makeDir(resPath);
-	else resPath=strdup("./");
+	if((progType & (BN)) == 0){	//========= binner not require creating profPath
+		if(profPath!=0) makeDir(profPath);
+		else profPath=strdup("");
+		if(resPath!=0) makeDir(resPath);
+		else resPath=strdup("");
+	}
 	if(trackPath!=0) makeDir(trackPath);
-	else trackPath=strdup("./");
+	else trackPath=strdup("");
+	if((progType & (BN)) !=0){	//========= only binner requires creating BinPath
+		if(binPath!=0  &&  binPath[0] !=0 ) makeDir(binPath);
+		else trackPath=strdup("");
+	}
+	if((progType & (SM)) !=0){	//========= only binner requires creating BinPath
+		if(smoothPath!=0 && smoothPath[0] != 0) makeDir(smoothPath);
+		else trackPath=strdup("");
+	}
 }
 
 
@@ -380,21 +389,58 @@ void addTracks(char* fname, int list_id){
 
 int listID=0;	//ID of the list from where the tack is taken
 void addList(char* fname){
-	if(nfiles > 256) errorExit("too many input files\n");
-	char b[4096], *s;
+	if(nfiles > MAX_FILES) errorExit("too many input files\n");
+	char b[TBS], *s, curDir[TBS];
+	//========================= check for directory =======
+	snprintf(curDir,sizeof(b),"%s%s",trackPath,fname);
+	if(isDirectory(curDir)){
+	DIR *d;
+	struct dirent *dir;
+	d = opendir(curDir);
+	if (d) {
+		struct stat FileAttrib;
+		while ((dir = readdir(d)) != NULL) {
+			stat(dir->d_name, &FileAttrib);
+			sprintf(b,"%s/%s",curDir,dir->d_name);
+			if(isDirectory(b)) continue;
+			if(getTrackType(b)){
+				char bb[TBS];
+				snprintf(bb,sizeof(bb),"%s/%s",fname, dir->d_name);
+				addTracks(bb,listID);
+			}
+		}
+		closedir(d);
+		}
+	listID++;
+	return;
+	}
+	//======================== List ===============
+
+	curDir[0]=0;
 	strcpy(b,fname); s=strrchr(b,'.'); if(s) s++;
 	if(s && (keyCmp(s,"lst")==0 || keyCmp(s,"list")==0)){
 		FILE *f=0;
 		if(fileExists(fname)) f=xopen(fname,"rt");
 		else{
-			makeFileName(b,trackPath,fname);
+			makeFileName(b, sizeof(b), trackPath,fname);
 			f=xopen(b,"rt");
 		}
 		for(;(s=fgets(b,sizeof(b),f))!=0;){
 			strtok(b,"\r\n#");
 			s=trim(b);
 			if(strlen(s)==0 || *s=='#') continue;
-			addTracks(s,listID);
+			if(*s=='&'){
+				strcpy(curDir,trim(s+1));
+				char *last=lastChar(curDir);
+				if(*last!='/') strcat(curDir,"/");
+				continue;
+			}
+			char pt[TBS]; pt[0]=0;
+			if(*curDir){
+				strcat(pt,curDir);
+			}
+			strcat(pt,s);
+			addTracks(pt,listID);
 		}
 		fclose(f);
 		listID++;
@@ -405,6 +451,189 @@ void addList(char* fname){
 	}
 }
 
+//======================================================================
+AliasTable::AliasTable(const char *fname){
+	FILE *f=xopen(fname,"r");
+	char b[TBS];
+	for(;fgets(b,sizeof(b),f)!=0;){
+		char *s=trim(b);
+		char *ss=strchr(s,'=');
+		if(ss==0) continue;
+		*ss=0; ss=trim(ss+1); s=trim(s);
+		add(s,ss);
+	}
+	fclose(f);
+}
+void AliasTable::add(char* pat,char* repl){
+	if(nAl >= maxAL) return;
+	Alias* a= new Alias(pat,repl);
+	at[nAl++]=a;
+}
+int AliasTable::replace(char *txt){
+	int n=0;
+	for(int i=0; i<nAl; i++){
+		n+=at[i]->replace(txt);
+	}
+	return n;
+}
+
+//=============== Matrices  =================
+//================================================
+VectorX::VectorX(int nn){init(nn);}
+VectorX::VectorX(){init(nfiles);}
+void VectorX::init(int nn){
+	n=nn; getMem(v,n,"");
+	for(int i=0; i<n; i++)
+		v[i]=1;
+}
+
+//==========================================================================================
+double VectorX::get(int pos){
+	return v[pos];
+}
+
+//==========================================================================================
+double VectorX::scalar(VectorX *x){
+	return scalar(*x);
+}
+//==========================================================================================
+void VectorX::norm(){
+	double t=scalar(*this);
+	t=sqrt(t);
+	if(t==0) t=1;
+	for(int i=0; i<n; i++) v[i]/=t;}
+
+//==========================================================================================
+double VectorX::scalar(VectorX &x){
+	double w=0;
+	int nn=0;
+	for(int i=0; i<n; i++) {
+		if(v[i]==NA || x.v[i]==NA) continue;
+		w+=v[i]*x.v[i]; nn++;
+	}
+	if(nn==0) return NA;
+	w=w/nn*n;
+	return w;
+}
+
+//==========================================================================================
+void VectorX::mult(Matrix *mtx){
+	double *vv;
+	getMemZ(vv,n,"");
+
+	for(int i=0; i<n; i++){
+		for(int j=0; j<n; j++){
+			vv[i]+=v[j]*mtx->get(j,i);
+		}
+	}
+	xfree(v,"");
+	v=vv;
+}
+//==========================================================================================
+void VectorX::print(FILE *f){
+	for(int i=0; i<n; i++){
+		fprintf(f,"%.3f",v[i]);
+		if(i<n-1) fputc('\t',f);
+		else	  fputc('\n',f);
+	}
+}
+void VectorX::print() {
+	print(stdout);
+}
+
+
+//=========================================
+Matrix::Matrix(int nn, double *a){
+	init(nn,a);
+}
+//=========================================
+Matrix::Matrix(int mm){
+	init(mm);
+}
+//=========================================
+Matrix::Matrix(Matrix *mtx){
+	init(mtx->n,mtx->values);
+}
+//=========================================
+void Matrix::init(int nn){
+	n=nn;
+	getMem(values,n*n,"aaaa"); zeroMem(values,n*n);
+}
+
+
+//=========================================
+void Matrix::init(int nn, double *a){
+	init(nn); set(a);
+}
+
+//=========================================
+void Matrix::transpose(){
+	for (int i = 0; i < n; i++) {
+		for (int j = 0; j < i; j++) {
+			double t = get(i,j);
+			set(i,j,get(j,i));
+			set(j,i,t);
+		}
+	}
+}
+//==========================================
+void Matrix::printMtx(FILE *f){
+	for(int i = 0; i < n; i++) {
+		for (int j = 0; j < n; j++) {
+			fprintf(f," %8.3f", get(i,j));
+		}
+		fprintf(f,"\n");
+	}
+	fprintf(f,"\n");
+}
+//==========================================
+void Matrix::printMtx(){
+	printMtx(stdout);
+}
+
+void Matrix::mult(Matrix *m){
+	double *vv;
+	getMemZ(vv,n*n,"");
+	for (int i = 0; i < n; ++i) {
+		for (int j = 0; j < n; ++j) {
+			vv[getIndex(i,j)]=0;
+			for(int k=0; k < n; k++){
+				vv[getIndex(i,j)]+=get(i,k)*get(k,j);
+			}
+		}
+	}
+	xfree(values,"");
+	values=vv;
+}
+
+//=========================================
+double Matrix::eigen(VectorX *v){
+	mult(this); //mtx^2
+	mult(this);	//mtx^4
+	mult(this);	//mtx^16
+	int nIter=100;
+	for(int i=0; i<n; i++) v->v[i]=1;
+	double w[n];
+
+	for(int iter=0; iter<nIter; iter++){
+		memcpy(w,v->v,n*sizeof(double));
+		v->mult(this);
+		v->norm();
+		double eps=0;
+		for(int i=0; i<n; i++){
+			double d=w[i]-v->v[i];
+			eps+=d*d;
+		}
+		eps=sqrt(eps);
+		if(eps < 1.e-9) break;
+	}
+	v->mult(this);
+	double ev=sqrt(sqrt(sqrt(v->v[0])));
+	v->norm();
+
+	return ev;
+}
+//=========================================
 
 
 

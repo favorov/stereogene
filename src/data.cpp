@@ -8,7 +8,7 @@
 #include "track_util.h"
 
 
-const char* version="2.31";
+const char* version="2.50";
 
 
 
@@ -19,20 +19,41 @@ int  binSize=100;   // frame size fo profile
 bool  NAFlag=0;
 
 
-long long GenomeLength=0;      // TOTAL LENGTH OF THE GENOME
+long long GenomeLength=0;   // TOTAL LENGTH OF THE GENOME
 int n_chrom;
 char trackName[4096];       // current track name
 char *chromFile=0;
-char *confFile=0;		// confounder file name
-char *cfgFile=0;		// config file name
-char *profPath=strdup("./");
-char *trackPath=strdup("./");
-char *resPath=strdup("./");
+char *confounder=0;		    // confounder file name
+char *cfgFile=0;		    // config file name
+char *profPath	=strdup("");
+char *trackPath	=strdup("");
+char *binPath	=strdup("");
+char *smoothPath=strdup("");
+char *resPath	=strdup("");
+char *reportPath=0;	        // path to the report files
+const char*defaultConfig="stereogene.cfg";
+
+char outFile    [TBS];	// common pathname for outputs
+char curOutFname[TBS];	// current output file without ext
+char curOutPath [TBS];	// current output path
+char curRepPath [TBS];
+char curReport  [TBS];	// fille pathname for reports relative to curOutPath
+char reportPDF	[TBS];	// PDF  report
+char reportHTML	[TBS];	// HTML report
+
 char *statFileName=(char*)"./statistics";
 char *paramsFileName=(char*)"./params";
 char *inputProfiles=0;
-char *outTrackFile=0; // Filename for write out track
-char *idSuff=(char*)"";
+AliasTable *aliases=0;
+char* aliasFile=0;
+char* Rscript=(char*)"rscript";
+int  plotH=3;
+int  plotW=7;
+
+
+
+//char *outTrackFile=0; // Filename for write out track
+//char *idSuff=(char*)"";
 
 
 bool  syntax=1;				// Strong syntax control
@@ -43,8 +64,8 @@ int   complFg=IGNORE_STRAND;
 int   profileLength;			// size of the profile array
 
 
-char *pcorProfile=0;    		// partial correlation profile file name
-int  binBufSize=30000000;
+//char *pcorProfile=0;    		// partial correlation profile file name
+int  binBufSize=100000000;
 
 
 
@@ -52,22 +73,22 @@ int  binBufSize=30000000;
 int 	kernelType=KERN_NORM;
 char* 	customKern=0;
 double 	noiseLevel=0;
-int 	wSize=100000;        	// size of widow (nucleotides)
+int 	wSize=300000;        	// size of widow (nucleotides)
 int 	wStep=0;             	// window step   (nucleotides)
 int 	flankSize=0;
-double 	kernelSigma=1000.;    	// kernel width (nucleotides)
-double 	kernelShift=0;      	// Kernel mean (for Gauss) or Kernel start for exponent
+int 	kernelSigma=1000.;    	// kernel width (nucleotides)
+int 	kernelShift=0;      	// Kernel mean (for Gauss) or Kernel start for exponent
 int 	intervFg0;
 double 	scaleFactor=0.2;
 
 
 //==================== Output
-int   	writeDistr=DISTR_DETAIL;
+int   	writeDistr=DISTR_SHORT;
 bool  	writeDistCorr=1;		    // write BroadPeak
 int   	crossWidth=10000;
 bool  	outSpectr=0;
 bool  	outChrom=0;
-int   	outRes=XML|TAB;
+int   	outRes=TAB;
 double 	totCorr=FNA, BgTotal=FNA;
 int 	RScriptFg=0;
 //bool 	writeHTML=false;
@@ -97,27 +118,23 @@ double 	kernelProfShift=0;
 double 	kernelNS=0;			// Correction for non-specifisity
 Track 	*track1=0, *track2=0, *projTrack=0;
 Kernel 	*kern=0;
-double 	maxNA0=95;
-double 	maxZero0=95;
+double 	maxNA0=99;
+double 	maxZero0=99;
 double 	maxNA=100;
 double 	maxZero=100;
 int 	nShuffle=10000;
-char *trackName1=strdup("");
-char *trackName2=strdup("");
-double mannW_Z=0;
-double mannW_p=1;
-double smoothZ=3;
-
+char 	*trackName1=strdup("");
+char 	*trackName2=strdup("");
+double 	mannW_Z=0;
+double 	mannW_p=1;
+double 	smoothZ=3;
 
 Model 	*model;
 
-
 int 	threshold=0;
-
 
 FILE 	*logFile=0;
 bool 	doAutoCorr=0;
-
 
 int 	corrScale=10;
 double 	prod11=0,prod12=0,prod22=0, eprod1,eprod2;
@@ -128,15 +145,17 @@ Fourier LCorrelation;
 
 
 int 	bpType=BP_SIGNAL;
-int 	cage=0;
 bool 	clearProfile=false;
 int 	scoreType=AV_SCORE;
-FileListEntry files[256];
+FileListEntry files[MAX_FILES];
 int   	nfiles=0;
 bool LCExists=false;
+
+double avBg=FNA,sdBg=FNA,avFg=FNA,sdFg=FNA;
 
 
 //double 	BgAvCorr=0;
 //double 	FgAvCorr=0;
 int  	pgLevel=2;
+char    *biotypes=0;
 float total=0;						// total count over the track

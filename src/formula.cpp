@@ -489,8 +489,6 @@ double 	frmlGetValue(Formula* f, const char* txt){return f->getValue(txt);}
 
 void test_formula(){
 	const char *input="a=2; [h3k4](x+3)+a";
-//	const char *input="s1=0.5; s2=1; m1=1; m2=-1; y1=(x-m1)/s1; y2=(x-m2)/s2; 1/s1*exp(-y1*y1) + 1/s2*exp(-y2*y2)";
-
 
 	Formula formula;
 
@@ -498,45 +496,10 @@ void test_formula(){
 	formula.parse(input);
 
 
-//char b[256];
-//for(int i=0; i<formula.nNodes; i++){
-//	deb(formula.getNode(i)->print(b));
-//}
-
 
 double x=80;
 double y=formula.calc(x);
 printf("f(%f)=%f\n",x,y);
-//deb("f(%f)=%f",x,y);
-
-
-//for(int i=0; i<100; i++){
-//	deb("%i\t%f",i,formula.calc(i));
-//}
-
-
-
-
-//	formula.setValue("sigma",0.2);
-//	formula.setValue("x",0);
-//	formula.setValue("y",0);
-//
-//	double d=0.00001, x=0, y=0;
-//	Timer t;
-//	for(int i=0; i<10000000; i++){
-//		y=y+exp(-x)*d; x=x+d;
-//	}
-//	deb("%s",t.getTime());
-//	t.reset();
-//	for(int i=0; i<10000000; i++){
-//		formula.calc();
-//	}
-//	deb("%s",t.getTime());
-//	deb("%f\t%f",x,y);
-//	deb("%f\t%f",formula.getValue("x"),formula.getValue("y"));
-//	for(double x=-3; x<3; x+=0.1){
-//		deb("%f\t%f",x, formula.calc(x));
-//	}
 exit(0);
 }
 

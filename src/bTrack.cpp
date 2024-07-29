@@ -9,6 +9,7 @@
 
 void failParam(const char* s){
 	verb("parameter \'%s\' failed\n",s);
+	writeLog("parameter \'%s\' failed\n",s);
 }
 
 
@@ -18,31 +19,37 @@ int chkVersion(char *ver){
 }
 
 
-bool bTrack::check(const char *fname){
+bool bTrack::check(const char *inFname){
+	setName(inFname);
 	if(clearProfile){
 		verb("forced profile recalculation\n");
 		return false;
 	}
-	char prmFile[4096], binFile[4096], b[4096];
-	makeFileName(prmFile,profPath, fname, PRM_EXT);
-	makeFileName(binFile,profPath, fname, BPROF_EXT);
+	char prmFile[TBS], binFile[TBS], b[TBS];
+	makePrmFname(prmFile);
+	makeBinFname(binFile);
 //======================================================= check existing files
 	if(! fileExists(binFile)) {
-		verb("file < %s > does not exist. Preparing binary track\n",binFile); return false;
+		verb("file < %s > does not exist. Preparing binary track\n",binFile);
+		writeLog("file < %s > does not exist. Preparing binary track\n",binFile);
+		return false;
 	}
 	if(! fileExists(prmFile)) {
-		verb("file < %s > does not exist. Preparing binary track\n",prmFile); return false;
+		writeLog("file < %s > does not exist. Preparing binary track\n",prmFile);
+		return false;
 	}
 	//================= Check modification time
-	makeFileName(b,trackPath, fname);
+	makeFileName(b, sizeof(b), trackPath, inFname);
 	unsigned long tPrm  =getFileTime(prmFile);
 	unsigned long tTrack=getFileTime(b);
 	if(tPrm < tTrack){
-		verb("Old profile:  prm_time=%li  track_time=%li\n",tPrm,tTrack); return false;
+		verb("Old profile:  prm_time=%li  track_time=%li\n",tPrm,tTrack);
+		writeLog("Old profile:  prm_time=%li  track_time=%li\n",tPrm,tTrack);
+		return false;
 	}
 //======================================================= check parameters
 	FILE* f=xopen(prmFile,"rt");
-	trackType=getTrackType(fname);
+	trackType=getTrackType(inFname);
 	bool fg=true;
 	char bver[80]="";
 	for(;fgets(b,sizeof(b),f)!=0;){
@@ -50,12 +57,11 @@ bool bTrack::check(const char *fname){
 		char *s2=strtok(0,"=\r\n");
 		if(b[0]=='#') continue;
 
-
 		else if(strcmp(s1,"version")==0){
 			strcpy(bver,s2);
 		}
 		if(strcmp(s1,"input"    )==0){
-			if(strcmp(s2,fname)) {
+			if(strcmp(s2,inFname)) {
 				failParam("input");  fg=false; break;}}
 		else if(strcmp(s1,"bin")==0){
 			if(atoi(s2)!=binSize) {failParam("bin");  fg=false; break;}
@@ -71,28 +77,87 @@ bool bTrack::check(const char *fname){
 	return fg;
 }
 
+//=============================================================================
+//=============================================================================
+void  Track::getPath(char*b, char *path1, char *path2){
+	getPath(b,path1);
+	strcat(b,path2);
+}
+void Track::getPath(char*b, char *pathx){
+	if(path[0]=='~' || path[0]=='/') strcpy(b,path);
+	strcat(strcpy(b,pathx),path);
+}
+
+void Track::makePath(char* pathx){
+	char b[TBS];
+	getPath(b,pathx);
+	makeDir(b);
+}
+void Track::makeFname(char *b, char* pathx){
+	getPath(b,pathx);
+	strcat(b,name);
+}
+
+void Track::makeFname(char *b, char *path1, char *path2, const char *ext){
+	if(path[0]=='~' || path[0]=='/') strcpy(b,fname);
+	else 	snprintf(b,TBS,"%s%s%s.%s", path1, path2, name, ext);
+}
+
+void Track::makeFname(char *b, char* pathx, const char* ext){
+	makeFname(b,pathx);
+	strcat(strcat(b,"."),ext);
+}
+void Track::makeInputFname(char *b){
+	if(path[0]=='~' || path[0]=='/') strcpy(b,fname);
+	else 	snprintf(b,	TBS,"%s%s", trackPath, fname);
+}
+
+//=================== extended fname like <fname_ee.ext>
+void Track::makeExtFname(char *b, char* pathx, const char *ee, const char* ext){
+	snprintf(b,TBS,"%s%s%s_%s.%s", pathx, path, name,ee, ext);
+}
+void Track::makeExtFname(char *b, char* pathx, int k, const char* ext){
+	snprintf(b,TBS,"%s%s%s_%i.%s", pathx, path, name, k, ext);
+}
+
+//=============================================================================
+void Track::makePrmFname(char *prmFile){
+	makeFname(prmFile, profPath,PRM_EXT);
+}
+void Track::makeBinFname(char *binFile){
+	makeFname(binFile,  profPath,BPROF_EXT);
+}
 
 
 
 //=============================================================================
 bool bTrack::readPrm(){
-	char prmFile[4096], b[4096];
-	makeFileName(prmFile,profPath, name, PRM_EXT);
+	char prmFile[TBS], b[TBS];
+	makePrmFname(prmFile);
+
 	if(!fileExists(prmFile)) return false;
 	errStatus="read bytes";
 	FILE *f=xopen(prmFile,"rt");
 	for(;fgets(b,sizeof(b),f)!=0;){
-		char *s1=strtok(b,"=");
-		char *s2=strtok(0,"=\r\n");
-		if(     strcmp(s1,"min"    )==0) minP=atof(s2);
-		else if(strcmp(s1,"max"    )==0) maxP=atof(s2);
-		else if(strcmp(s1,"average")==0) av0 =atof(s2);
-		else if(strcmp(s1,"stdDev" )==0) sd0 =atof(s2);
-		else if(strcmp(s1,"strand" )==0) hasCompl=atoi(s2);
+		char* s=trim(b);
+		if(*s==0) continue;
+		if(*s=='#') continue;
+		char *s1=strtok(s,"="); 		if(s1==0 || *s1==0) continue;
+		char *s2=strtok(0,"=\r\n# ");	if(s2==0 || *s2==0) continue;
+		if(     strcmp(s1,"min"   )==0) minP=atof(s2);
+		else if(strcmp(s1,"max"   )==0) maxP=atof(s2);
+		else if(strcmp(s1,"stdDev")==0) sd =atof(s2);
+		else if(strcmp(s1,"strand")==0) hasCompl=atoi(s2);
 		else if(strcmp(s1,"scale" )==0)  scaleFactor  =atof(s2);
 		else if(strcmp(s1,"total" )==0)  total  =atof(s2);
+
+		else if(strcmp(s1,"nativeMin")==0)  nativeMin  =atof(s2);
+		else if(strcmp(s1,"nativeMax")==0)  nativeMax  =atof(s2);
+		else if(strcmp(s1,"nativeAv" )==0)  nativeAv  =atof(s2);
+		else if(strcmp(s1,"nativeSd" )==0)  nativeSd  =atof(s2);
+
 	}
-	if(sd==NAN) sd=1;
+	if(sd==NAN || sd==0) sd=1;
 	fclose(f);
 	return true;
 }
@@ -106,8 +171,9 @@ void BuffArray::init(Track *bbt, bool cmpl, bool wrr){		// Prepare
 
 
 	getMem0(bval,binBufSize+2*wProfSize, "Read bTrack");
-	char binFile[4096];
-	makeFileName(binFile,profPath, bt->name, BPROF_EXT);
+	char binFile[TBS];
+	bbt->makeBinFname(binFile);
+//	makeFileName0(binFile,profPath, bt->name, BPROF_EXT);
 	if(wrr){													// Track for write
 		f=xopen(binFile,"w+b"); if(f==0) return;
 		for(int i=0; i<binBufSize; i++) bval[i]=NA;			// Fill the file with NA
@@ -215,7 +281,7 @@ FloatArray::FloatArray(){
 	getMem0(val,binBufSize+2*wProfSize, "Read bTrack");
 	char binFile[4096];
 	unsigned int tt=mtime()+rand();	// generate filename
-	sprintf(binFile,"%x.tmp",tt);
+	snprintf(binFile, sizeof(binFile), "%x.tmp",tt);
 	fname=strdup(binFile);
 	f=xopen(binFile,"w+b"); if(f==0) return;
 }
@@ -287,10 +353,10 @@ float FloatArray::add(int pos, float v){
 //=============================================================================
 bool bTrack::readBin(){
 	//============================================= get file length
-	char b[1024];
+	char binFile[TBS];
 	if(bytes==0) bytes=new BuffArray();
-	makeFileName(b,profPath, name, BPROF_EXT);
-	if(!fileExists(b)) return false;
+	makeBinFname(binFile);
+	if(!fileExists(binFile)) return false;
 	bytes->init(this,0,0);
 	if(hasCompl){
 		if(cbytes==0) cbytes=new BuffArray();
@@ -309,17 +375,33 @@ bool Track::openTrack(const char *fname){
 	}
 	return true;
 }
-bool bTrack::readTrack(const char *fname){
-	for(;*fname==DERIV; fname++) {
+
+void bTrack::setName(const char *inFname){
+	char b[TBS];
+	fname=strdup(inFname);
+	strcpy(b,fname);
+	char *s=strrchr(b,'/');
+	if(s!=0) {
+		s[1]=0;
+		path=strdup(b); //============= PATH CONTAINS '/'
+		if((progType & (BN)) ==0){	//========= binner not require creating profPath
+			makePath(profPath);
+		}
+	}
+	else
+		path=strdup("");
+	name=strdup(getFnameWithoutExt(b,inFname));
+}
+
+bool bTrack::readTrack(const char *inFname){
+	setName(inFname);
+	for(;*inFname==DERIV; inFname++) {
 		deriv++;
 	}
-	char b[4096];
-	name=strdup(getFnameWithoutExt(b,fname));
 	//============================================== Read params
 	if(!readPrm()) return false;
 	if(!readBin()) return false;
 	//============================================== Read bytes
-	av=sd=nObs=0;
 	errStatus=0;
 	return true;
 }
@@ -402,11 +484,10 @@ bool Track::makeIntervals(){
 	ivs->fin();
 	if(ivsC->nIv) ivsC->fin();
 
-
 	int l0=profileLength; if(hasCompl) l0*=2;
 	int l1=ivs->totLength; if(hasCompl) l1+=ivsC->totLength;
-	av0=av0*l0/l1;
-	sd0=sd0*sqrt(l0/l1);
+//	av0=av0*l0/l1;
+	sd=sd*sqrt(l0/l1);
 	return true;
 }
 
@@ -425,7 +506,9 @@ int Track::getRnd(bool cmpl){
 //========================================================================
 void Track::clear(){
 	ivs->clear();
-	if(name) xfree(name,"clear btrack");
+	if(name ) xfree(name ,"clear btrack");
+	if(fname) xfree(fname,"clear btrack");
+	if(path ) xfree(path ,"clear btrack");
 }
 
 
@@ -477,13 +560,15 @@ int  Track::countZero(int pos, bool cmpl){
 
 void Track::init(){
 	name=0;
+	fname=0;
+	path=strdup("");
 	profWindow=0;
 	autoCorr=0;
 	avWindow=sdWindow=0;// mean and stdDev in current window
 	ivs =new IVSet();
 	ivsC=new IVSet();
 	av=sd=minP=maxP=nObs=0;
-	av0=sd0=total=0;
+//	av0=sd0=total=0;
 	deriv=0;
 	trackType=0;
 	projCoeff=0;
@@ -525,7 +610,7 @@ double bTrack::getVal(BINVAL b){
 	if(b==NA){
 			if(NAFlag && trackType!=BED_TRACK){
 			double x=rExp();
-			double y=x*sd0*noiseLevel;
+			double y=x*sd*noiseLevel;
 			return y;
 		}
 		else return 0;
@@ -552,12 +637,14 @@ int    bTrack::getBVal(int pos, int cmpl){
 double bTrack::getValue(int pos, int cmpl){
 	BINVAL b=getBVal(pos,cmpl);
 	if(b==NA){
-			if(NAFlag && trackType!=BED_TRACK){
+		if(NAFlag && trackType!=BED_TRACK){
 			double x=rExp();
-			double y=x*sd0*noiseLevel;
+			double y=x*sd*noiseLevel;
 			return y;
 		}
-		else return 0;
+		else {
+			return 0;
+		}
 	}
 	if(b <= threshold  && b >= - threshold) return 0;
 	double x=b/scaleFactor+minP;
@@ -569,7 +656,7 @@ double bTrack::getValue(int pos, int cmpl){
 //====================================== calculate projection to orthogonal subspace
 void Track::ortProject(){
 	projCoeff=0;
-	if(pcorProfile==0) return;
+	if(confounder==0) return;
 	double xy=0, xx=0;
 	for(int i=0; i<profileLength; i++){
 		double x,y;
@@ -626,7 +713,7 @@ double * Track::getProfile(double *prof, int pos, int l, bool cmpl){ //====== po
 	//========================================= Constant window => add noise
 	a=aa;
 	if(sdWindow<=0){
-		sdWindow=sd0*1.e-2;
+		sdWindow=sd*1.e-2;
 	}
 	else{sdWindow/=l; sdWindow=sqrt(sdWindow);}
 	//======================================== fill flanks
@@ -651,10 +738,10 @@ double * Track::getProfile(int pos, bool cmpl){ //====== pos - profile position;
 //======================================================
 
 
-void Track::writeAuto(){
+void Track::writeAuto(char * outPt){
 	if(autoCorr==0) return;
-	char b[4096];
-	sprintf(b,"%s%s.auto",resPath,name);
+	char b[TBS];
+	makeFname(b,resPath,outPt,"auto");
 	FILE *f=xopen(b,"wt");
 	for(int j=0; j<profWithFlanksLength; j++){
 		int k=(j + profWithFlanksLength / 2 ) % profWithFlanksLength;
@@ -677,7 +764,7 @@ void Model::readModel(const char *fnam){
 	char bb[2048];
 	char b[2048];
 	name=strdup(getFnameWithoutExt(b,fnam));
-	makeFileName(bb,trackPath, fnam);
+	makeFileName(bb, sizeof(bb),trackPath, fnam);
 	FILE *f=fopen(bb,"r");
 	*bb=0;
 	for(char *s; (s=fgets(b,sizeof(b),f))!=0;){

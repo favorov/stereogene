@@ -31,8 +31,7 @@ OBJS=$(od)/FourierCorr.o \
 	$(od)/util.o \
 	$(od)/mixfft.o \
 	$(od)/parsePrm.o \
-	$(od)/parse_genes.o \
-	$(od)/householder.o \
+	$(od)/main_parseGenes.o \
 	$(od)/data.o \
 	$(od)/sg_utils.o \
 	
@@ -61,8 +60,7 @@ $(od)/trackPrepare.o: trackPrepare.cpp track_util.h util.h sg_util.h
 $(od)/util.o: util.cpp track_util.h util.h sg_util.h
 $(od)/mixfft.o: mixfft.c
 $(od)/parsePrm.o: parsePrm.cpp track_util.h util.h sg_util.h
-$(od)/parse_genes.o: parse_genes.cpp track_util.h util.h sg_util.h
-$(od)/householder.o: householder.cpp track_util.h util.h sg_util.h
+$(od)/main_parseGenes.o: main_parseGenes.cpp track_util.h util.h sg_util.h
 $(od)/data.o: data.cpp track_util.h util.h sg_util.h
 $(od)/sg_utils.o: sg_utils.cpp track_util.h util.h sg_util.h
 

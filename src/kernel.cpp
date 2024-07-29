@@ -472,8 +472,9 @@ void XYCorrelation::makeSpectrum()	{
 	float *spX=fx->getSpectrum();
 	float *spY=fy->getSpectrum();
 	for(int i=0; i<length; i++){
-		spectrumX[i] += spX[i];
-		spectrumY[i] += spY[i];
+		spectrumX[i] += spX[i]/profileLength;
+		spectrumY[i] += spY[i]/profileLength;
+//deb("spect=%e %e          %e %e", spX[i],spY[i],spectrumX[i],spectrumY[i]);
 	}
 }
 
