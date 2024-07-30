@@ -1,4 +1,4 @@
-exename=main_smooth
+exename=Smoother
 od=./obj
 
 srcdirlist=.

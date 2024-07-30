@@ -105,11 +105,11 @@ void *xmalloc(size_t n, const char * err);
 void *xrealloc(void *a, size_t n, const char * err);
 void zfree(void *a, const char* b);
 //============================================ MACROS
-#define getMem0(a,n,err)  {if(a==0) a=(typeof a)xmalloc((n+100)*sizeof(*a),err);}
-#define getMem(a,n,err)   {a=(typeof a)xmalloc((n+100)*sizeof(*a),err);}
-#define getMemZ(a,n,err)  {a=(typeof a)xmalloc((n+100)*sizeof(*a),err); memset(a,0,n*sizeof(*a));}
+#define getMem0(a,n,err)  {if(a==0) a=(__typeof__(a))xmalloc((n+100)*sizeof(*a),err);}
+#define getMem(a,n,err)   {a=(__typeof__(a))xmalloc((n+100)*sizeof(*a),err);}
+#define getMemZ(a,n,err)  {a=(__typeof__(a))xmalloc((n+100)*sizeof(*a),err); memset(a,0,n*sizeof(*a));}
 #define del(a)  {delete a; a=0;}
-#define realocMem(a,n,err)  {a=(typeof a)xrealloc(a,(n+100)*sizeof(*a),err);}
+#define realocMem(a,n,err)  {a=(__typeof__(a))xrealloc(a,(n+100)*sizeof(*a),err);}
 #define xfree(a,b) 		 {zfree(a,b); a=0;}
 #define zeroMem(a,n) 	 {memset(a,0,n*sizeof(*a));}
 //#define xmemcpy(dest,pds, src, psrc, n) {memcpy(dest+(pds)*sizeof(*dest), src+(psrc)*sizeof(*src),(n)*sizeof(*src));}

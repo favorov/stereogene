@@ -1,9 +1,3 @@
-#****************************************************************************#
-#SeSiMCMC. Looking - for - motifs by MCMC project. (c) A. Favorov 2001
-#$Id: gibbslfm.mak 1034 2009-04-17 14:07:27Z favorov $
-#****************************************************************************#
-
-
 exename=Projector
 od=./obj
 
@@ -37,10 +31,10 @@ OBJS=$(od)/FourierCorr.o \
 	$(od)/util.o \
 	$(od)/mixfft.o \
 	$(od)/parsePrm.o \
-	$(od)/projector.o \
 	$(od)/data.o \
 	$(od)/sg_utils.o \
-	$(od)/main_proj.o \
+	$(od)/projector.o \
+	$(od)/main_proj.o 
 	
 objs:$(OBJS)
 
@@ -67,7 +61,7 @@ $(od)/trackPrepare.o: trackPrepare.cpp track_util.h util.h sg_util.h
 $(od)/util.o: util.cpp track_util.h util.h sg_util.h
 $(od)/mixfft.o: mixfft.c
 $(od)/parsePrm.o: parsePrm.cpp track_util.h util.h sg_util.h
-$(od)/projector.o: projector.cpp track_util.h util.h sg_util.h
+#$(od)/projector.o: projector.cpp track_util.h util.h sg_util.h
 $(od)/data.o: data.cpp track_util.h util.h sg_util.h
 $(od)/sg_utils.o: sg_utils.cpp track_util.h util.h sg_util.h
 $(od)/main_proj.o: main_proj.cpp track_util.h util.h sg_util.h
