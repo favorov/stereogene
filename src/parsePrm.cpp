@@ -86,7 +86,7 @@ char* NamedRes::printValue(char *buf){
 };
 
 int NamedRes::printValue(FILE *out){
-	if(type==0) return fprintf(out,name);
+	if(type==0) return fprintf(out,"%s",name);
 	if(f) return fprintf(out, "%s", f());
 	switch(type){
 	case PRM_STRING:{

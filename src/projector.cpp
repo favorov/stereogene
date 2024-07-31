@@ -101,7 +101,7 @@ void copyCfg(FILE *cfg){
 			if(keyCmp(s,"profPath" ) == 0) {fprintf(cfg,"profPath=%s\n" ,confProfPath  );continue;}
 			if(keyCmp(s,"resfPath" ) == 0) {fprintf(cfg,"profPath=%s\n" ,confProfPath  );continue;}
 		}
-	fprintf(cfg,b);
+	fprintf(cfg,"%s",b);
 	}
 	fprintf(cfg,"\n\n");
 	fclose(old);

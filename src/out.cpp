@@ -463,7 +463,7 @@ void printR(int type){
 	fprintf(f," plot(density(bkg[[1]]),main='Distribution of correlations%s',\n",sub);
 			fprintf(f,	"      xlim=c(-1,1), ylim=c(0, y_lim1),\n");
 			fprintf(f,	"      xlab='correlation coefficient',ylab='density',  col='red', \n");
-			fprintf(f,cex);
+			fprintf(f,"%s",cex);
 	fprintf(f," legend(-1, y_lim1, legend=c('Foreground','Background'),\n");
     fprintf(f,"     col=c('blue','red'), lty=1:2, cex=0.5)\n");
 	if(writeDistr==DISTR_SHORT)
@@ -480,7 +480,7 @@ void printR(int type){
 		if(XYCorrScale!=1) snprintf(b,sizeof(b), "%s*%i",dens,XYCorrScale); else strcpy(b,dens);
 		fprintf(f," plot(dist$dist/1000, dist$Fg, type='l', main='Cross-correlation function%s',\n",sub);
 		fprintf(f,"      xlim=x_lim2, xlab='Distance (kb)',ylab='%s',col='blue',\n",b);
-		fprintf(f,cex);
+		fprintf(f,"%s",cex);
 		fprintf(f," legend(x_lim2[1], y_lim2, legend=c('Foreground','Background'),\n");
 		fprintf(f,"     col=c('blue','red'), lty=1:2, cex=0.5)\n");
 
@@ -520,17 +520,17 @@ void printR(int type){
 		fprintf(f,"ylim2=max(max(Auto1$V2), max(Auto2$V2))\n");
 		fprintf(f," plot  (Auto1$V1/1000,Auto1$V2,type=\'l\', main='Autocorrelation\\n%s,\\n%s',\n",track1->name,track2->name);
 		fprintf(f,"      xlim=x_lim2, ylim=c(ylim1,ylim2),  xlab='distance (kb)', ylab='autocorr',col=\'blue\',\n");
-		fprintf(f,cex);
+		fprintf(f,"%s",cex);
 		fprintf(f," lines  (Auto2$V1/1000,Auto2$V2,\n");
 		fprintf(f,"      xlim=x_lim2, ylim=c(ylim1,ylim2),  xlab='distance (kb)', ylab='autocorr',col=\'red\',\n");
-		fprintf(f,cex);
+		fprintf(f,"%s",cex);
 		fprintf(f," legend(x_lim2[1], 1, legend=c('%s','%s'),\n",track1->name,track2->name);
 	    fprintf(f,"     col=c('blue','red'), lty=1:2, cex=0.5)\n");
 
 
 	}
 	fprintf(f," par( old.par ) \n\n");
-	if(type==PDF || type==	HTML) fprintf(f," dev.off() \n");
+	if(type==PDF || type==	HTML) fprintf(f,"%s"," dev.off() \n");
 
 	fclose(f);
 
