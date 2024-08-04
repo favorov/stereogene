@@ -157,10 +157,10 @@ extern int nHelpLines;
 extern int inputErr;		// flag: if input track has errors
 extern int inputErrLine;	// Error line in the input
 
+extern char curOutPath 	[1024];	// current output path
+extern char curRepPath 	[1024];  //current path to the report
 extern char outFile    	[TBS];	// output filename
-extern char curOutFname	[TBS];	// current output file without ext
-extern char curOutPath 	[TBS];	// current output path
-extern char curRepPath 	[TBS];  //current path to the report
+extern char curOutFname	[1024];	// current output file without ext
 extern char curReport  	[TBS];	// fille pathname for reports relative to curOutPath
 extern char reportPDF	[TBS];	// PDF  report
 extern char reportHTML	[TBS];	// HTML report
@@ -866,7 +866,7 @@ struct Param{
 	void printDescr();
 	int readVal(char *s);
 	int readEnum(char *s);
-	char* printParamValue(char *buf);
+	char* printParamValue(char *buf, int siz);
 	int   printParamValue(FILE *out);
 	char* printParamXML(char *buf, int siz);
 };
@@ -881,7 +881,7 @@ struct NamedRes{
 	NamedRes(const char *nm, char **v);
 	NamedRes(const char *nm, char* (*ff)());
 	NamedRes(const char *nm);
-	char* printValue(char *buf);
+	char* printValue(char *buf, int siz);
 	int printValue(FILE* f);
 };
 

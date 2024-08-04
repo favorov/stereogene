@@ -33,10 +33,10 @@ char *resPath	=strdup("");
 char *reportPath=0;	        // path to the report files
 const char*defaultConfig="stereogene.cfg";
 
+char curOutPath [1024];	// current output path
+char curRepPath [1024];
+char curOutFname[1024];	// current output file without ext
 char outFile    [TBS];	// common pathname for outputs
-char curOutFname[TBS];	// current output file without ext
-char curOutPath [TBS];	// current output path
-char curRepPath [TBS];
 char curReport  [TBS];	// fille pathname for reports relative to curOutPath
 char reportPDF	[TBS];	// PDF  report
 char reportHTML	[TBS];	// HTML report

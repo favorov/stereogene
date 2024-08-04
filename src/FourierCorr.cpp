@@ -363,7 +363,8 @@ void calcAutoCorr(){
 //================================================================================================
 //================================================================== Make name for outfile
 char * makeOutFilename(Track *tr1, Track *tr2){
-	char p1Fname[TBS], p2Fname[TBS];
+	const int nameSize=256;
+	char p1Fname[nameSize], p2Fname[nameSize];
 
 	if(strchr(tr1->name,'~'))
 		snprintf(p1Fname, sizeof(p1Fname),"(%s)",tr1->name);
@@ -372,7 +373,7 @@ char * makeOutFilename(Track *tr1, Track *tr2){
 		snprintf(p2Fname, sizeof(p2Fname),"(%s)",tr2->name);
 	else strcpy(p2Fname, tr2->name);
 	if(aliases){
-		char p1F[TBS], p2F[TBS]; strcpy(p1F,p1Fname); strcpy(p2F,p2Fname);
+		char p1F[nameSize], p2F[nameSize]; strcpy(p1F,p1Fname); strcpy(p2F,p2Fname);
 		aliases->replace(p1Fname);
 		aliases->replace(p2Fname);
 		writeLog("Replace out name %s -> %s\n",p1F, p1Fname);
@@ -387,7 +388,7 @@ char * makeOutFilename(Track *tr1, Track *tr2){
 	repFile=outFile;
 	if(reportPath){
 		snprintf(curRepPath,sizeof(curRepPath), "%s%s",curOutPath,reportPath);
-		makeDir(curRepPath);
+		makeDir (curRepPath);
 		snprintf(curReport,sizeof(curReport), "%s%s",reportPath,curOutFname);
 	}
 	else strcpy(curReport, curOutFname);

@@ -157,7 +157,7 @@ void addLCProf(double *f, int pos){
 
 //===================== Write the local correlation into the bedGraph file =====
 void writeLC(){
-	char bf[TBS];
+	char bf[TBS+128];
 	LCExists=outLC && dHist.n[0] && dHist.n[1];
 	if(dHist.n[0]==0 || dHist.n[1]==0){
 		verb("\nLocal Correlations contains no data\n");

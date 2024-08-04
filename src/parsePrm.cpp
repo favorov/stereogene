@@ -59,7 +59,7 @@ char zfdsgfdsID[50];
 char * printId(){snprintf(zfdsgfdsID,sizeof(zfdsgfdsID), "%08lx",id); return zfdsgfdsID;}
 
 
-char* NamedRes::printValue(char *buf){
+char* NamedRes::printValue(char *buf, int siz){
 	if(type==0) return strcpy(buf,name);
 	if(f) return f();
 	switch(type){
@@ -70,16 +70,16 @@ char* NamedRes::printValue(char *buf){
 		break;}
 	case PRM_DOUBLE:
 		{double *d=(double *)value;
-		if(*d==FNA) snprintf(buf,sizeof(buf),"NA");
-		else if(abs(*d) > 0.1) snprintf(buf,sizeof(buf),"%.3f",*d);
-		else if(abs(*d) > 0.01) snprintf(buf,sizeof(buf),"%.4f",*d);
-		else if(abs(*d) > 0.001) snprintf(buf,sizeof(buf),"%.5f",*d);
+		if(*d==FNA) snprintf(buf,siz,"NA");
+		else if(abs(*d) > 0.1) snprintf(buf,siz,"%.3f",*d);
+		else if(abs(*d) > 0.01) snprintf(buf,siz,"%.4f",*d);
+		else if(abs(*d) > 0.001) snprintf(buf,siz,"%.5f",*d);
 		else snprintf(buf,sizeof(buf),"%.2e",*d);
 		break;}
 	case PRM_INT:
 		{int *k=(int *)value;
-		if(*k==NA) snprintf(buf,sizeof(buf),"NA");
-		else snprintf(buf,sizeof(buf),"%i",*k);
+		if(*k==NA) snprintf(buf,siz,"NA");
+		else snprintf(buf,siz,"%i",*k);
 		break;}
 	}
 	return buf;
@@ -383,7 +383,7 @@ void Param::setVal(){
 
 
 //===========================================================================================================
-char *Param::printParamValue(char *buf){
+char *Param::printParamValue(char *buf, int siz){
 	strcpy(buf,"NONE");
 	switch(type){
 	case PRM_INT: 		sprintf(buf,"%i",*(int *)prm); break;
@@ -392,7 +392,7 @@ char *Param::printParamValue(char *buf){
 		char *s=*(char**)prm;
 		if(s) sprintf(buf,"%s",s);} break;
 	case PRM_ENUM:
-		snprintf(buf,sizeof(buf),"%s",getNamebyVal(enums,*(int*)prm)); break;
+		snprintf(buf,siz,"%s",getNamebyVal(enums,*(int*)prm)); break;
 	case PRM_FG: 		sprintf(buf,"%i",(*(int*)prm) ? 1:0); break;
 	case PRM_PATH:		if(prm){
 		char *s=*(char**)prm;
@@ -425,7 +425,7 @@ int Param::printParamValue(FILE *out){
 
 char *Param::printParamXML(char *buf, int siz){
 	char bb[4096];
-	snprintf(buf,siz,"%s=\"%s\"",name,printParamValue(bb));
+	snprintf(buf,siz,"%s=\"%s\"",name,printParamValue(bb,siz));
 	return buf;
 }
 

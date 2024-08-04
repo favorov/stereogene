@@ -500,7 +500,7 @@ char* makeFileName(char *b, int siz, const char *path, const char*fname){
 }
 //================= create filename using path and name
 char *makeFileName(char *b, int siz, const char *path, const char*fname, const char*ext){
-	char bb[TBS];
+	char bb[TBS+256];
 	makeFileName(bb,sizeof(bb), path,fname);
 	char *s=strrchr(bb,'/'); if(s==0) s=bb;
 	char *sp=strrchr(s,'.'); if(sp) *sp=0;

@@ -368,7 +368,7 @@ void printR(){
 
 void printR(int type){
 
-	char b[4096], fname[4096],rFile[4096];
+	char b[TBS], fname[TBS],rFile[TBS];
 	int pH=plotH;
 	if(type==R)		strcat(strcpy(rFile,outFile),".r");
 	if(type==PDF)	strcat(strcpy(rFile,outFile),"_pdf.r");
@@ -440,22 +440,22 @@ void printR(int type){
 	fprintf(f,"plot(x = 0:1, y = 0:1,bty = 'n',type = 'n', xlab='',ylab='',\n");
 	fprintf(f,"      xaxt = 'n', yaxt = 'n', xlim=c(0,1), ylim=c(0,2), main='Results')\n\n");
 	fprintf(f," y=2; dy=0.2\n\n");
-	printPDFRaw(f,"Output files",fname);
+	printPDFRaw(f,"Output files"           ,fname);
 	printPDFRaw(f,"n Foreground comparisons",nFg);
 	printPDFRaw(f,"n Background comparisons",nBkg);
 //	printPDFRaw(f,"Foregr. total correlation"       ,totCorr);
-	printPDFRaw(f,"Foregr.  correlation"     ,avFg);
+	printPDFRaw(f,"Foregr.  correlation"    ,avFg);
 	printPDFRaw(f,"Foregr. correlation std.dev"   ,sdFg);
 //	printPDFRaw(f,"Backgr. total correlation"       ,BgTotal);
-	printPDFRaw(f,"Backgr.  correlation"     ,avBg);
-	printPDFRaw(f,"Backgr. correlation std.dev"   ,sdBg);
-	printPDFRaw(f,"Mann-Witney p-value"    ,mannW_p);
+	printPDFRaw(f,"Backgr.  correlation"      ,avBg);
+	printPDFRaw(f,"Backgr. correlation std.dev",sdBg);
+	printPDFRaw(f,"Mann-Witney p-value"     ,mannW_p);
 	}
 
 	//	===============================================================================================
 	//	===============================================================================================
 	//	===============================================================================================
-	char sub[1024];
+	char sub[TBS+100];
 	snprintf(sub,sizeof(sub),"\\n%s",fname);
 
 	const char* cex="      cex.axis = 0.8,  cex.lab = 1,  cex.main = 1,lwd=2) \n";
@@ -468,7 +468,7 @@ void printR(int type){
     fprintf(f,"     col=c('blue','red'), lty=1:2, cex=0.5)\n");
 	if(writeDistr==DISTR_SHORT)
 		fprintf(f," lines(density(fg[[1]]), col='blue', lwd=2) \n");
-	else{
+	else if(writeDistr==DISTR_DETAIL){
 		fprintf(f," lines(density(fg[,4]), col='blue', lwd=2) \n");
 	}
 	fprintf(f," #plot line for chomosome \n");
@@ -535,7 +535,7 @@ void printR(int type){
 	fclose(f);
 
 	if(Rscript && (type==PDF || type==	HTML)){
-		char b[4096], cwd[4096];
+		char b[TBS+256], cwd[TBS];
 		char *rf=strrchr(rFile,'/');
 		if(rf) rf=rf+1;
 		else   rf=rFile;
@@ -608,7 +608,7 @@ void printParams(FILE* f){
 	fprintf(f,"%08lx\t%s",id,version);
 	for(int i=0; pparams[i] ; i++){
 		if(pparams[i]->printFg && (pparams[i]->prog&progType))
-			fprintf(f,"\t%s",pparams[i]->printParamValue(b));
+			fprintf(f,"\t%s",pparams[i]->printParamValue(b, sizeof(b)));
 	}
 	fprintf(f,"\n");
 }
@@ -616,7 +616,7 @@ void printXMLparams(FILE *f){
 	char b[4096];
 	for(int i=0; pparams[i] ; i++){
 		if(pparams[i]->printFg && (pparams[i]->prog&progType))
-			fprintf(f,"%s=\"%s\" ",pparams[i]->name,pparams[i]->printParamValue(b));
+			fprintf(f,"%s=\"%s\" ",pparams[i]->name,pparams[i]->printParamValue(b, sizeof(b)));
 	}
 }
 void printStatHeader(FILE *f){
@@ -635,7 +635,7 @@ void printStatHeader(FILE *f){
 
 
 void printXML(FILE *f){
-	char b[1024];
+	char b[TBS];
 	fprintf(f,"<run ");
 	int kk=0;
 	for(int i=0; results[i]; i++){
@@ -645,12 +645,12 @@ void printXML(FILE *f){
 			kk++;
 			fprintf(f,"<%s ",results[i]->name); continue;
 		}
-		fprintf(f," %s=\"%s\"",results[i]->name,results[i]->printValue(b));
+		fprintf(f," %s=\"%s\"",results[i]->name,results[i]->printValue(b,sizeof(b)));
 	}
 	fprintf(f,"/>\n\t<prm ");
 	for(int i=0; pparams[i] ; i++){
 		if(pparams[i]->printFg && (pparams[i]->prog&progType))
-			fprintf(f,"%s=\"%s\" ",pparams[i]->name, pparams[i]->printParamValue(b));
+			fprintf(f,"%s=\"%s\" ",pparams[i]->name, pparams[i]->printParamValue(b,sizeof(b)));
 	}
 	fprintf(f,"/>\n</run>\n");
 }
