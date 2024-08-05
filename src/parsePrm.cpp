@@ -70,16 +70,16 @@ char* NamedRes::printValue(char *buf, int siz){
 		break;}
 	case PRM_DOUBLE:
 		{double *d=(double *)value;
-		if(*d==FNA) snprintf(buf,siz,"NA");
-		else if(abs(*d) > 0.1) snprintf(buf,siz,"%.3f",*d);
-		else if(abs(*d) > 0.01) snprintf(buf,siz,"%.4f",*d);
+		if(*d==FNA)              snprintf(buf,siz,"NA");
+		else if(abs(*d) > 0.1)   snprintf(buf,siz,"%.3f",*d);
+		else if(abs(*d) > 0.01)  snprintf(buf,siz,"%.4f",*d);
 		else if(abs(*d) > 0.001) snprintf(buf,siz,"%.5f",*d);
-		else snprintf(buf,sizeof(buf),"%.2e",*d);
+		else 					 snprintf(buf,siz,"%.2e",*d);
 		break;}
 	case PRM_INT:
 		{int *k=(int *)value;
-		if(*k==NA) snprintf(buf,siz,"NA");
-		else snprintf(buf,siz,"%i",*k);
+		if(*k==NA) 				snprintf(buf,siz,"NA");
+		else 					snprintf(buf,siz,"%i",*k);
 		break;}
 	}
 	return buf;

@@ -123,14 +123,14 @@ void Projector(){
 	FILE * cfg=xopen(b,"wt");
 	snprintf(confDir,sizeof(confDir), "%s.proj",confBTrack->name);
 
-	makeConfDir(confTrackPath, trackPath, confBTrack->path, confBTrack->name , "trackPath", cfg);
-	makeConfDir(confProfPath , profPath, confBTrack->path , confBTrack->name, "profPath" , cfg);
-	makeConfDir(confResPath  ,resPath, confBTrack->path  , confBTrack->name, "resPath"  , cfg);
+	makeConfDir(confTrackPath, trackPath, confBTrack->path , confBTrack->name , "trackPath", cfg);
+	makeConfDir(confProfPath , profPath , confBTrack->path , confBTrack->name , "profPath" , cfg);
+	makeConfDir(confResPath  , resPath  , confBTrack->path , confBTrack->name , "resPath"  , cfg);
 
 	if(fileExists(cfgFile)) copyCfg(cfg);
 
 	profPath =confProfPath;
-	prjLog=fopen("projections","w");
+	prjLog=xopen("projections","w");
 	fprintf(prjLog,"confounder=<%s>\n",confounder);
 	fprintf(prjLog,"track\tminVal\tmaxVal\te\tproj_coef\n");
 

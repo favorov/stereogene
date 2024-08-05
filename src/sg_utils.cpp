@@ -233,7 +233,7 @@ BufFile::~BufFile(){
 
 
 void BufFile::init(const char *fname){
-	f=fopen(fname,"rb"); buffer=0;
+	f=xopen(fname,"rb"); buffer=0;
 	getMem0(buffer,SG_BUFSIZ+SG_BUFEXT,"err");
 	int n=fread(buffer,1,SG_BUFSIZ,f);
 	if(n <= 0) {curString=0;}
@@ -422,7 +422,8 @@ void addList(char* fname){
 		FILE *f=0;
 		if(fileExists(fname)) f=xopen(fname,"rt");
 		else{
-			makeFileName(b, sizeof(b), trackPath,fname);
+//			makeFileName(b, sizeof(b), trackPath,fname);
+			makeFileName(b, trackPath,fname);
 			f=xopen(b,"rt");
 		}
 		for(;(s=fgets(b,sizeof(b),f))!=0;){

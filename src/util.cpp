@@ -39,7 +39,7 @@ int isEmpty(const char*buff){
 
 //==============================================================================
 //==============================================================================
-char* lastChar(char *s){
+char *lastChar(char *s){
 	if(s==0 ||*s==0) return 0;
 	return s+strlen(s)-1;
 }
@@ -66,7 +66,7 @@ bool isDouble(const char *s){
 	char b[256]; strcpy(b,s);
 	char *last=lastChar(b);
 	char c=toupper(*last);
-	if(c=='K' || c=='M') last=0;
+	if(c=='K' || c=='M') *last=0;
 
 	char *s0=strtok(b,"eE");
 	char *s1=strtok(0,"");
@@ -191,13 +191,13 @@ int Alias::replace(char *txt){
 //============================================================
 const char *errStatus=0;
 void clearLog(){
-	if(logFileName) fclose(gopen(logFileName,"wt"));
+	if(logFileName) fclose(xopen(logFileName,"wt"));
 }
 
 
 FILE *openLog(){
 	if(logFileName) {
-		FILE *f=gopen(logFileName,"at");
+		FILE *f=xopen(logFileName,"at");
 		if(f!=0) return f;
 		else{
 			fprintf(stderr, "Error in opening log file%s Error code=%i\n", logFileName, errno);
@@ -467,46 +467,54 @@ char* parseTilda(char *b, const char*fname){
 //================ open file with control
 FILE *xopen(const char* fname, const char *t){
 	if(fname==0) errorExit("can\'t open file <null>");
-	FILE* f=gopen(fname,t);
-	if(f==0){
-		char b[2048];
-		errorExit("can\'t open file <%s> (<%s>)",fname, parseTilda(b,fname));
-	}
+	FILE* f=fopen(fname,t);
+	if(f==0) errorExit("can\'t open file <%s>)",fname);
 	return f;
 }
 
-
-FILE *gopen(const char*fname, const char* type){		// open file with parsing ~
-	char b[TBS];
-	return fopen(parseTilda(b,fname),type);
-}
 // remove fucked backslash
 char *correctFname(char* s){
 	char *ss;
 	for(ss=s;*ss;ss++) if(*ss=='\\') *ss='/';
 	return s;
 }
+////================= create filename using path and name
+//char* makeFileName(char *b, int siz, char *path, char*fname){
+//	if(*fname=='~' || *fname=='/') return strcpy(b,fname);
+//	if(*(lastChar(path))=='/')     snprintf(b, siz-1, "%s%s" ,path,fname);
+//	else			               snprintf(b, siz-1, "%s/%s",path,fname);
+//	return b;
+//}
 //================= create filename using path and name
-char* makeFileName(char *b, int siz, const char *path, const char*fname){
-	char fn[TBS]; parseTilda(fn,fname);
-	if(path==0) return strcpy(b,fn);
-	char pt[TBS];
-	parseTilda(pt,path);
-
-	char *ff=fn;
-	if(*(lastChar(pt))=='/') snprintf(b, siz, "%s%s",path,ff);
-	else					 snprintf(b, siz, "%s/%s",path,ff);
+char* makeFileName(char *b, char *path, char*fname){
+	if(*fname=='~' || *fname=='/') path=0;
+	if(path==0) return strcpy(b,fname);
+	strcpy(b,path);
+	if(*(lastChar(b)) != '/') strcat(b,"/");
+	return strcat(b,fname);
+//	if(*(lastChar(path))=='/')     sprintf(b, "%s%s" ,path,fname);
+//	else			               sprintf(b, "%s/%s",path,fname);
 	return b;
 }
 //================= create filename using path and name
-char *makeFileName(char *b, int siz, const char *path, const char*fname, const char*ext){
-	char bb[TBS+256];
-	makeFileName(bb,sizeof(bb), path,fname);
+char *makeFileName(char *b, char *path, char*fname, const char*ext){
+	char bb[TBS];
+	makeFileName(bb,path,fname);
 	char *s=strrchr(bb,'/'); if(s==0) s=bb;
-	char *sp=strrchr(s,'.'); if(sp) *sp=0;
-	snprintf(b,siz, "%s.%s",bb,ext);
-	return b;
+	char *sp=strrchr(s,'.'); if(sp  ) *sp=0;
+	return strcat(strcat(b,"."),ext);
+//	sprintf(b, "%s.%s",bb,ext);
+//	snprintf(b, TBS, "%s.%s",bb,ext);
 }
+////================= create filename using path and name
+//char *makeFileName(char *b, int siz, char *path, char*fname, const char*ext){
+//	char bb[TBS];
+//	makeFileName(bb,sizeof(bb), path,fname);
+//	char *s=strrchr(bb,'/'); if(s==0) s=bb;
+//	char *sp=strrchr(s,'.'); if(sp  ) *sp=0;
+//	snprintf(b, siz-1, "%s.%s",bb,ext);
+//	return b;
+//}
 //=================== extract fname wothout path
 char *getFnameWithoutPath(char *buf, const char *fname){
 	const char *s;
@@ -521,11 +529,11 @@ char *getFnameWithoutExt(char *buf, const char *fname){
 	if(pp) *pp=0;
 	return buf;
 }
-//================ Make Fname without path
-char *MakeFname(char *b, const char*fname, const char*ext){
-	char *s=getFnameWithoutExt(b,fname);
-	return strcat(strcat(s,"."), ext);
-}
+////================ Make Fname without path
+//char *MakeFname(char *b, const char*fname, const char*ext){
+//	char *s=getFnameWithoutExt(b,fname);
+//	return strcat(strcat(s,"."), ext);
+//}
 
 
 //===================== platform independent Make Directory
@@ -547,9 +555,9 @@ int _makeDir(const char * path){
 void makeDir(const char *path){
 	if(path==0 || *path==0) return;
 	char b[TBS];
-	parseTilda(b,path);
-	char *s=b+strlen(b)-1;
-	if(*s=='/') *s=0;
+	strcpy(b,path);
+	char *last=lastChar(b);
+	if(*last=='/') *last=0;
 	for(char *s=b; (s=strchr(s+1,'/'))!=0;){
 		*s=0;
 		if(_makeDir(b))
@@ -579,25 +587,25 @@ void funlockFile(FILE *f){
 
 //=================== Check if given file exists
 bool fileExists(const char *fname){
-	bool fg=false;						// The file do not exist. The header should be writen.
-	FILE *f=gopen(fname,"r");	// check if file exists
+	bool fg=false;				// The file do not exist. The header should be writen.
+	FILE *f=fopen(fname,"r");	// check if file exists
 	if(f!=0) {fg=true; fclose(f);}
 	return fg;
 }
 
 
-//=================== Check if given file exists
-bool fileExists(const char* path, const char *fname){
-	char b[TBS];
-	makeFileName(b, sizeof(b), path,fname);
-	return fileExists(b);
-}
-//==================== check if the file exists
-bool fileExists(const char* path, const char *fname, const char *ext){
-	char b[TBS];
-	makeFileName(b, sizeof(b), path,fname,ext);
-	return fileExists(b);
-}
+////=================== Check if given file exists
+//bool fileExists( char* path,  char *fname){
+//	char b[TBS];
+//	makeFileName(b, sizeof(b), path,fname);
+//	return fileExists(b);
+//}
+////==================== check if the file exists
+//bool fileExists( char* path,  char *fname, const char *ext){
+//	char b[TBS];
+//	makeFileName(b, sizeof(b), path,fname,ext);
+//	return fileExists(b);
+//}
 //====================
 unsigned long getFileTime(const char *fname){
 	struct stat mystat;

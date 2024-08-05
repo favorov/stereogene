@@ -146,7 +146,7 @@ void printStat(){
 		sprintf(b,"%s.tsv",statFileName);
 		fg=fileExists(b);
 		if((outRes & TAB)!=0) {
-			f=gopen(b,"a+t");
+			f=xopen(b,"a+t");
 			if(f!=0) flockFile(f);
 			else {
 				writeLogErr("Can not open file %s\n",statFileName);
@@ -168,7 +168,7 @@ void printStat(){
 		sprintf(b,"%s.tsv",paramsFileName);
 		fg=fileExists(b);
 		if((outRes&TAB)!=0){
-			f=gopen(b,"a+t");
+			f=xopen(b,"a+t");
 			if(f) flockFile(f);
 			else {
 				writeLogErr("Can not open file %s\n",paramsFileName);
@@ -202,7 +202,7 @@ void printStat(){
 		}
 	}
 	if(customKern){
-		FILE*cust=gopen("kernels","a+");
+		FILE*cust=xopen("kernels","a+");
 		fprintf(cust,"%s\t\"%s\"\n", printId(), customKern);
 		fclose(cust);
 	}

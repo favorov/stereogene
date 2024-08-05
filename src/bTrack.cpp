@@ -39,7 +39,8 @@ bool bTrack::check(const char *inFname){
 		return false;
 	}
 	//================= Check modification time
-	makeFileName(b, sizeof(b), trackPath, inFname);
+	makeFileName(b, trackPath, (char*)inFname);
+//	makeFileName(b, sizeof(b), trackPath, (char*)inFname);
 	unsigned long tPrm  =getFileTime(prmFile);
 	unsigned long tTrack=getFileTime(b);
 	if(tPrm < tTrack){
@@ -279,11 +280,11 @@ FloatArray::FloatArray(){
 		getMem0(val,profileLength, "Read bTrack"); return;
 	}
 	getMem0(val,binBufSize+2*wProfSize, "Read bTrack");
-	char binFile[4096];
+	char binFile[TBS];
 	unsigned int tt=mtime()+rand();	// generate filename
 	snprintf(binFile, sizeof(binFile), "%x.tmp",tt);
 	fname=strdup(binFile);
-	f=xopen(binFile,"w+b"); if(f==0) return;
+	f=fopen(binFile,"w+b"); if(f==0) return;
 }
 
 
@@ -764,8 +765,9 @@ void Model::readModel(const char *fnam){
 	char bb[2048];
 	char b[2048];
 	name=strdup(getFnameWithoutExt(b,fnam));
-	makeFileName(bb, sizeof(bb),trackPath, fnam);
-	FILE *f=fopen(bb,"r");
+	makeFileName(bb, trackPath, (char*)fnam);
+//	makeFileName(bb, sizeof(bb),trackPath, (char*)fnam);
+	FILE *f=xopen(bb,"r");
 	*bb=0;
 	for(char *s; (s=fgets(b,sizeof(b),f))!=0;){
 		s=trim(s);

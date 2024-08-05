@@ -170,7 +170,7 @@ void writeLC(){
 	//========================================== Write histograms ===============
 	if(writeDistr) {
 		snprintf(bf,sizeof(bf), "%s.LChist",outFile);
-		FILE *lcHistF=fopen(bf,"wt");
+		FILE *lcHistF=xopen(bf,"wt");
 		NormWHist.print(lcHistF);
 		fclose(lcHistF);
 	}
@@ -267,7 +267,7 @@ void writeBedGr(const char *fname, FloatArray *array, float lTreshold, float rTr
 	char b[TBS];
 	strcpy(b,fname);
 	strcat(strcat(b,"."),BGR_EXT);
-	FILE *f=fopen(b,"w");
+	FILE *f=xopen(b,"w");
 	char bname[TBS];
 	strcpy(bname,outFile);
 	fprintf(f,"track type=bedGraph name=\"%s~%s\" description=\"Local correlation. threshold=%.1f < %f\"\n",

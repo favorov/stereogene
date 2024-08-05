@@ -44,8 +44,9 @@ void Confounder(){
 	//=================================================== Norm
 	confdr->finProfile();
 	//=================================================== Write bedgraph
-	makeFileName(b,sizeof(b), trackPath, confFile, BGR_EXT);
-	f=gopen(b,"wt");
+//	makeFileName(b,sizeof(b), trackPath, confFile, BGR_EXT);
+	makeFileName(b, trackPath, confFile, BGR_EXT);
+	f=xopen(b,"wt");
 	fprintf(f,"track type=bedGraph name=\"%s\" ", confFile);
 	fprintf(f,"description=\"confounder\" \n");
 	for(int i=0; i<nfiles; i++){

@@ -129,7 +129,7 @@ extern int debugFg;
 char *getAttr(char *s0, const char *name, char *buf); // find attribute by name in the string and return attribute value
 char *skipSpace(char *s);		// skip space characters
 char *skipNoSpace(char *s);		// skip non-space characters
-char* skipInt(char *s);
+char * skipInt(char *s);
 char *lastChar(char *s);
 int  readInt(const char* val);
 double readDouble(const char *s);
@@ -146,19 +146,21 @@ int isDirectory(const char *path) ;
 FILE *xopen(const char*, const char*);		// open file if exists, exit otherwise
 FILE *gopen(const char*, const char*);		// open file with parsing ~
 bool fileExists(const char *fname);				// check if the file exists
-bool fileExists(const char* path, const char *fname);				// check if the file exists
-bool fileExists(const char* path, const char *fname, const char *ext); // check if the file exists
+//bool fileExists( char* path,  char *fname);				// check if the file exists
+//bool fileExists( char* path,  char *fname, const char *ext); // check if the file exists
 const char *getExt(const char *fname);					// extract file extension
-char *getFnameWithoutExt(char *buf, const char *fname);
-char *getFnameWithoutPath(char *buf, const char *fname);
 void makeDir(const char *path);
 unsigned long getFileTime(const char *fname);
 char *correctFname(char* s);			// remove fucking MS Widows backslash
 void flockFile(FILE *f);
 void funlockFile(FILE *f);
-char *makeFileName(char *b, int siz,const char *path, const char*fname);	// make filename using path and name
-char *makeFileName(char *b, int siz, const char *path, const char*fname, const char*ext);	// make filename using path, name and extension
-char *MakeFname(char *b, const char*fname, const char*ext); // Make Fname without path and new ext
+//char *makeFileName(char *b, int siz, char *path, char*fname);	// make filename using path and name
+//char *makeFileName(char *b, int siz, char *path, char*fname, const char*ext);	// make filename using path, name and extension
+char *getFnameWithoutExt (char *buf, const char *fname);	// get fname without path & ext
+char *getFnameWithoutPath(char *buf, const char *fname);    // get fname without path
+char *makeFileName(char *b, char *path, char*fname);	// make filename using path and name
+char *makeFileName(char *b, char *path, char*fname, const char*ext);	// make filename using path, name and extension
+//char *MakeFname(char *b, const char*fname, const char*ext); // Make Fname without path and new ext
 
 
 //============================================ Arrays
