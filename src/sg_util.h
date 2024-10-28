@@ -301,7 +301,7 @@ struct FNode{
 
 
 	FNode(Formula* form);
-	char *print(char *b);
+	char *print(char *b, int n);
 	double calc();
 };
 

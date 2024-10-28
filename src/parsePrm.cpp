@@ -65,8 +65,8 @@ char* NamedRes::printValue(char *buf, int siz){
 	switch(type){
 	case PRM_STRING:{
 		char *s=*((char**)value);
-		if(s) sprintf(buf,"%s",s);
-		else  sprintf(buf,"NA");
+		if(s) snprintf(buf,siz,"%s",s);
+		else  snprintf(buf,siz,"NA");
 		break;}
 	case PRM_DOUBLE:
 		{double *d=(double *)value;
@@ -386,17 +386,17 @@ void Param::setVal(){
 char *Param::printParamValue(char *buf, int siz){
 	strcpy(buf,"NONE");
 	switch(type){
-	case PRM_INT: 		sprintf(buf,"%i",*(int *)prm); break;
-	case PRM_DOUBLE: 	sprintf(buf,"%.2g",*(double*)prm); break;
+	case PRM_INT: 		snprintf(buf,siz,"%i",*(int *)prm); break;
+	case PRM_DOUBLE: 	snprintf(buf,siz,"%.2g",*(double*)prm); break;
 	case PRM_STRING: 	if(prm){
 		char *s=*(char**)prm;
-		if(s) sprintf(buf,"%s",s);} break;
+		if(s) snprintf(buf,siz,"%s",s);} break;
 	case PRM_ENUM:
 		snprintf(buf,siz,"%s",getNamebyVal(enums,*(int*)prm)); break;
-	case PRM_FG: 		sprintf(buf,"%i",(*(int*)prm) ? 1:0); break;
+	case PRM_FG: 		snprintf(buf,siz,"%i",(*(int*)prm) ? 1:0); break;
 	case PRM_PATH:		if(prm){
 		char *s=*(char**)prm;
-		if(s) sprintf(buf,"%s",s);} break;
+		if(s) snprintf(buf,siz,"%s",s);} break;
 	}
 	return buf;
 }

@@ -567,15 +567,15 @@ int main(int argc, char **argv) {
 	if(s) {
 		*s=0; if(keyCmp(s+1,"bed")==0) type=1;		//================ refseq
 	}
-	sprintf(b,"%s%s_gene.bed" ,trackPath,inFile);  fgene =fopen(b,"w");
-	sprintf(b,"%s%s_g_beg.bed",trackPath,inFile);  fg_beg=fopen(b,"w");
-	sprintf(b,"%s%s_g_end.bed",trackPath,inFile);  fg_end=fopen(b,"w");
-	sprintf(b,"%s%s_exn.bed"  ,trackPath,inFile);  fexn  =fopen(b,"w");
-	sprintf(b,"%s%s_e_beg.bed",trackPath,inFile);  fe_beg=fopen(b,"w");
-	sprintf(b,"%s%s_e_end.bed",trackPath,inFile);  fe_end=fopen(b,"w");
-	sprintf(b,"%s%s_ivs.bed"  ,trackPath,inFile);  fivs  =fopen(b,"w");
-	sprintf(b,"%s%s_i_beg.bed",trackPath,inFile);  fi_beg=fopen(b,"w");
-	sprintf(b,"%s%s_i_end.bed",trackPath,inFile);  fi_end=fopen(b,"w");
+	snprintf(b,sizeof(b),"%s%s_gene.bed" ,trackPath,trim(inFile));  fgene =fopen(b,"w");
+	snprintf(b,sizeof(b),"%s%s_g_beg.bed",trackPath,trim(inFile));  fg_beg=fopen(b,"w");
+	snprintf(b,sizeof(b),"%s%s_g_end.bed",trackPath,trim(inFile));  fg_end=fopen(b,"w");
+	snprintf(b,sizeof(b),"%s%s_exn.bed"  ,trackPath,trim(inFile));  fexn  =fopen(b,"w");
+	snprintf(b,sizeof(b),"%s%s_e_beg.bed",trackPath,trim(inFile));  fe_beg=fopen(b,"w");
+	snprintf(b,sizeof(b),"%s%s_e_end.bed",trackPath,trim(inFile));  fe_end=fopen(b,"w");
+	snprintf(b,sizeof(b),"%s%s_ivs.bed"  ,trackPath,trim(inFile));  fivs  =fopen(b,"w");
+	snprintf(b,sizeof(b),"%s%s_i_beg.bed",trackPath,trim(inFile));  fi_beg=fopen(b,"w");
+	snprintf(b,sizeof(b),"%s%s_i_end.bed",trackPath,trim(inFile));  fi_end=fopen(b,"w");
 
 	if(type) parseRefSeq();
 	else parseGTF();

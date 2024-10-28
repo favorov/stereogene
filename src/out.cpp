@@ -143,7 +143,7 @@ void printStat(){
 
 
 	if(statFileName){
-		sprintf(b,"%s.tsv",statFileName);
+		snprintf(b,sizeof(b),"%s.tsv",trim(statFileName));
 		fg=fileExists(b);
 		if((outRes & TAB)!=0) {
 			f=xopen(b,"a+t");
@@ -165,7 +165,7 @@ void printStat(){
 
 	//================================================== write parameters
 	if(paramsFileName){
-		sprintf(b,"%s.tsv",paramsFileName);
+		snprintf(b,sizeof(b),"%s.tsv",trim(paramsFileName));
 		fg=fileExists(b);
 		if((outRes&TAB)!=0){
 			f=xopen(b,"a+t");
@@ -186,7 +186,7 @@ void printStat(){
 	}
 	if(statFileName){
 		if((outRes & XML)!=0) {
-			snprintf(b,sizeof(b), "%s.xml",statFileName);
+			snprintf(b,sizeof(b), "%s.xml",trim(statFileName));
 			fg=fileExists(b);
 			FILE *xml=0;
 			if(!fg) {xml=xopen(b,"wb"); fprintf(xml,"<xml>\n");}
@@ -311,7 +311,7 @@ void printPDFRaw(FILE *f, const char * prm, const char * val){
 void printHTML(){
 	char fname[TBS];
 
-	snprintf(fname,sizeof(fname),"%s%s.html",curRepPath,curOutFname);
+	snprintf(fname,sizeof(fname),"%s%s.html",trim(curRepPath),trim(curOutFname));
 
 	FILE *f=xopen(fname,"w");
 
@@ -456,7 +456,7 @@ void printR(int type){
 	//	===============================================================================================
 	//	===============================================================================================
 	char sub[TBS+100];
-	snprintf(sub,sizeof(sub),"\\n%s",fname);
+	snprintf(sub,sizeof(sub),"\\n%s",trim(fname));
 
 	const char* cex="      cex.axis = 0.8,  cex.lab = 1,  cex.main = 1,lwd=2) \n";
 	fprintf(f," y_lim2 <- max(max(dist$Fg),max(dist$Bkg))\n");

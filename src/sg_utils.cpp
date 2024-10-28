@@ -401,7 +401,7 @@ void addList(char* fname){
 		struct stat FileAttrib;
 		while ((dir = readdir(d)) != NULL) {
 			stat(dir->d_name, &FileAttrib);
-			sprintf(b,"%s/%s",curDir,dir->d_name);
+			snprintf(b,TBS,"%s/%s",trim(curDir),dir->d_name);
 			if(isDirectory(b)) continue;
 			if(getTrackType(b)){
 				char bb[TBS];
@@ -410,7 +410,7 @@ void addList(char* fname){
 			}
 		}
 		closedir(d);
-		}
+	}
 	listID++;
 	return;
 	}
@@ -422,7 +422,6 @@ void addList(char* fname){
 		FILE *f=0;
 		if(fileExists(fname)) f=xopen(fname,"rt");
 		else{
-//			makeFileName(b, sizeof(b), trackPath,fname);
 			makeFileName(b, trackPath,fname);
 			f=xopen(b,"rt");
 		}

@@ -176,7 +176,7 @@ void calcCovar(){
 	Matrix *mtx=new Matrix(cMtx);
 	eValue = mtx->eigen(eVector);
 	char b[TBS];
-	sprintf(b,"%s.covar",confFile);
+	snprintf(b,sizeof(b),"%s.covar",trim(confFile));
 	FILE *f=xopen(b,"wt");
 	cMtx->print(f);
 

@@ -366,7 +366,6 @@ void testDistrib(){
 
 void bTrack::finProfile(){
 	errStatus="finProfile";
-	double lprof=0.;
 	nativeAv= av=0.;            	// Average profile Log value
 	nativeSd= sd=1.;         		// Standard Log deviation
 	nativeMin=minP= 5.e+20;      	// Minimal profile Log value
@@ -386,7 +385,6 @@ void bTrack::finProfile(){
 			// we take into account only valid profile values
 			av+=z; x2+=z*z; nn++;
 			nativeAv+=x; nativeSd+=x*x;
-			lprof+=1;
 			if(x < nativeMin) nativeMin=x;
 			if(x > nativeMax) nativeMax=x;
 			if(z < minP) minP=z;
@@ -398,7 +396,6 @@ void bTrack::finProfile(){
 			// we take into account only valid profile values
 			av+=z; x2+=z*z; nn++;
 			nativeAv+=x; nativeSd+=x*x;
-			lprof+=1;
 			if(x < nativeMin) nativeMin=x;
 			if(x > nativeMax) nativeMax=x;
 			if(z < minP) minP=z;

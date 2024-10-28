@@ -72,7 +72,7 @@ struct BFormula{
 	int parse();
 	int parse(int from, int to);
 	void parseOper(int pos, int oper);
-	char * print(char*b);
+	char * print(char*b, int n);
 	int getNode(int pos) 			{return bf[pos]-NodeBeg;}
 	int getTrack(int pos) 		{return bf[pos]-TrackBeg;}
 	int codeNode(int id)			{return id+NodeBeg;}
@@ -119,7 +119,7 @@ double TrackNode::getValue(int p){
 
 //===================================================================
 char *TrackNode::print(char *b){
-	sprintf(b,"[%s]",name);
+	snprintf(b,sizeof(b),"[%s]",name);
 	return b;
 }
 TrackNode::~TrackNode(){
@@ -233,7 +233,7 @@ FNode::FNode(Formula* form){
 	form->fNodes[id]=this;
 }
 //===================================================================
-char *FNode::print(char *b){
+char *FNode::print(char *b, int n){
 	const char *oprs="*/+-=_sctelqa:u@#~!";
 	const int opcodes[]=
 		{MULT,DIV,PLUS,MINUS,EQ,UMINUS,SIN,COS,TAN,EXP,LOG,SQR,ABS,SIGN,ATAN,IDENT,CONST,TRACK};
@@ -242,18 +242,18 @@ char *FNode::print(char *b){
 	char val[20], chL[20], chR[20];
 	if(childL <0) strcpy(chL," "); else snprintf(chL,sizeof(chL),"%i",childL);
 	if(childR <0) strcpy(chR," "); else snprintf(chR,sizeof(chR),"%i",childR);
-	sprintf(val,"%f",value);
-	sprintf(b,"$%i\tv=%s\t$%s\t%c\t$%s %x",id, val, chL,oper,chR,operation);
+	snprintf(val,sizeof(val),"%f",value);
+	snprintf(b,n,"$%i\tv=%s\t$%s\t%c\t$%s %x",id, val, chL,oper,chR,operation);
 	if(operation==IDENT){
 		for(int i=0; i<formula->nIds; i++){
 			if(formula->identifiers[i]->nodeID==id)
-				{sprintf(b+strlen(b),"\t%s",formula->identifiers[i]->name); break;}
+				{snprintf(b+strlen(b),n-strlen(b),"\t%s",formula->identifiers[i]->name); break;}
 		}
 	}
 	if(operation==TRACK){
 		for(int i=0; i<formula->nTracks; i++){
 			if(formula->tracks[i]->nodeID==id)
-				sprintf(b+strlen(b),"\t[%s]",formula->tracks[i]->name);
+				snprintf(b+strlen(b),n-strlen(b),"\t[%s]",trim(formula->tracks[i]->name));
 		}
 	}
 	return b;
@@ -351,13 +351,14 @@ void BFormula::parseTerms(const char* input){//===== convert text formula to a b
 	}
 }
 //===================================================================
-char * BFormula::print(char *bb){//======= print binary formula to a buffer
+char * BFormula::print(char *bb, int n){//======= print binary formula to a buffer
 	char *b=bb;	*b=0;
 	char bx[40];
-	sprintf(bb,"len=%i  ",len); b=bb+strlen(bb);
+//	sprintf(bb,"len=%i  ",len); b=bb+strlen(bb);
+	snprintf(bb,n,"len=%i  ",len); b=bb+strlen(bb); n-=strlen(bb);
 	for(int i=0; i<len; i++){
-		if(isNode(i)) 		{sprintf(bx,"$%x",bf[i]); strcat(b,bx); b+=strlen(b);}
-		else if(isTrack(i)) {sprintf(bx,"^%x",bf[i]); strcat(b,bx); b+=strlen(b);}
+		if(isNode(i)) 		{snprintf(bx,sizeof(bx),"$%x",bf[i]); strcat(b,bx); b+=strlen(b);}
+		else if(isTrack(i)) {snprintf(bx,sizeof(bx),"^%x",bf[i]); strcat(b,bx); b+=strlen(b);}
 		else if(isFun(i)) 	{*b++=shortFun[bf[i]-FunBeg+1]; *b=0;}
 		else      			{*b++=bf[i]; *b=0;}
 	}

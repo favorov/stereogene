@@ -22,7 +22,7 @@ FILE *prjLog=0;
 
 
 void makeConfDir(char *confPath, const char *path, char * tPath, char *tName, const char*prmName, FILE *cfg){
-	sprintf(confPath, "%s%s%s.proj/",path,tPath,tName);	//========== additional path in the track
+	snprintf(confPath,TBS, "%s%s%s.proj/",path,tPath,tName);	//========== additional path in the track
 	makeDir(confPath);
 }
 

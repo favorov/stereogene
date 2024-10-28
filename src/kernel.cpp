@@ -12,17 +12,15 @@ double Complex::Mod(){return sqrt(re*re+im*im);}
 
 Complex Complex::scalar(Complex otherC){
 	Complex res=Complex();
-	res.re = re * otherC.re + im * otherC.im;
-	res.im = - re*otherC.im + im*otherC.re;
+	res.re =   re * otherC.re + im * otherC.im;
+	res.im = - re * otherC.im + im * otherC.re;
 	return res;
 }
 
 
-Fourier::Fourier(int n){init(n);}
-
-
 Fourier::Fourier(){re=im=datRe=datIm=0; length=0; err=0; spectrum=0; autocorr=0;}
 
+Fourier::Fourier(int n){re=im=datRe=datIm=0; length=0; err=0; spectrum=0; autocorr=0; init(n);}
 
 void Fourier::init(int len){
 	if(length==len) return;

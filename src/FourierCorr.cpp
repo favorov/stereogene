@@ -382,14 +382,14 @@ char * makeOutFilename(Track *tr1, Track *tr2){
 
 	tr1->getPath(curOutPath,resPath);
 	makeDir(curOutPath);
-	sprintf(curOutFname,"%s~%s",p1Fname,p2Fname);
+	snprintf(curOutFname, sizeof(curOutFname),"%s~%s",trim(p1Fname), trim(p2Fname));
 
-	snprintf(outFile,sizeof(outFile),"%s%s",curOutPath,curOutFname);
+	snprintf(outFile,sizeof(outFile),"%s%s",trim(curOutPath), trim(curOutFname));
 	repFile=outFile;
 	if(reportPath){
-		snprintf(curRepPath,sizeof(curRepPath), "%s%s",curOutPath,reportPath);
+		snprintf(curRepPath,sizeof(curRepPath), "%s%s",trim(curOutPath), trim(reportPath));
 		makeDir (curRepPath);
-		snprintf(curReport,sizeof(curReport), "%s%s",reportPath,curOutFname);
+		snprintf(curReport,sizeof(curReport), "%s%s",trim(reportPath), trim(curOutFname));
 	}
 	else strcpy(curReport, curOutFname);
 	return outFile;
@@ -519,7 +519,6 @@ int Correlator(){
 		if(localSuffle) distrBkgCycle();		// Make background distribution with cycling window
 		else 			distrBkg();				// Make background distribution with shuffling windows
 		writeLog("Correlations -> Done\n");
-		printStat();							// write report. The avCoor & avSD defined here!
 		if(nFg && nBkg){
 			printCorrelations();				// write correlations
 			if(RScriptFg) {
@@ -529,6 +528,7 @@ int Correlator(){
 		else{
 			xverb("*** <%s>: No data for statistics: nFg=%i nBkg=%i ***\n", outFile,nFg, nBkg);
 		}
+		printStat();							// write report. The avCoor & avSD defined here!
 		n_cmp++;
 		if(outLC) finOutLC();
 		writeLog("<%s> => Done  time=%s\n",outFile,thisTimer.getTime());

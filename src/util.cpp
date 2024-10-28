@@ -226,11 +226,12 @@ void writeLog(const char *format, ...){
 	writeLog(format, args);
 	va_end(args);
 }
+
 void writeLogErr(const char *format, ...){
 	char b[TBS];
 	va_list args;
 	va_start(args, format);
-	vsprintf(b, format,args);
+	vsnprintf(b,sizeof(b), format,args);
 	va_end(args);
 	writeLog(b);
 	fprintf(stderr,"%s",b);
@@ -273,7 +274,7 @@ void errorExit(const char *format, va_list args){
     fflush(stdout);
 	if (format != NULL) {
 		char b[1024];
-		vsprintf(b, format, args);
+		vsnprintf(b, sizeof(b), format, args);
 	    fprintf(stderr, "%s", b);
 	    if(errStatus) fprintf(stderr, " %s\n", errStatus);
 	    else fprintf(stderr, "\n");
@@ -313,7 +314,7 @@ void clearDeb(){
 //===========================================
 void _deb_(bool t, const char *format, va_list args){
 	char b[TBS];
-	vsprintf(b, format, args);
+	vsnprintf(b,sizeof(b), format, args);
 	if((debugFg&DEBUG_PRINT)!=0){
 		printf("%s",b);
 		if(t) printf(" %s",debTimer.getTime());
@@ -478,13 +479,6 @@ char *correctFname(char* s){
 	for(ss=s;*ss;ss++) if(*ss=='\\') *ss='/';
 	return s;
 }
-////================= create filename using path and name
-//char* makeFileName(char *b, int siz, char *path, char*fname){
-//	if(*fname=='~' || *fname=='/') return strcpy(b,fname);
-//	if(*(lastChar(path))=='/')     snprintf(b, siz-1, "%s%s" ,path,fname);
-//	else			               snprintf(b, siz-1, "%s/%s",path,fname);
-//	return b;
-//}
 //================= create filename using path and name
 char* makeFileName(char *b, char *path, char*fname){
 	if(*fname=='~' || *fname=='/') path=0;
@@ -492,9 +486,6 @@ char* makeFileName(char *b, char *path, char*fname){
 	strcpy(b,path);
 	if(*(lastChar(b)) != '/') strcat(b,"/");
 	return strcat(b,fname);
-//	if(*(lastChar(path))=='/')     sprintf(b, "%s%s" ,path,fname);
-//	else			               sprintf(b, "%s/%s",path,fname);
-	return b;
 }
 //================= create filename using path and name
 char *makeFileName(char *b, char *path, char*fname, const char*ext){
@@ -503,18 +494,7 @@ char *makeFileName(char *b, char *path, char*fname, const char*ext){
 	char *s=strrchr(bb,'/'); if(s==0) s=bb;
 	char *sp=strrchr(s,'.'); if(sp  ) *sp=0;
 	return strcat(strcat(b,"."),ext);
-//	sprintf(b, "%s.%s",bb,ext);
-//	snprintf(b, TBS, "%s.%s",bb,ext);
 }
-////================= create filename using path and name
-//char *makeFileName(char *b, int siz, char *path, char*fname, const char*ext){
-//	char bb[TBS];
-//	makeFileName(bb,sizeof(bb), path,fname);
-//	char *s=strrchr(bb,'/'); if(s==0) s=bb;
-//	char *sp=strrchr(s,'.'); if(sp  ) *sp=0;
-//	snprintf(b, siz-1, "%s.%s",bb,ext);
-//	return b;
-//}
 //=================== extract fname wothout path
 char *getFnameWithoutPath(char *buf, const char *fname){
 	const char *s;
@@ -529,23 +509,15 @@ char *getFnameWithoutExt(char *buf, const char *fname){
 	if(pp) *pp=0;
 	return buf;
 }
-////================ Make Fname without path
-//char *MakeFname(char *b, const char*fname, const char*ext){
-//	char *s=getFnameWithoutExt(b,fname);
-//	return strcat(strcat(s,"."), ext);
-//}
 
 
 //===================== platform independent Make Directory
 int _makeDir(const char * path){
     struct stat sb;
+
     if (stat(path, &sb) == 0 && S_ISDIR(sb.st_mode)) return 0;
 #if defined(_WIN32)
-//#if __GNUC__ > 5
-//	return _mkdir(path);
-//#else
 	return mkdir(path);
-//#endif
 #else
 	mode_t mode=S_IRWXU|S_IRWXG|S_IROTH|S_IXOTH;
 	return mkdir(path, mode); // notice that 777 is different than 0777
