@@ -37,7 +37,8 @@
 %=============================================================================
 \newcommand{\prm}[1]{\texttt{\textbf{{#1}}}}
 \newcommand{\pr}[1]{\texttt{{#1}}}
-\newcommand{\sg}{$StereoGene$\\ version 2.5}
+\newcommand{\sg}{$StereoGene$\ }
+\newcommand{\sgv}{$StereoGene$ version 2.50\ }
 
 \usepackage{ifthen}
 \newcounter{rowc}
@@ -54,7 +55,7 @@
 \renewcommand{\arraystretch}{1.2}
 
 %=============================================================================
-\title {\sg}
+\title {\sgv}
 \author{User manual}
 
 \begin{document}
@@ -68,7 +69,7 @@ High-throughput sequencing methods generate massive amounts of data.  The most c
 
 Here we propose the \sg method, which rapidly estimates the genome-wide correlation of two genomic annotations. The method allows correlation of continuous data, eliminating the data loss that occurs when reducing to intervals. To incorporate the analysis of non-overlapping but spatially related features, we use kernel correlation.  Another novel and powerful feature of our approach is the output of local correlation traces that allow overlapping with other correlations (correlation of correlations). 
 \subsection{Software availability}
-The \sg C++ source code, program documentation, Galaxy integration scripts and examples are available on the  github repository \url{https://github.com/favorov/stereogene}.
+The \sgv C++ source code, program documentation, Galaxy integration scripts and examples are available on the  github repository \url{https://github.com/favorov/stereogene}.
 
 The repository includes four folders: 
 \begin{itemize}
@@ -79,15 +80,15 @@ The repository includes four folders:
 \end{itemize}
 
 \subsection{Source code and license}
-The software is provided in a form of C++ source code with a makefile for GCC compiler. The code was tested both with 4 and 5 versions of GCC. After cloning or downloading and unpacking the source, say command \prm{<make>} from the shell in the source folder. 
+The software is provided in a form of C++ source code with a makefile for GCC compiler. After cloning or downloading and unpacking the source, say command \prm{<make>} from the shell in the source (\prm{stereogene/src}) folder. 
 
 Our source code is covered by MIT artistic license. We use FFT code by Jens Jorgen Nielsen, its license is shown in the mixfft.c source file.
 
 \subsection{Input and output}
-The program reads standard (bed, wigg, etc.) formats for the features to be correlated and a tab-delimited text file with chromosome name and its length pairs on each line as the chromosome length file. The output will be a set of text files. One pair of them (statistics and parameters) is a report that grows line by line with each start of \sg in the current working folder. Others are text files that follow a naming scheme (see below) that allows batch post-processing. On request (using the \prm{plotType} parameter), \sg generates an R script that creates a human-readable report in pdf or html format. If rscript is not defined PATH (usually in Windows platform) it should be referred in the \prm{Rscript} parameter (for example: \texttt{Rscript="C:/Program Files/R/R-3.6.0/bin/x64/Rscript.exe"})
+The program reads standard (bed, wigg, etc.) formats for the features to be correlated and a tab-delimited text file with chromosome name and its length pairs on each line as the chromosome length file. The output will be a set of text files. One pair of them (statistics and parameters) is a report that grows line by line with each start of \sg in the current working folder. Others are text files that follow a naming scheme (see below) that allows batch post-processing. On request (using the \prm{plotType} parameter), \sg generates an R script that creates a human-readable report in pdf or html format. If Rscript is not defined PATH (usually in Windows platform) it should be referred in the \prm{Rscript} parameter (for example: \texttt{Rscript="C:/Program Files/R/R-3.6.0/bin/x64/Rscript.exe"})
 %========================================================================================
 \subsection{Easy start}
-\sg has a lot of parameters that change the behavior of the software.  However, all of them have reasonable defaults, actually a run requires two track files and a file with chromosome lengths. The following example is started from the example folder. First, copy (link) the \sg executable to the example folder. Then, at a shell prompt, type \vspace{0.5cm}
+\sg has a lot of parameters that change the behavior of the software.  However, all of them have reasonable defaults, actually a run requires two track files and a file with chromosome lengths. The following example is started from the example (\prm{stereogene/example}) folder. First, copy (link) the \sg executable you've biult by \prm{make} in the source folder to the example folder. Then, at a shell prompt, type \vspace{0.5cm}
 
 \begin{center}
 \texttt{./StereoGene chrom=chromLength -r H3K4me1.bed H3K4me1.bed}\vspace{0.5cm}
@@ -1091,7 +1092,7 @@ where \prm{<File\_list>} -- list of the tracks or directory.
                 &10000
 \rc{Rscript}
         &Command to run R script. If the parameter defined the program will call R automatically.
-                &rscript
+                &Rscript
 \rc{plotW}
         &Plot width     &4
 \rc{plotH}
