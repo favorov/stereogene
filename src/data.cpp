@@ -46,7 +46,7 @@ char *paramsFileName=(char*)"./params";
 char *inputProfiles=0;
 AliasTable *aliases=0;
 char* aliasFile=0;
-char* Rscript=(char*)"rscript";
+char* Rscript=(char*)"Rscript";
 int  plotH=3;
 int  plotW=7;
 
