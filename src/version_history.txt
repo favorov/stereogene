@@ -188,6 +188,6 @@
 2. List file can contain references with paths relative to the tracks directory
 3. A report subdirectory can be defined in the results. A PDF and/or HTML file will be placed in the report directory instead of the result directory. 
 ========== Version 2.50 ====================
-1. Canged and verified the documentation
+1. Changed and verified the documentation, now it is in latex
 2. A lot of small changes in the code
 3. Changed algorithm for eigenvectors
