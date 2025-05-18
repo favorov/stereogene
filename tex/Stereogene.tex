@@ -137,10 +137,11 @@ This directory structure can be defined in the configuration file. Example:\\
 \end{minipage}
 %=============================================================================================
 \subsection{More complicated case}\label{case2}
-Suppose you have two sets of tracks: \{\pr{H3K4me3.wig H3K4me1.wig H3K9ac.wig H3K27ac.wig\}} -- active histone modifications and \{\pr{H3K9me3.wig, H3K27me3.wig\}} -- repressive modifications. You want to analyze the correlation of each active modification with each repressive modification. The algorithm.
+
+The example uses the tracks \{\pr{H3K4me3.bed H3K9ac.bed H3K27ac.bed\}} -- active histone modifications and \{\pr{H3K9me3.bed, H3K27me3.bed\}} -- repressive modifications. We analyze the correlation of each active modification with each repressive modification.
 \begin{enumerate}
-\item Create directory \prm{Tracks} and subdirectories \pr{Tracks/active, Tracks/repress}.
-\item Put the active tracks to the directory \pr{Tracks/active} and repressive tracks to the directory \pr{Tracks/repress}.
+\item Find the directory (\prm{stereogene/example/example-section-1.6}), it will be the work folder.
+\item It has \prm{Tracks} folder and subfolders \pr{Tracks/active, Tracks/repress} for the active tracks and repressive tracks.
 \item Download from \url{https://genome.ucsc.edu/cgi-bin/hgTracks?db=hg38&chromInfoPage=} chromosome file. Put file with chromosomes \pr{chr\_len\_hg38.tab} to working directory
 \item Create the configuration file \pr{stereogene.cfg}:
 
