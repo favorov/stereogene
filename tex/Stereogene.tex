@@ -91,7 +91,7 @@ The program reads standard (bed, wigg, etc.) formats for the features to be corr
 \sg has a lot of parameters that change the behavior of the software.  However, all of them have reasonable defaults, actually a run requires two track files and a file with chromosome lengths. The following example is started from the example (\prm{stereogene/example}) folder. First, copy (link) the \sg executable you've biult by \prm{make} in the source folder to the example folder. Then, at a shell prompt, type \vspace{0.5cm}
 
 \begin{center}
-\texttt{./StereoGene chrom=chromLength -r H3K4me1.bed H3K4me1.bed}\vspace{0.5cm}
+\texttt{./stereogene chrom=chromLength -r H3K4me1.bed H3K4me1.bed}\vspace{0.5cm}
 \end{center}
 
 The first parameter refers to the file with the length of the chromosomes, the parameter -r tells the program to generate an R script for visualizing the results, other parameters define the input tracks.
@@ -140,30 +140,31 @@ This directory structure can be defined in the configuration file. Example:\\
 
 The example uses the tracks \{\pr{H3K4me3.bed H3K9ac.bed H3K27ac.bed\}} -- active histone modifications and \{\pr{H3K9me3.bed, H3K27me3.bed\}} -- repressive modifications. We analyze the correlation of each active modification with each repressive modification.
 \begin{enumerate}
-\item Find the directory (\prm{stereogene/example/example-section-1.6}), it will be the work folder.
-\item It has \prm{Tracks} folder and subfolders \pr{Tracks/active, Tracks/repress} for the active tracks and repressive tracks.
-\item Download from \url{https://genome.ucsc.edu/cgi-bin/hgTracks?db=hg38&chromInfoPage=} chromosome file. Put file with chromosomes \pr{chr\_len\_hg38.tab} to working directory
+\item Find the directory (\prm{stereogene/example/example-section-1.6}). Use it as work folder or creata a new one anywhere and copy  (\prm{stereogene/example/example-section-1.6/Tracks}) there.
+\item Now, your work folder has \prm{Tracks} folder and subfolders \pr{Tracks/active, Tracks/repress} for the active tracks and repressive tracks.
+\item Download from \url{https://hgdownload.soe.ucsc.edu/goldenPath/hg38/bigZips/hg38.chrom.sizes} chromosome length file as {\pr{hg38.chrom.sizes}} to the working directory
 \item Create the configuration file \pr{stereogene.cfg}:
 
 \begin{shaded} 
 \begin{verbatim}
-chrom=chr_len_hg38.tab          # define the chromosome file
+chrom=hg38.chrom.sizes
+# define the chromosome file
 trackPath=Tracks                # define path to the tracks
 profPath=profiles               # define path to temporary binary profiles
 resPath=res                     # define path to the results
 report=report                   # define path to the reports
 plotType=pdf                    # define type of the reports
-#-------------------------------- define where is the Rscript 
-Rscript="C:/Program Files/R/R-3.6.0/bin/x64/Rscript.exe"
 \end{verbatim}
 \end{shaded}
 
 
-\item Run \sg: 
-\pr{\$./StereoGene active repress}
+\item copy (link) the \sg executable here. Run \sg: 
+\pr{\$./stereogene active repress}
 \item Find and browse the report files \pr{*.pdf} in the directory \pr{res/active/report}
 \item Open the file statitics.tsv in Excel or OpenOffice or R and analyse the result
 \end{enumerate}
+You can just run the built \sg without copying it, so you run something like {\pr{~/stereogene/src/stereogene}} from the folder where you built it.
+
 
 \subsection{How to look at the results}
 After running \sg for tracks \prm{ARID2.bgr}, \prm{ARID1B.bgr} (these are proteins from the SWI/SNF complex) with the configuration file:
@@ -182,7 +183,6 @@ KernelSigma=3K
 crossWidth=30000
 
 plotType=pdf
-Rscript="C:/Program Files/R/R-3.6.0/bin/x64/Rscript.exe"
 \end{verbatim}
 \end{footnotesize}
 \end{shaded}
