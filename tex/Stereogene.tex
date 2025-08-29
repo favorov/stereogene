@@ -321,7 +321,7 @@ If the DNA strand is defined (e.g. for genes), the \prm{complFg} parameter indic
 
 It is challenging to analytically estimate the null distribution of correlation coefficients that takes into account the dependencies of all features at neighboring positions of the genome. We use a permutation to test the statistical reliability of the result. To do this, we randomly sample pairs of windows, first from one track, then from the other, and evaluate the correlation value for each pair (Figure \ref{sh}B).  The number of sampled pairs is determined by the parameter \prm{nShuffle}. 
 
-Another sparse data approach based on cyclic permutation of non-zero windows. It uses all the features of the standard approach. Instead of comparing different windows, a random cyclic permutation of the tracks is used to compute the background distribution. To use this option, set the parameter \prm{localSuffle}=1. This option is useful for sparse data (Figure \ref{sh}C).
+Another sparse data approach based on cyclic permutation of non-zero windows. It uses all the features of the standard approach. Instead of comparing different windows, a random cyclic permutation of the tracks is used to compute the background distribution. To use this option, set the parameter \prm{localShuffle}=1. This option is useful for sparse data (Figure \ref{sh}C).
 
 List of calculation parameters shown in the Table \ref{calcPrm}
 
@@ -351,7 +351,7 @@ Parameter&Sense&default value\\\hline
 \rc{nShuffle}       
 	&       Number of shuffle to calculate the background distribution 
 		& 10000
-\rc{localSuffle}    
+\rc{localShuffle}    
 	&       Use local shuffle instead of window shuffle 
 		&1
 \end{longtable}
@@ -840,7 +840,7 @@ KernelSigma=30k
 nShuffle=2000
 maxNA=99.9
 maxZero=99.9
-localSuffle=1
+localShuffle=1
 
 plotType=pdf
 crossWidth=30000
@@ -865,7 +865,7 @@ KernelSigma=30k
 nShuffle=2000
 maxNA=99.9
 maxZero=99.9
-localSuffle=1
+localShuffle=1
 
 plotType=pdf
 crossWidth=30000
@@ -1475,7 +1475,7 @@ Continue of the table
 \begin{shaded} 
 \begin{scriptsize}
 \begin{tabular}{llllllllllll}
- nShuffle & noiseLevel & complFg & localSuffle & outSpectr & outChrom & writeDistr & plotType & Cross & outLC & L\_LC \\
+ nShuffle & noiseLevel & complFg & localShuffle & outSpectr & outChrom & writeDistr & plotType & Cross & outLC & L\_LC \\
  2000     & 0          & IGNORE\_ & 1           & 0         & 1        & DETAIL     & PDF     & 1     & NA    & -20   \\
  2000     & 0          & IGNORE\_ & 1           & 0         & 1        & DETAIL     & PDF     & 1     & NA    & -20   \\
 \end{tabular}
