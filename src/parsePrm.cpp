@@ -255,7 +255,7 @@ Param *pparams[]={
 		new Param(SG, "nShuffle"	,1, &nShuffle  	,"Number of shuffles for background calculation"),
 		new Param(SG, "noiseLevel"	,1, &noiseLevel ,0),
 		new Param(SG, "complFg"		,1, &complFg	,complFlags,0),
-		new Param(SG, "localShuffle" ,1, &localSuffle,1,"Use cyclic permutations"),
+		new Param(SG, "localShuffle" ,1, &localShuffle,1,"Use cyclic permutations"),
 //==============================================================================================================
 		new Param(SG, "Output parameters"),
 		new Param(SG, "outSpectr" 	,1, &outSpectr    ,"write fourier spectrums"),

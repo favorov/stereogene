@@ -252,7 +252,7 @@ extern bool syntax;				// Strong syntax control
 //extern bool sparse;				// the data is sparce
 
 
-extern bool	localSuffle;		// use shuffle inside the windoww
+extern bool	localShuffle;		// use shuffle inside the windoww
 extern bool clearProfile; //Force profile recalculation
 extern int scoreType;
 extern double smoothZ;

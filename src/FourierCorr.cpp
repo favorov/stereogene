@@ -516,7 +516,7 @@ int Correlator(){
 		writeLog("Foreground\n");
 		if(distrCorr()==0) continue;			// Calculate correlations
 		writeLog("Background\n");
-		if(localSuffle) distrBkgCycle();		// Make background distribution with cycling window
+		if(localShuffle) distrBkgCycle();		// Make background distribution with cycling window
 		else 			distrBkg();				// Make background distribution with shuffling windows
 		writeLog("Correlations -> Done\n");
 		if(nFg && nBkg){
